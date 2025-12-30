@@ -1,0 +1,9 @@
+.env
+.env.local
+**/node_modules/
+dist/
+build/
+.vscode/
+*.tar.gz
+.DS_Store
+npm-debug.log*
