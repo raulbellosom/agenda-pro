@@ -1690,6 +1690,12 @@ export function CalendarPage() {
         isOpen={showCreateCalendarModal}
         onClose={() => setShowCreateCalendarModal(false)}
         isFirstCalendar={!hasCalendars}
+        onSuccess={(newCalendar) => {
+          // Auto-select the new calendar
+          if (newCalendar?.$id) {
+            setVisibleCalendars((prev) => [...prev, newCalendar.$id]);
+          }
+        }}
       />
 
       {/* Edit Calendar Modal */}

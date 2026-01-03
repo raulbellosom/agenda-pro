@@ -1642,6 +1642,12 @@ export function AppShell() {
         }}
         calendar={calendarToEdit}
         isEditing={!!calendarToEdit}
+        onSuccess={(newCalendar) => {
+          // Auto-select the new calendar when created (not editing)
+          if (!calendarToEdit && newCalendar?.$id) {
+            setMobileVisibleCalendars((prev) => [...prev, newCalendar.$id]);
+          }
+        }}
       />
 
       {/* Group Modal */}
