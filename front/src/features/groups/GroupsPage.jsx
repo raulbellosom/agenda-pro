@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import {
@@ -40,6 +41,120 @@ const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 },
 };
+
+// Menu Portal Component - renders menu in a portal to avoid z-index issues
+function MenuPortal({
+  isOpen,
+  onClose,
+  isOwner,
+  group,
+  onEdit,
+  onDelete,
+  onLeave,
+}) {
+  const menuRef = useRef(null);
+  const [position, setPosition] = useState({ top: 0, right: 0 });
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Find the button that triggered the menu
+    const button = document.querySelector(`[data-group-menu="${group.$id}"]`);
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+
+    // Close on click outside
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+
+    // Close on escape
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    // Add listeners with a small delay to avoid immediate close
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, group.$id, onClose]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        ref={menuRef}
+        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+        style={{
+          position: "fixed",
+          top: position.top,
+          right: position.right,
+          zIndex: 9999,
+        }}
+        className="w-52 bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-base))] shadow-2xl overflow-hidden"
+      >
+        <div className="p-1">
+          {isOwner ? (
+            <>
+              <button
+                onClick={() => {
+                  onClose();
+                  onEdit(group);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                Editar espacio
+              </button>
+              <div className="my-1 border-t border-[rgb(var(--border-base))]" />
+              <button
+                onClick={() => {
+                  onClose();
+                  onDelete(group);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Eliminar espacio
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                onClose();
+                onLeave(group);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Salir del espacio
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
+  );
+}
 
 // Group Card Component
 function GroupCard({
@@ -163,6 +278,7 @@ function GroupCard({
             {/* Menu button */}
             <div className="relative">
               <button
+                data-group-menu={group.$id}
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowMenu(!showMenu);
@@ -177,64 +293,15 @@ function GroupCard({
                 <MoreHorizontal className="w-5 h-5" />
               </button>
 
-              <AnimatePresence>
-                {showMenu && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowMenu(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 top-full mt-2 w-52 bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-base))] shadow-xl overflow-hidden z-50"
-                    >
-                      <div className="p-1">
-                        {isOwner ? (
-                          <>
-                            <button
-                              onClick={() => {
-                                setShowMenu(false);
-                                onEdit(group);
-                              }}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
-                            >
-                              <Pencil className="w-4 h-4" />
-                              Editar espacio
-                            </button>
-                            <div className="my-1 border-t border-[rgb(var(--border-base))]" />
-                            <button
-                              onClick={() => {
-                                setShowMenu(false);
-                                onDelete(group);
-                              }}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              Eliminar espacio
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setShowMenu(false);
-                              onLeave(group);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Salir del espacio
-                          </button>
-                        )}
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
+              <MenuPortal
+                isOpen={showMenu}
+                onClose={() => setShowMenu(false)}
+                isOwner={isOwner}
+                group={group}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onLeave={onLeave}
+              />
             </div>
           </div>
         </div>

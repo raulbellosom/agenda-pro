@@ -97,7 +97,7 @@ export function Modal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
           aria-modal="true"
           role="dialog"
         >
@@ -124,7 +124,7 @@ export function Modal({
               "relative z-10 w-full mx-4 sm:mx-6",
               "flex flex-col",
               "max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)]",
-              "rounded-2xl border border-(--border) bg-(--card) shadow-2xl",
+              "rounded-2xl border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-elevated))] shadow-2xl",
               "outline-none",
               sizes[size],
               className
@@ -132,10 +132,10 @@ export function Modal({
           >
             {/* Header - siempre visible y fijo */}
             {(header || showCloseButton) && (
-              <div className="shrink-0 flex items-center justify-between gap-4 border-b border-(--border) px-6 py-4">
+              <div className="shrink-0 flex items-center justify-between gap-4 border-b border-[rgb(var(--border-base))] px-6 py-4">
                 <div className="flex-1 min-w-0">
                   {typeof header === "string" ? (
-                    <h2 className="text-lg font-semibold text-(--fg) truncate">
+                    <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] truncate">
                       {header}
                     </h2>
                   ) : (
@@ -146,7 +146,7 @@ export function Modal({
                   <button
                     type="button"
                     onClick={handleCloseButton}
-                    className="shrink-0 rounded-lg p-2 text-(--muted-fg) hover:bg-(--muted) hover:text-(--fg) transition-colors focus:outline-none focus:ring-2 focus:ring-(--ring)"
+                    className="shrink-0 rounded-lg p-2 text-[rgb(var(--text-muted))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/50"
                     aria-label="Cerrar modal"
                   >
                     <X size={20} />
@@ -162,7 +162,7 @@ export function Modal({
 
             {/* Footer - siempre visible y fijo */}
             {footer && (
-              <div className="shrink-0 border-t border-(--border) px-6 py-4 bg-(--card)">
+              <div className="shrink-0 border-t border-[rgb(var(--border-base))] px-6 py-4 bg-[rgb(var(--bg-elevated))]">
                 {footer}
               </div>
             )}
@@ -185,18 +185,20 @@ export function ModalHeader({ icon: Icon, title, subtitle, children }) {
   return (
     <div className="flex items-center gap-3">
       {Icon && (
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--brand)/10 shrink-0">
-          <Icon size={20} className="text-(--brand)" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--brand-primary))]/10 shrink-0">
+          <Icon size={20} className="text-[rgb(var(--brand-primary))]" />
         </div>
       )}
       <div className="flex-1 min-w-0">
         {title && (
-          <h2 className="text-lg font-semibold text-(--fg) truncate">
+          <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] truncate">
             {title}
           </h2>
         )}
         {subtitle && (
-          <p className="text-sm text-(--muted-fg) truncate">{subtitle}</p>
+          <p className="text-sm text-[rgb(var(--text-muted))] truncate">
+            {subtitle}
+          </p>
         )}
         {children}
       </div>

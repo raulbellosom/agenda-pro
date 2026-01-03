@@ -251,7 +251,6 @@ export default async ({ req, res, log, error }) => {
           groupId,
           profileId: ownerProfileId,
           roleId: adminRoleId,
-          name: "Admin", // Added for Appwrite schema compatibility
           enabled: true,
           assignedAt: new Date().toISOString(),
         }

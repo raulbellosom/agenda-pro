@@ -18,7 +18,7 @@ export function Input({
 
   return (
     <motion.label
-      className="block"
+      className="block w-full"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -30,25 +30,26 @@ export function Input({
       )}
       <div className="relative group">
         {Icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--text-muted))] group-focus-within:text-[rgb(var(--brand-primary))] transition-colors duration-200">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--text-muted))] group-focus-within:text-[rgb(var(--brand-primary))] transition-colors duration-200 pointer-events-none">
             <Icon className="w-5 h-5" />
           </div>
         )}
         <input
           type={inputType}
           className={clsx(
-            "w-full min-h-[var(--tap)] rounded-xl",
+            "w-full h-12 rounded-xl",
             "bg-[rgb(var(--bg-muted))]",
-            "px-4 text-base text-[rgb(var(--text-primary))]",
+            "px-4 py-3 text-base text-[rgb(var(--text-primary))]",
             "placeholder:text-[rgb(var(--text-muted))]",
             "border border-[rgb(var(--border-base))]",
             "focus:border-[rgb(var(--brand-primary))] focus:bg-[rgb(var(--bg-surface))]",
+            "focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20",
             "hover:border-[rgb(var(--border-hover))]",
             "outline-none transition-all duration-200",
             Icon && "pl-12",
             isPassword && "pr-12",
             error &&
-              "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]",
+              "border-[rgb(var(--error))] focus:border-[rgb(var(--error))] focus:ring-[rgb(var(--error))]/20",
             className
           )}
           {...rest}

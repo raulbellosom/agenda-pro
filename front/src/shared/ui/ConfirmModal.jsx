@@ -75,9 +75,11 @@ export function ConfirmModal({
           <Icon className={`h-8 w-8 ${config.iconColor}`} />
         </motion.div>
 
-        <h3 className="text-lg font-semibold text-(--fg)">{title}</h3>
+        <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+          {title}
+        </h3>
         {description && (
-          <p className="mt-2 text-sm text-(--muted-fg) max-w-xs">
+          <p className="mt-2 text-sm text-[rgb(var(--text-muted))] max-w-xs">
             {description}
           </p>
         )}
