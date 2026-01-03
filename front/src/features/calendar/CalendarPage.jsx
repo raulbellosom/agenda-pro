@@ -1227,6 +1227,7 @@ function DayView({
   onEventClick,
   onEventLongPress,
   onDateClick,
+  onCreateEventAtTime,
 }) {
   const scrollRef = useRef(null);
   const dayStart = startOfDay(selectedDate);
@@ -1292,23 +1293,35 @@ function DayView({
           )}
 
           {/* Hour rows */}
-          {HOURS.map((hour) => (
-            <div
-              key={hour}
-              className="absolute left-0 right-0 flex border-t border-[rgb(var(--border-base))]"
-              style={{ top: `${hour * 60}px`, height: "60px" }}
-            >
-              <div className="w-16 sm:w-20 shrink-0 pr-2 text-right">
-                <span className="text-xs text-[rgb(var(--text-muted))] -translate-y-2 inline-block">
-                  {format(setHours(new Date(), hour), "HH:mm")}
-                </span>
-              </div>
+          {HOURS.map((hour) => {
+            const hourLongPress = useLongPress(
+              () => {
+                // Long press para crear evento en esta hora (móvil)
+                onCreateEventAtTime?.(selectedDate, hour);
+              },
+              null,
+              { delay: 500 }
+            );
+
+            return (
               <div
-                className="flex-1 relative hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
-                onDoubleClick={() => onDateClick()}
-              />
-            </div>
-          ))}
+                key={hour}
+                className="absolute left-0 right-0 flex border-t border-[rgb(var(--border-base))]"
+                style={{ top: `${hour * 60}px`, height: "60px" }}
+              >
+                <div className="w-16 sm:w-20 shrink-0 pr-2 text-right">
+                  <span className="text-xs text-[rgb(var(--text-muted))] -translate-y-2 inline-block">
+                    {format(setHours(new Date(), hour), "HH:mm")}
+                  </span>
+                </div>
+                <div
+                  className="flex-1 relative hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
+                  onDoubleClick={() => onDateClick()}
+                  {...hourLongPress}
+                />
+              </div>
+            );
+          })}
 
           {/* Events */}
           <div className="absolute top-0 left-16 sm:left-20 right-0 bottom-0">
@@ -1349,6 +1362,7 @@ function WeekView({
   onSelectDate,
   onEventClick,
   onEventLongPress,
+  onCreateEventAtTime,
   weekStartsOn = 1,
 }) {
   const scrollRef = useRef(null);
@@ -1492,13 +1506,26 @@ function WeekView({
                   onClick={() => onSelectDate(day)}
                 >
                   {/* Hour cells for interaction */}
-                  {HOURS.map((hour) => (
-                    <div
-                      key={`${day.toISOString()}-${hour}`}
-                      className="absolute left-0 right-0 hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
-                      style={{ top: `${hour * 60}px`, height: "60px" }}
-                    />
-                  ))}
+                  {HOURS.map((hour) => {
+                    const cellLongPress = useLongPress(
+                      () => {
+                        // Long press para crear evento en este día y hora (móvil)
+                        onCreateEventAtTime?.(day, hour);
+                      },
+                      null,
+                      { delay: 500 }
+                    );
+
+                    return (
+                      <div
+                        key={`${day.toISOString()}-${hour}`}
+                        className="absolute left-0 right-0 hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
+                        style={{ top: `${hour * 60}px`, height: "60px" }}
+                        onDoubleClick={() => onCreateEventAtTime?.(day, hour)}
+                        {...cellLongPress}
+                      />
+                    );
+                  })}
 
                   {/* Events */}
                   {dayEvents.map((event) => (
@@ -2253,6 +2280,25 @@ export function CalendarPage() {
     prevViewModeRef.current = viewMode;
   }, [viewMode]);
 
+  // Generar key para animación basada en el período de vista
+  // Para vista semanal, usa el inicio de semana para evitar re-renders innecesarios
+  const getViewKey = useCallback(() => {
+    switch (viewMode) {
+      case VIEW_MODES.DAY:
+        return `day-${format(currentDate, "yyyy-MM-dd")}`;
+      case VIEW_MODES.WEEK:
+        // Usar inicio de semana para que no cambie al seleccionar días dentro de la misma semana
+        const weekStart = startOfWeek(currentDate, { weekStartsOn });
+        return `week-${format(weekStart, "yyyy-MM-dd")}`;
+      case VIEW_MODES.MONTH:
+        return `month-${format(currentDate, "yyyy-MM")}`;
+      case VIEW_MODES.AGENDA:
+        return `agenda-${format(currentDate, "yyyy-MM")}`;
+      default:
+        return currentDate.toISOString();
+    }
+  }, [viewMode, currentDate, weekStartsOn]);
+
   // Filter events by visible calendars
   const filteredEvents = useMemo(() => {
     return events.filter((e) => visibleCalendars.includes(e.calendarId));
@@ -2345,6 +2391,15 @@ export function CalendarPage() {
   // Event handlers
   const handleCreateEvent = useCallback((date = null) => {
     setDefaultEventDate(date);
+    setEditingEvent(null);
+    setShowEventModal(true);
+  }, []);
+
+  // Handler para crear evento en una hora específica (desde day/week view)
+  const handleCreateEventAtTime = useCallback((date, hour) => {
+    // Crear una fecha con la hora específica
+    const eventDate = setHours(startOfDay(date), hour);
+    setDefaultEventDate(eventDate);
     setEditingEvent(null);
     setShowEventModal(true);
   }, []);
@@ -2737,7 +2792,7 @@ export function CalendarPage() {
             >
               <AnimatePresence mode="wait" custom={navigationDirection}>
                 <motion.div
-                  key={viewMode + currentDate.toISOString()}
+                  key={getViewKey()}
                   custom={navigationDirection}
                   variants={viewTransitionVariants}
                   initial="enter"
@@ -2756,6 +2811,7 @@ export function CalendarPage() {
                       onEventClick={handleEventClick}
                       onEventLongPress={handleEventLongPress}
                       onDateClick={() => setShowDatePicker(true)}
+                      onCreateEventAtTime={handleCreateEventAtTime}
                     />
                   )}
 
@@ -2769,6 +2825,7 @@ export function CalendarPage() {
                       }}
                       onEventClick={handleEventClick}
                       onEventLongPress={handleEventLongPress}
+                      onCreateEventAtTime={handleCreateEventAtTime}
                       weekStartsOn={weekStartsOn}
                     />
                   )}

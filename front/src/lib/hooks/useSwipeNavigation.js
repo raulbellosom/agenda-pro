@@ -55,10 +55,7 @@ export function useSwipeNavigation({
         isSwipingRef.current = false;
         startTimeRef.current = Date.now();
 
-        // En móvil, prevenir el comportamiento por defecto si se solicita
-        if (preventScroll && event.cancelable) {
-          event.preventDefault();
-        }
+        // No intentar preventDefault aquí, se manejará en onDrag
       },
 
       onDrag: ({
@@ -86,12 +83,13 @@ export function useSwipeNavigation({
             if (isHorizontalGesture && horizontal) {
               isSwipingRef.current = true;
               // Prevenir scroll vertical durante swipe horizontal
-              if (event.cancelable) {
+              // Solo si preventScroll está habilitado y el evento es cancelable
+              if (preventScroll && event.cancelable) {
                 event.preventDefault();
               }
             } else if (!isHorizontalGesture && vertical) {
               isSwipingRef.current = true;
-              if (event.cancelable) {
+              if (preventScroll && event.cancelable) {
                 event.preventDefault();
               }
             }
