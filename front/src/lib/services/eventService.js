@@ -105,7 +105,9 @@ export async function getEvent(eventId) {
  */
 export async function createEvent(data) {
   const now = new Date().toISOString();
-  return databases.createDocument(databaseId, collectionId, ID.unique(), {
+
+  // Construir payload solo con campos que existen en la colección
+  const payload = {
     groupId: data.groupId,
     calendarId: data.calendarId,
     ownerProfileId: data.ownerProfileId,
@@ -115,15 +117,27 @@ export async function createEvent(data) {
     startAt: data.startAt,
     endAt: data.endAt,
     allDay: data.allDay || false,
-    timezone: data.timezone || null,
     status: data.status || ENUMS.EVENT_STATUS.CONFIRMED,
-    visibility: data.visibility || ENUMS.EVENT_VISIBILITY.INHERIT,
-    recurrenceRule: data.recurrenceRule || null,
-    recurrenceUntil: data.recurrenceUntil || null,
     enabled: true,
     createdAt: now,
     updatedAt: now,
-  });
+  };
+
+  // Campos opcionales - solo agregar si tienen valor
+  // Nota: visibility, timezone, recurrenceRule, recurrenceUntil
+  // pueden no existir aún en la colección de Appwrite
+  // Descomentar cuando se creen en la base de datos:
+  // if (data.visibility) payload.visibility = data.visibility;
+  // if (data.timezone) payload.timezone = data.timezone;
+  // if (data.recurrenceRule) payload.recurrenceRule = data.recurrenceRule;
+  // if (data.recurrenceUntil) payload.recurrenceUntil = data.recurrenceUntil;
+
+  return databases.createDocument(
+    databaseId,
+    collectionId,
+    ID.unique(),
+    payload
+  );
 }
 
 /**

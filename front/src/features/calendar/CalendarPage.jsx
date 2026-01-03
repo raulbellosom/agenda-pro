@@ -51,6 +51,9 @@ import {
 } from "lucide-react";
 import { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 import { CreateCalendarModal } from "./CreateCalendarModal";
+import { EventModal } from "./EventModal";
+import { EventDetailsModal } from "./EventDetailsModal";
+import { DeleteEventModal } from "./DeleteEventModal";
 import {
   format,
   startOfMonth,
@@ -108,12 +111,33 @@ const CALENDAR_COLORS = {
     dot: "bg-emerald-500",
     light: "bg-emerald-500/10",
   },
+  teal: {
+    bg: "bg-teal-500/20",
+    border: "border-teal-500",
+    text: "text-teal-500 dark:text-teal-400",
+    dot: "bg-teal-500",
+    light: "bg-teal-500/10",
+  },
   amber: {
     bg: "bg-amber-500/20",
     border: "border-amber-500",
     text: "text-amber-500 dark:text-amber-400",
     dot: "bg-amber-500",
     light: "bg-amber-500/10",
+  },
+  orange: {
+    bg: "bg-orange-500/20",
+    border: "border-orange-500",
+    text: "text-orange-500 dark:text-orange-400",
+    dot: "bg-orange-500",
+    light: "bg-orange-500/10",
+  },
+  red: {
+    bg: "bg-red-500/20",
+    border: "border-red-500",
+    text: "text-red-500 dark:text-red-400",
+    dot: "bg-red-500",
+    light: "bg-red-500/10",
   },
   rose: {
     bg: "bg-rose-500/20",
@@ -128,6 +152,13 @@ const CALENDAR_COLORS = {
     text: "text-pink-500 dark:text-pink-400",
     dot: "bg-pink-500",
     light: "bg-pink-500/10",
+  },
+  slate: {
+    bg: "bg-slate-500/20",
+    border: "border-slate-500",
+    text: "text-slate-500 dark:text-slate-400",
+    dot: "bg-slate-500",
+    light: "bg-slate-500/10",
   },
 };
 
@@ -498,16 +529,20 @@ function CalendarsList({
 // EVENT CARD COMPONENT
 // ================================================
 
-function EventCard({ event, compact = false }) {
+function EventCard({ event, compact = false, onClick }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
-  const startTime = event.startTime
-    ? format(parseISO(event.startTime), "HH:mm")
+  const startTime = event.startAt
+    ? format(parseISO(event.startAt), "HH:mm")
     : "";
-  const endTime = event.endTime ? format(parseISO(event.endTime), "HH:mm") : "";
+  const endTime = event.endAt ? format(parseISO(event.endAt), "HH:mm") : "";
 
   if (compact) {
     return (
       <div
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.(event);
+        }}
         className={`px-2 py-1 rounded-md text-xs truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-[rgb(var(--brand-primary))]/30 transition-all`}
       >
         {startTime && <span className="opacity-75 mr-1">{startTime}</span>}
@@ -520,6 +555,7 @@ function EventCard({ event, compact = false }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      onClick={() => onClick?.(event)}
       className={`group p-3 rounded-xl border-l-4 ${colors.border} bg-[rgb(var(--bg-surface))] shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -536,14 +572,20 @@ function EventCard({ event, compact = false }) {
               </span>
             </div>
           )}
-          {event.location && (
+          {event.locationText && (
             <div className="flex items-center gap-1.5 mt-1 text-xs text-[rgb(var(--text-muted))]">
               <MapPin className="w-3.5 h-3.5" />
-              <span className="truncate">{event.location}</span>
+              <span className="truncate">{event.locationText}</span>
             </div>
           )}
         </div>
-        <button className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.(event);
+          }}
+          className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] opacity-0 group-hover:opacity-100 transition-opacity"
+        >
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
@@ -618,12 +660,10 @@ function DayCell({
 // TIME GRID EVENT (for Day/Week views)
 // ================================================
 
-function TimeGridEvent({ event, dayStart }) {
+function TimeGridEvent({ event, dayStart, onClick }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
-  const eventStart = parseISO(event.startTime);
-  const eventEnd = event.endTime
-    ? parseISO(event.endTime)
-    : addDays(eventStart, 0);
+  const eventStart = parseISO(event.startAt);
+  const eventEnd = event.endAt ? parseISO(event.endAt) : addDays(eventStart, 0);
 
   const startMinutes = differenceInMinutes(eventStart, dayStart);
   const duration = differenceInMinutes(eventEnd, eventStart) || 60;
@@ -635,6 +675,7 @@ function TimeGridEvent({ event, dayStart }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
+      onClick={() => onClick?.(event)}
       className={`absolute left-1 right-1 ${colors.bg} ${colors.border} border-l-2 rounded-md px-2 py-1 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[rgb(var(--brand-primary))]/30 transition-all z-10`}
       style={{
         top: `${top}px`,
@@ -699,14 +740,14 @@ function EmptyDayMessage({ onDismiss }) {
 // DAY VIEW COMPONENT
 // ================================================
 
-function DayView({ selectedDate, events }) {
+function DayView({ selectedDate, events, onEventClick }) {
   const scrollRef = useRef(null);
   const dayStart = startOfDay(selectedDate);
   const [showEmptyMessage, setShowEmptyMessage] = useState(true);
 
   const dayEvents = events.filter((e) => {
-    if (!e.startTime) return false;
-    return isSameDay(parseISO(e.startTime), selectedDate);
+    if (!e.startAt) return false;
+    return isSameDay(parseISO(e.startAt), selectedDate);
   });
 
   // Reset empty message visibility when date changes
@@ -783,6 +824,7 @@ function DayView({ selectedDate, events }) {
                 key={event.$id}
                 event={event}
                 dayStart={dayStart}
+                onClick={onEventClick}
               />
             ))}
           </div>
@@ -807,7 +849,7 @@ function DayView({ selectedDate, events }) {
 // WEEK VIEW COMPONENT
 // ================================================
 
-function WeekView({ selectedDate, events, onSelectDate }) {
+function WeekView({ selectedDate, events, onSelectDate, onEventClick }) {
   const scrollRef = useRef(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -822,8 +864,8 @@ function WeekView({ selectedDate, events, onSelectDate }) {
 
   const getEventsForDay = (day) =>
     events.filter((e) => {
-      if (!e.startTime) return false;
-      return isSameDay(parseISO(e.startTime), day);
+      if (!e.startAt) return false;
+      return isSameDay(parseISO(e.startAt), day);
     });
 
   return (
@@ -926,6 +968,7 @@ function WeekView({ selectedDate, events, onSelectDate }) {
                       key={event.$id}
                       event={event}
                       dayStart={dayStart}
+                      onClick={onEventClick}
                     />
                   ))}
                 </div>
@@ -1003,13 +1046,13 @@ function MonthView({ currentDate, selectedDate, onSelectDate, eventsByDay }) {
 // AGENDA VIEW COMPONENT
 // ================================================
 
-function AgendaView({ events, selectedDate }) {
+function AgendaView({ events, selectedDate, onEventClick, onCreateEvent }) {
   // Group events by date
   const groupedEvents = useMemo(() => {
     const groups = {};
     events.forEach((event) => {
-      if (event.startTime) {
-        const dateKey = format(parseISO(event.startTime), "yyyy-MM-dd");
+      if (event.startAt) {
+        const dateKey = format(parseISO(event.startAt), "yyyy-MM-dd");
         if (!groups[dateKey]) groups[dateKey] = [];
         groups[dateKey].push(event);
       }
@@ -1052,7 +1095,10 @@ function AgendaView({ events, selectedDate }) {
               No tienes eventos programados. ¡Es un buen momento para planificar
               algo!
             </p>
-            <button className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[rgb(var(--brand-primary))] text-white font-medium hover:opacity-90 transition-opacity">
+            <button
+              onClick={onCreateEvent}
+              className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[rgb(var(--brand-primary))] text-white font-medium hover:opacity-90 transition-opacity"
+            >
               <Plus className="w-4 h-4" />
               Crear evento
             </button>
@@ -1108,7 +1154,11 @@ function AgendaView({ events, selectedDate }) {
                   {/* Events for this day */}
                   <div className="space-y-3 pl-0 sm:pl-15">
                     {dayEvents.map((event) => (
-                      <EventCard key={event.$id} event={event} />
+                      <EventCard
+                        key={event.$id}
+                        event={event}
+                        onClick={onEventClick}
+                      />
                     ))}
                   </div>
                 </motion.div>
@@ -1125,7 +1175,12 @@ function AgendaView({ events, selectedDate }) {
 // SELECTED DAY PANEL COMPONENT
 // ================================================
 
-function SelectedDayPanel({ selectedDate, events }) {
+function SelectedDayPanel({
+  selectedDate,
+  events,
+  onEventClick,
+  onCreateEvent,
+}) {
   // Estado para el reloj en tiempo real
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -1139,8 +1194,8 @@ function SelectedDayPanel({ selectedDate, events }) {
   }, []);
 
   const dayEvents = events.filter((e) => {
-    if (!e.startTime) return false;
-    return isSameDay(parseISO(e.startTime), selectedDate);
+    if (!e.startAt) return false;
+    return isSameDay(parseISO(e.startAt), selectedDate);
   });
 
   return (
@@ -1184,7 +1239,10 @@ function SelectedDayPanel({ selectedDate, events }) {
             <p className="text-sm text-[rgb(var(--text-muted))] mt-1">
               No hay eventos programados
             </p>
-            <button className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))] text-sm font-medium hover:bg-[rgb(var(--brand-primary))]/20 transition-colors">
+            <button
+              onClick={onCreateEvent}
+              className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))] text-sm font-medium hover:bg-[rgb(var(--brand-primary))]/20 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               Crear evento
             </button>
@@ -1192,7 +1250,7 @@ function SelectedDayPanel({ selectedDate, events }) {
         ) : (
           <div className="space-y-3">
             {dayEvents.map((event) => (
-              <EventCard key={event.$id} event={event} />
+              <EventCard key={event.$id} event={event} onClick={onEventClick} />
             ))}
           </div>
         )}
@@ -1272,6 +1330,12 @@ export function CalendarPage() {
   const [deletingCalendar, setDeletingCalendar] = useState(null);
   const [sharingCalendar, setSharingCalendar] = useState(null);
 
+  // Event modal states
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [viewingEvent, setViewingEvent] = useState(null);
+  const [deletingEvent, setDeletingEvent] = useState(null);
+
   const { activeGroup, calendars = [], profile } = useWorkspace();
   const deleteCalendar = useDeleteCalendar();
   const hasCalendars = calendars.length > 0;
@@ -1299,8 +1363,8 @@ export function CalendarPage() {
   const eventsByDay = useMemo(() => {
     const map = {};
     filteredEvents.forEach((event) => {
-      if (event.startTime) {
-        const dateKey = format(parseISO(event.startTime), "yyyy-MM-dd");
+      if (event.startAt) {
+        const dateKey = format(parseISO(event.startAt), "yyyy-MM-dd");
         if (!map[dateKey]) map[dateKey] = [];
         map[dateKey].push(event);
       }
@@ -1362,6 +1426,33 @@ export function CalendarPage() {
         : [...prev, calId]
     );
   };
+
+  // Event handlers
+  const handleCreateEvent = useCallback(() => {
+    setEditingEvent(null);
+    setShowEventModal(true);
+  }, []);
+
+  const handleEventClick = useCallback((event) => {
+    setViewingEvent(event);
+  }, []);
+
+  const handleEditEvent = useCallback((event) => {
+    setEditingEvent(event);
+    setShowEventModal(true);
+  }, []);
+
+  const handleDeleteEvent = useCallback((event) => {
+    setDeletingEvent(event);
+  }, []);
+
+  // Get calendar for an event
+  const getCalendarForEvent = useCallback(
+    (event) => {
+      return calendars.find((c) => c.$id === event?.calendarId);
+    },
+    [calendars]
+  );
 
   // Get title based on view mode
   const getNavigationTitle = () => {
@@ -1448,7 +1539,7 @@ export function CalendarPage() {
               if (!hasCalendars) {
                 setShowCreateCalendarModal(true);
               } else {
-                // TODO: Abrir modal de crear evento
+                handleCreateEvent();
               }
             }}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity"
@@ -1458,25 +1549,6 @@ export function CalendarPage() {
               {hasCalendars ? "Nuevo" : "Crear Calendario"}
             </span>
           </button>
-
-          {/* Right Sidebar Toggle - Desktop, only in month view */}
-          {viewMode === VIEW_MODES.MONTH && hasCalendars && (
-            <button
-              onClick={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
-              className="hidden xl:flex p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] transition-colors"
-              title={
-                rightSidebarCollapsed
-                  ? "Mostrar detalles del día"
-                  : "Ocultar detalles del día"
-              }
-            >
-              {rightSidebarCollapsed ? (
-                <PanelRight className="w-5 h-5" />
-              ) : (
-                <PanelRightClose className="w-5 h-5" />
-              )}
-            </button>
-          )}
         </div>
       </header>
 
@@ -1597,6 +1669,7 @@ export function CalendarPage() {
                   <DayView
                     selectedDate={selectedDate}
                     events={filteredEvents}
+                    onEventClick={handleEventClick}
                   />
                 )}
 
@@ -1608,6 +1681,7 @@ export function CalendarPage() {
                       setSelectedDate(d);
                       setCurrentDate(d);
                     }}
+                    onEventClick={handleEventClick}
                   />
                 )}
 
@@ -1624,6 +1698,8 @@ export function CalendarPage() {
                   <AgendaView
                     events={filteredEvents}
                     selectedDate={selectedDate}
+                    onEventClick={handleEventClick}
+                    onCreateEvent={handleCreateEvent}
                   />
                 )}
               </motion.div>
@@ -1676,6 +1752,8 @@ export function CalendarPage() {
                     <SelectedDayPanel
                       selectedDate={selectedDate}
                       events={filteredEvents}
+                      onEventClick={handleEventClick}
+                      onCreateEvent={handleCreateEvent}
                     />
                   </div>
                 </motion.aside>
@@ -1839,6 +1917,41 @@ export function CalendarPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Event Modals */}
+      <EventModal
+        isOpen={showEventModal}
+        onClose={() => {
+          setShowEventModal(false);
+          setEditingEvent(null);
+        }}
+        event={editingEvent}
+        isEditing={!!editingEvent}
+        defaultDate={selectedDate}
+        onSuccess={() => {
+          setShowEventModal(false);
+          setEditingEvent(null);
+        }}
+      />
+
+      <EventDetailsModal
+        isOpen={!!viewingEvent}
+        onClose={() => setViewingEvent(null)}
+        event={viewingEvent}
+        calendar={getCalendarForEvent(viewingEvent)}
+        onEdit={handleEditEvent}
+        onDelete={handleDeleteEvent}
+      />
+
+      <DeleteEventModal
+        isOpen={!!deletingEvent}
+        onClose={() => setDeletingEvent(null)}
+        event={deletingEvent}
+        onSuccess={() => {
+          setDeletingEvent(null);
+          setViewingEvent(null);
+        }}
+      />
     </div>
   );
 }

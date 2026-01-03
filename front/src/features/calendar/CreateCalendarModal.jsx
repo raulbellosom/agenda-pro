@@ -297,7 +297,7 @@ function StepColorAndIcon({ color, icon, onColorChange, onIconChange }) {
         <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
           Icono
         </label>
-        <div className="grid grid-cols-5 gap-2 max-h-[180px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-5 gap-2">
           {ICONS_CONFIG.map((iconItem, idx) => {
             const IconComponent = iconItem.icon;
             const isSelected = icon === iconItem.id;
@@ -581,10 +581,14 @@ export function CreateCalendarModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-4 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:max-h-[calc(100vh-2rem)] z-50 flex items-center justify-center"
+            className="fixed inset-4 z-50 flex items-center justify-center sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-md sm:p-4"
+            style={{ maxHeight: "calc(100dvh - 2rem)" }}
           >
-            <div className="bg-[rgb(var(--bg-surface))] rounded-3xl shadow-2xl border border-[rgb(var(--border-base))] w-full max-h-full flex flex-col">
-              {/* Header */}
+            <div
+              className="bg-[rgb(var(--bg-surface))] rounded-3xl shadow-2xl border border-[rgb(var(--border-base))] w-full flex flex-col"
+              style={{ maxHeight: "calc(100dvh - 2rem)" }}
+            >
+              {/* Header - Always visible */}
               <div className="px-6 py-5 border-b border-[rgb(var(--border-base))] shrink-0">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -648,8 +652,8 @@ export function CreateCalendarModal({
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto min-h-0">
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
                 <div className="p-6">
                   <AnimatePresence mode="wait">
                     {step === 1 && (
@@ -680,8 +684,8 @@ export function CreateCalendarModal({
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="px-6 py-4 border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-muted))]/50 shrink-0">
+              {/* Footer - Always visible */}
+              <div className="px-6 py-4 border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] shrink-0 rounded-b-3xl">
                 <div className="flex items-center justify-between">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
