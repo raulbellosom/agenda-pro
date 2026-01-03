@@ -114,7 +114,7 @@ export function RegisterPage() {
       <AuthLayout
         title={
           <>
-            Crea tu <span className="text-gradient-brand">cuenta</span>
+            Crea tu <span className="text-gradient">cuenta</span>
           </>
         }
         subtitle="Únete y toma el control de tu tiempo."
@@ -219,7 +219,7 @@ export function RegisterPage() {
                 {[1, 2, 3, 4].map((level) => (
                   <motion.div
                     key={level}
-                    className="h-1.5 flex-1 rounded-full overflow-hidden bg-[rgb(var(--bg-subtle))]"
+                    className="h-1.5 flex-1 rounded-full overflow-hidden bg-[rgb(var(--bg-muted))]"
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
                     transition={{ delay: level * 0.1, duration: 0.2 }}
@@ -228,10 +228,10 @@ export function RegisterPage() {
                       className={`h-full rounded-full ${
                         password.length >= level * 3
                           ? password.length >= 12
-                            ? "bg-[rgb(var(--ok))]"
+                            ? "bg-[rgb(var(--success))]"
                             : password.length >= 8
-                            ? "bg-[rgb(var(--brand-1))]"
-                            : "bg-[rgb(var(--warn))]"
+                            ? "bg-[rgb(var(--brand-primary))]"
+                            : "bg-[rgb(var(--warning))]"
                           : "bg-transparent"
                       }`}
                       initial={{ width: 0 }}
@@ -243,7 +243,7 @@ export function RegisterPage() {
                   </motion.div>
                 ))}
               </div>
-              <p className="text-xs text-[rgb(var(--muted))]">
+              <p className="text-xs text-[rgb(var(--text-muted))]">
                 {password.length >= 12
                   ? "Contraseña muy segura"
                   : password.length >= 8
@@ -277,19 +277,19 @@ export function RegisterPage() {
             variants={formItemVariants}
             initial="hidden"
             animate="visible"
-            className="text-xs text-center text-[rgb(var(--muted))] leading-relaxed"
+            className="text-xs text-center text-[rgb(var(--text-muted))] leading-relaxed"
           >
             Al crear tu cuenta, aceptas nuestros{" "}
             <Link
               to="/terms"
-              className="text-[rgb(var(--brand-1))] hover:underline"
+              className="text-[rgb(var(--brand-primary))] hover:underline"
             >
               términos de servicio
             </Link>{" "}
             y{" "}
             <Link
               to="/privacy"
-              className="text-[rgb(var(--brand-1))] hover:underline"
+              className="text-[rgb(var(--brand-primary))] hover:underline"
             >
               política de privacidad
             </Link>
@@ -304,10 +304,10 @@ export function RegisterPage() {
             className="relative pt-2"
           >
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[rgb(var(--card-hover))]" />
+              <div className="w-full border-t border-[rgb(var(--border-base))]" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-transparent text-[rgb(var(--muted))]">
+              <span className="px-4 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-muted))]">
                 ¿Ya tienes cuenta?
               </span>
             </div>

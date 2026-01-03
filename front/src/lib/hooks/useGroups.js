@@ -79,6 +79,58 @@ export function useDeleteGroup() {
 }
 
 /**
+ * Hook para salir de un grupo
+ */
+export function useLeaveGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ groupId, profileId }) =>
+      groupService.leaveGroup(groupId, profileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
+    },
+  });
+}
+
+/**
+ * Hook para subir logo de grupo
+ */
+export function useUploadGroupLogo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ groupId, file }) =>
+      groupService.uploadGroupLogo(groupId, file),
+    onSuccess: (result) => {
+      queryClient.setQueryData(
+        [QUERY_KEYS.GROUPS, "detail", result.group.$id],
+        result.group
+      );
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
+    },
+  });
+}
+
+/**
+ * Hook para eliminar logo de grupo
+ */
+export function useDeleteGroupLogo() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (groupId) => groupService.deleteGroupLogo(groupId),
+    onSuccess: (updatedGroup) => {
+      queryClient.setQueryData(
+        [QUERY_KEYS.GROUPS, "detail", updatedGroup.$id],
+        updatedGroup
+      );
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
+    },
+  });
+}
+
+/**
  * Hook para obtener los miembros de un grupo
  */
 export function useGroupMembers(groupId) {
@@ -98,8 +150,17 @@ export function useCreateGroupWithDefaults() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ name, description, ownerProfileId }) => {
-      return groupService.createGroup({ name, description }, ownerProfileId);
+    mutationFn: async ({
+      name,
+      description,
+      ownerProfileId,
+      timezone,
+      logoFileId,
+    }) => {
+      return groupService.createGroup(
+        { name, description, timezone, logoFileId },
+        ownerProfileId
+      );
     },
     onSuccess: () => {
       // Invalidar todas las queries de grupos
@@ -108,3 +169,6 @@ export function useCreateGroupWithDefaults() {
     },
   });
 }
+
+// Re-export utils
+export { getGroupLogoUrl } from "../services/groupService";

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import {
   User,
   Mail,
@@ -12,6 +13,10 @@ import {
   X,
   Edit3,
   Eye,
+  Calendar,
+  Shield,
+  Copy,
+  CheckCircle,
 } from "lucide-react";
 import { useWorkspace } from "../../../app/providers/WorkspaceProvider";
 import { useAuth } from "../../../app/providers/AuthProvider";
@@ -25,6 +30,13 @@ import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import { ImageViewerModal } from "../../../shared/ui/ImageViewerModal";
 import { BUCKETS } from "../../../lib/constants";
+import {
+  SettingsCard,
+  SettingsCardHeader,
+  SettingsCardDivider,
+  SettingsRow,
+} from "./SettingsCard";
+import { SettingsAvatar, SettingsAlert } from "./SettingsWidgets";
 
 export function ProfileSection() {
   const { profile } = useWorkspace();
@@ -149,54 +161,31 @@ export function ProfileSection() {
   const isLoading =
     updateProfile.isPending || uploadAvatar.isPending || deleteAvatar.isPending;
 
+  const [copiedId, setCopiedId] = useState(false);
+
+  const copyUserId = () => {
+    if (profile?.$id) {
+      navigator.clipboard.writeText(profile.$id);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Avatar Section */}
-      <div className="glass-card rounded-3xl p-6">
-        <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-6">
-          Foto de perfil
-        </h2>
-
-        <div className="flex flex-col sm:flex-row items-center gap-6">
+      {/* Avatar Section - Hero Style */}
+      <SettingsCard className="overflow-visible">
+        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
           {/* Avatar */}
-          <div className="relative group">
-            <button
-              onClick={handleAvatarClick}
-              disabled={isLoading}
-              className="relative w-28 h-28 rounded-3xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-1))] focus:ring-offset-2 focus:ring-offset-[rgb(var(--bg-app))]"
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full gradient-brand flex items-center justify-center">
-                  <span className="text-3xl font-bold text-white">
-                    {initials.toUpperCase()}
-                  </span>
-                </div>
-              )}
-
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                {avatarUrl ? (
-                  <Eye className="w-6 h-6 text-white" />
-                ) : (
-                  <Camera className="w-6 h-6 text-white" />
-                )}
-              </div>
-
-              {/* Loading overlay */}
-              {(uploadAvatar.isPending || deleteAvatar.isPending) && (
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-white animate-spin" />
-                </div>
-              )}
-            </button>
-
-            {/* Hidden file input */}
+          <div className="relative">
+            <SettingsAvatar
+              src={avatarUrl}
+              initials={initials}
+              size="lg"
+              loading={uploadAvatar.isPending || deleteAvatar.isPending}
+              onView={() => setShowAvatarViewer(true)}
+              onUpload={() => fileInputRef.current?.click()}
+            />
             <input
               ref={fileInputRef}
               type="file"
@@ -206,16 +195,19 @@ export function ProfileSection() {
             />
           </div>
 
-          {/* Avatar Actions */}
-          <div className="flex-1 text-center sm:text-left">
-            <h3 className="font-medium text-[rgb(var(--text-primary))]">
-              {profile?.firstName} {profile?.lastName}
-            </h3>
-            <p className="text-sm text-[rgb(var(--muted))] mt-1">
-              {profile?.email}
-            </p>
+          {/* Info & Actions */}
+          <div className="flex-1 text-center sm:text-left space-y-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-[rgb(var(--text-primary))]">
+                {profile?.firstName} {profile?.lastName}
+              </h2>
+              <p className="text-sm text-[rgb(var(--text-muted))] mt-1 flex items-center justify-center sm:justify-start gap-2">
+                <Mail className="w-4 h-4" />
+                {profile?.email}
+              </p>
+            </div>
 
-            <div className="flex flex-wrap gap-2 mt-4 justify-center sm:justify-start">
+            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
               <Button
                 variant="soft"
                 size="sm"
@@ -223,7 +215,7 @@ export function ProfileSection() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
               >
-                {avatarUrl ? "Cambiar" : "Subir"} foto
+                {avatarUrl ? "Cambiar foto" : "Subir foto"}
               </Button>
 
               {avatarUrl && (
@@ -233,157 +225,256 @@ export function ProfileSection() {
                   leftIcon={<Trash2 className="w-4 h-4" />}
                   onClick={handleDeleteAvatar}
                   disabled={isLoading}
-                  className="text-[rgb(var(--bad))] hover:bg-[rgb(var(--bad))]/10"
+                  className="text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
                 >
                   Eliminar
                 </Button>
               )}
             </div>
 
-            <p className="text-xs text-[rgb(var(--muted))] mt-3">
-              JPG, PNG o GIF. Máximo 5MB.
+            <p className="text-xs text-[rgb(var(--text-muted))]">
+              JPG, PNG o GIF • Máximo 5MB
             </p>
           </div>
         </div>
-      </div>
+      </SettingsCard>
 
       {/* Profile Info Section */}
-      <div className="glass-card rounded-3xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
-            Información personal
-          </h2>
-
-          {!isEditing ? (
-            <Button
-              variant="soft"
-              size="sm"
-              leftIcon={<Edit3 className="w-4 h-4" />}
-              onClick={() => setIsEditing(true)}
-            >
-              Editar
-            </Button>
-          ) : (
-            <div className="flex gap-2">
+      <SettingsCard>
+        <SettingsCardHeader
+          icon={User}
+          title="Información personal"
+          description="Tu información básica de perfil"
+          action={
+            !isEditing ? (
               <Button
-                variant="ghost"
+                variant="soft"
                 size="sm"
-                leftIcon={<X className="w-4 h-4" />}
-                onClick={handleCancel}
-                disabled={updateProfile.isPending}
+                leftIcon={<Edit3 className="w-4 h-4" />}
+                onClick={() => setIsEditing(true)}
               >
-                Cancelar
+                Editar
               </Button>
-              <Button
-                size="sm"
-                leftIcon={
-                  updateProfile.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Check className="w-4 h-4" />
-                  )
-                }
-                onClick={handleSave}
-                disabled={updateProfile.isPending}
-              >
-                Guardar
-              </Button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<X className="w-4 h-4" />}
+                  onClick={handleCancel}
+                  disabled={updateProfile.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  leftIcon={
+                    updateProfile.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )
+                  }
+                  onClick={handleSave}
+                  disabled={updateProfile.isPending}
+                >
+                  Guardar
+                </Button>
+              </div>
+            )
+          }
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="Nombre"
-            placeholder="Tu nombre"
-            value={form.firstName}
-            onChange={handleChange("firstName")}
-            disabled={!isEditing || isLoading}
-            icon={User}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+              Nombre
+            </label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+              <input
+                type="text"
+                placeholder="Tu nombre"
+                value={form.firstName}
+                onChange={handleChange("firstName")}
+                disabled={!isEditing || isLoading}
+                className={clsx(
+                  "w-full pl-12 pr-4 py-3 rounded-xl text-sm",
+                  "bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]",
+                  "text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))]",
+                  "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))] focus:border-transparent focus:bg-[rgb(var(--bg-surface))]",
+                  "transition-all duration-200",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              />
+            </div>
+          </div>
 
-          <Input
-            label="Apellido"
-            placeholder="Tu apellido"
-            value={form.lastName}
-            onChange={handleChange("lastName")}
-            disabled={!isEditing || isLoading}
-            icon={User}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+              Apellido
+            </label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+              <input
+                type="text"
+                placeholder="Tu apellido"
+                value={form.lastName}
+                onChange={handleChange("lastName")}
+                disabled={!isEditing || isLoading}
+                className={clsx(
+                  "w-full pl-12 pr-4 py-3 rounded-xl text-sm",
+                  "bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]",
+                  "text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))]",
+                  "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))] focus:border-transparent focus:bg-[rgb(var(--bg-surface))]",
+                  "transition-all duration-200",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              />
+            </div>
+          </div>
 
-          <Input
-            label="Correo electrónico"
-            type="email"
-            value={profile?.email || ""}
-            disabled
-            icon={Mail}
-            hint="El email no se puede cambiar desde aquí"
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+              Correo electrónico
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+              <input
+                type="email"
+                value={profile?.email || ""}
+                disabled
+                className={clsx(
+                  "w-full pl-12 pr-4 py-3 rounded-xl text-sm",
+                  "bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]",
+                  "text-[rgb(var(--text-primary))]",
+                  "opacity-60 cursor-not-allowed"
+                )}
+              />
+            </div>
+            <p className="text-xs text-[rgb(var(--text-muted))] pl-1">
+              El email no se puede cambiar desde aquí
+            </p>
+          </div>
 
-          <Input
-            label="Teléfono"
-            placeholder="+52 123 456 7890"
-            value={form.phone}
-            onChange={handleChange("phone")}
-            disabled={!isEditing || isLoading}
-            icon={Phone}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+              Teléfono
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+              <input
+                type="tel"
+                placeholder="+52 123 456 7890"
+                value={form.phone}
+                onChange={handleChange("phone")}
+                disabled={!isEditing || isLoading}
+                className={clsx(
+                  "w-full pl-12 pr-4 py-3 rounded-xl text-sm",
+                  "bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]",
+                  "text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))]",
+                  "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))] focus:border-transparent focus:bg-[rgb(var(--bg-surface))]",
+                  "transition-all duration-200",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              />
+            </div>
+          </div>
 
-          <div className="sm:col-span-2">
-            <Input
-              label="Nombre de usuario"
-              placeholder="usuario123"
-              value={form.username}
-              onChange={handleChange("username")}
-              disabled={!isEditing || isLoading}
-              icon={AtSign}
-              hint="Opcional. Se puede usar para encontrarte más fácil."
-            />
+          <div className="sm:col-span-2 space-y-2">
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+              Nombre de usuario
+            </label>
+            <div className="relative">
+              <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+              <input
+                type="text"
+                placeholder="usuario123"
+                value={form.username}
+                onChange={handleChange("username")}
+                disabled={!isEditing || isLoading}
+                className={clsx(
+                  "w-full pl-12 pr-4 py-3 rounded-xl text-sm",
+                  "bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]",
+                  "text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))]",
+                  "focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))] focus:border-transparent focus:bg-[rgb(var(--bg-surface))]",
+                  "transition-all duration-200",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              />
+            </div>
+            <p className="text-xs text-[rgb(var(--text-muted))] pl-1">
+              Opcional • Se puede usar para encontrarte más fácil
+            </p>
           </div>
         </div>
 
         {updateProfile.isError && (
-          <div className="mt-4 p-3 rounded-xl bg-[rgb(var(--bad))]/10 border border-[rgb(var(--bad))]/20">
-            <p className="text-sm text-[rgb(var(--bad))]">
-              {updateProfile.error?.message || "Error al guardar los cambios"}
-            </p>
-          </div>
+          <SettingsAlert
+            type="error"
+            title="Error al guardar"
+            description={
+              updateProfile.error?.message ||
+              "No se pudieron guardar los cambios"
+            }
+            className="mt-6"
+          />
         )}
-      </div>
+      </SettingsCard>
 
       {/* Account Info */}
-      <div className="glass-card rounded-3xl p-6">
-        <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-4">
-          Información de la cuenta
-        </h2>
+      <SettingsCard>
+        <SettingsCardHeader
+          icon={Shield}
+          title="Información de la cuenta"
+          description="Detalles de tu cuenta"
+          iconColor="muted"
+        />
 
-        <div className="space-y-3 text-sm">
-          <div className="flex justify-between py-2 border-b border-[rgb(var(--glass-border))]">
-            <span className="text-[rgb(var(--muted))]">ID de usuario</span>
-            <span className="font-mono text-[rgb(var(--text-secondary))]">
-              {profile?.$id?.slice(0, 8)}...
-            </span>
-          </div>
-          <div className="flex justify-between py-2 border-b border-[rgb(var(--glass-border))]">
-            <span className="text-[rgb(var(--muted))]">Cuenta creada</span>
-            <span className="text-[rgb(var(--text-secondary))]">
-              {profile?.$createdAt
+        <div className="space-y-1 rounded-xl bg-[rgb(var(--bg-muted))]/50 p-4">
+          <SettingsRow
+            icon={User}
+            label="ID de usuario"
+            value={
+              <button
+                onClick={copyUserId}
+                className="flex items-center gap-2 font-mono text-xs hover:text-[rgb(var(--brand-primary))] transition-colors"
+              >
+                {profile?.$id?.slice(0, 8)}...
+                {copiedId ? (
+                  <CheckCircle className="w-3.5 h-3.5 text-[rgb(var(--success))]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </button>
+            }
+          />
+          <SettingsRow
+            icon={Calendar}
+            label="Cuenta creada"
+            value={
+              profile?.$createdAt
                 ? new Date(profile.$createdAt).toLocaleDateString("es-MX", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                   })
-                : "-"}
-            </span>
-          </div>
-          <div className="flex justify-between py-2">
-            <span className="text-[rgb(var(--muted))]">Estado</span>
-            <span className="px-2 py-0.5 rounded-full bg-[rgb(var(--ok))]/10 text-[rgb(var(--ok))] text-xs font-medium">
-              Activo
-            </span>
-          </div>
+                : "-"
+            }
+          />
+          <SettingsRow
+            icon={Shield}
+            label="Estado"
+            value={
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgb(var(--success))]/10 text-[rgb(var(--success))] text-xs font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--success))]" />
+                Activo
+              </span>
+            }
+            border={false}
+          />
         </div>
-      </div>
+      </SettingsCard>
 
       {/* Image Viewer Modal */}
       {profile?.avatarFileId && BUCKETS.AVATARS && (

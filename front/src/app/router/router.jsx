@@ -7,6 +7,7 @@ import { RegisterPage } from "../../features/auth/RegisterPage";
 import { AppShell } from "../../features/shell/AppShell";
 import { CalendarPage } from "../../features/calendar/CalendarPage";
 import { SettingsPage } from "../../features/settings/SettingsPage";
+import { GroupsPage } from "../../features/groups/GroupsPage";
 import { NotFoundPage } from "../../features/shell/NotFoundPage";
 
 export const router = createBrowserRouter([
@@ -27,6 +28,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <CalendarPage /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "groups", element: <GroupsPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

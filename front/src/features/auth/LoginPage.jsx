@@ -70,7 +70,7 @@ export function LoginPage() {
       <AuthLayout
         title={
           <>
-            Bienvenido de <span className="text-gradient-brand">nuevo</span>
+            Bienvenido de <span className="text-gradient">nuevo</span>
           </>
         }
         subtitle="Inicia sesión para continuar organizando tu tiempo."
@@ -119,7 +119,7 @@ export function LoginPage() {
           >
             <Link
               to="/forgot-password"
-              className="text-sm text-[rgb(var(--brand-1))] hover:text-[rgb(var(--brand-2))] transition-colors"
+              className="text-sm text-[rgb(var(--brand-primary))] hover:opacity-80 transition-opacity"
             >
               ¿Olvidaste tu contraseña?
             </Link>
@@ -151,10 +151,10 @@ export function LoginPage() {
             className="relative"
           >
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[rgb(var(--card-hover))]" />
+              <div className="w-full border-t border-[rgb(var(--border-base))]" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-transparent text-[rgb(var(--muted))]">
+              <span className="px-4 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-muted))]">
                 ¿Nuevo en Agenda Pro?
               </span>
             </div>

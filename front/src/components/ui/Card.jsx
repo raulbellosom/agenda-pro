@@ -9,10 +9,11 @@ export function Card({
   animate = false,
 }) {
   const variants = {
-    default: "bg-[rgb(var(--card))] border border-[rgb(var(--card-hover))]",
+    default:
+      "bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-hover))]",
     elevated:
-      "bg-[rgb(var(--elevated))] border border-[rgb(var(--card-hover))] shadow-lg",
-    glass: "glass-card",
+      "bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-hover))] shadow-lg",
+    glass: "card",
     glassElevated: "glass-elevated",
   };
 
@@ -41,7 +42,7 @@ export function CardHeader({ title, subtitle, right, className }) {
       className={clsx("p-5 flex items-start justify-between gap-4", className)}
     >
       <div>
-        <div className="text-xl font-semibold tracking-tight text-[rgb(var(--text))]">
+        <div className="text-xl font-semibold tracking-tight text-[rgb(var(--text-primary))]">
           {title}
         </div>
         {subtitle && (
@@ -63,7 +64,7 @@ export function CardFooter({ className, children }) {
   return (
     <div
       className={clsx(
-        "px-5 py-4 border-t border-[rgb(var(--card-hover))] flex items-center justify-end gap-3",
+        "px-5 py-4 border-t border-[rgb(var(--border-hover))] flex items-center justify-end gap-3",
         className
       )}
     >

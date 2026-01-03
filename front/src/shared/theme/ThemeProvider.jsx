@@ -1,47 +1,93 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
 const ThemeProviderContext = createContext({
   theme: "system",
+  resolvedTheme: "light",
   setTheme: () => null,
 });
 
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "vite-ui-theme",
+  storageKey = "agenda-pro-theme",
 }) {
-  const [theme, setTheme] = useState(
+  const [theme, setThemeState] = useState(
     () => localStorage.getItem(storageKey) || defaultTheme
   );
+  const [resolvedTheme, setResolvedTheme] = useState("light");
 
+  // Get system preference
+  const getSystemTheme = useCallback(() => {
+    if (typeof window === "undefined") return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }, []);
+
+  // Apply theme to document
   useEffect(() => {
     const root = window.document.documentElement;
-
     root.classList.remove("light", "dark");
 
+    let resolved;
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
-
-      root.classList.add(systemTheme);
-      return;
+      resolved = getSystemTheme();
+    } else {
+      resolved = theme;
     }
 
-    root.classList.add(theme);
+    root.classList.add(resolved);
+    setResolvedTheme(resolved);
+
+    // Update meta theme-color for mobile browsers
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute(
+        "content",
+        resolved === "dark" ? "#09090b" : "#fafafa"
+      );
+    }
+  }, [theme, getSystemTheme]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    if (theme !== "system") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e) => {
+      const resolved = e.matches ? "dark" : "light";
+      const root = window.document.documentElement;
+      root.classList.remove("light", "dark");
+      root.classList.add(resolved);
+      setResolvedTheme(resolved);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
+
+  const setTheme = useCallback(
+    (newTheme) => {
+      localStorage.setItem(storageKey, newTheme);
+      setThemeState(newTheme);
+    },
+    [storageKey]
+  );
 
   const value = {
     theme,
-    setTheme: (theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
-    },
+    resolvedTheme,
+    setTheme,
   };
 
   return (
-    <ThemeProviderContext.Provider {...{ value }}>
+    <ThemeProviderContext.Provider value={value}>
       {children}
     </ThemeProviderContext.Provider>
   );
@@ -49,9 +95,8 @@ export function ThemeProvider({
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
-
-  if (context === undefined)
+  if (context === undefined) {
     throw new Error("useTheme must be used within a ThemeProvider");
-
+  }
   return context;
 };

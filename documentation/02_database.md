@@ -298,19 +298,20 @@
 
 # I) calendars
 
-## I.1 Attributes (sin cambios)
+## I.1 Attributes
 
-| Field          | Type        | Required | Default | Notes                |
-| -------------- | ----------- | -------: | ------- | -------------------- |
-| groupId        | String(64)  |       ✅ |         | tenant               |
-| ownerProfileId | String(64)  |       ✅ |         | creador              |
-| name           | String(120) |       ✅ |         |                      |
-| color          | String(20)  |       ❌ | f97316  | hex o token          |
-| visibility     | Enum        |       ❌ | GROUP   | PRIVATE/GROUP        |
-| isDefault      | Boolean     |       ❌ | false   | personal por defecto |
-| enabled        | Boolean     |       ❌ | true    |                      |
+| Field          | Type        | Required | Default  | Notes                                  |
+| -------------- | ----------- | -------: | -------- | -------------------------------------- |
+| groupId        | String(64)  |       ✅ |          | tenant                                 |
+| ownerProfileId | String(64)  |       ✅ |          | creador                                |
+| name           | String(120) |       ✅ |          |                                        |
+| color          | String(20)  |       ❌ | violet   | token de color (violet/blue/green/etc) |
+| icon           | String(96)  |       ❌ | calendar | nombre del icono (lucide icon name)    |
+| visibility     | Enum        |       ❌ | GROUP    | PRIVATE/GROUP                          |
+| isDefault      | Boolean     |       ❌ | false    | personal por defecto                   |
+| enabled        | Boolean     |       ❌ | true     | soft delete                            |
 
-## I.2 Indexes (sin cambios)
+## I.2 Indexes
 
 - `idx_calendars_groupId` → `groupId`
 - `idx_calendars_group_owner` → (`groupId`, `ownerProfileId`)
@@ -446,23 +447,23 @@
 
 ## N.1 Attributes
 
-| Field                       | Type        | Required | Default             | Notes                                     |
-| --------------------------- | ----------- | -------: | ------------------- | ----------------------------------------- |
-| groupId                     | String(64)  |       ✅ |                     | tenant                                    |
-| profileId                   | String(64)  |       ✅ |                     | usuario                                   |
-| timezone                    | String(64)  |       ❌ | America/Mexico_City | IANA tz - preferencia usuario             |
-| dateFormat                  | String(30)  |       ❌ | DD/MM/YYYY          | preferencia formato fecha                 |
-| timeFormat                  | String(30)  |       ❌ | 24h                 | 12h / 24h                                 |
-| weekStartsOn                | Integer     |       ❌ | 0                   | 0=Sunday, 1=Monday, etc                   |
-| defaultCalendarId           | String(64)  |       ❌ |                     | calendario por defecto para crear eventos |
-| notificationsEnabled        | Boolean     |       ❌ | true                | habilitar notificaciones in-app           |
-| emailNotificationsEnabled   | Boolean     |       ❌ | true                | habilitar notificaciones email            |
-| pushNotificationsEnabled    | Boolean     |       ❌ | false               | habilitar notificaciones push             |
-| defaultReminderMinutes      | Integer     |       ❌ | 15                  | recordatorio por defecto (minutos antes)  |
-| soundEnabled                | Boolean     |       ❌ | true                | sonido para notificaciones                |
-| language                    | String(10)  |       ❌ | es                  | código idioma (es, en, etc)               |
-| theme                       | Enum        |       ❌ | SYSTEM              | LIGHT / DARK / SYSTEM                     |
-| enabled                     | Boolean     |       ❌ | true                |                                           |
+| Field                     | Type       | Required | Default             | Notes                                     |
+| ------------------------- | ---------- | -------: | ------------------- | ----------------------------------------- |
+| groupId                   | String(64) |       ✅ |                     | tenant                                    |
+| profileId                 | String(64) |       ✅ |                     | usuario                                   |
+| timezone                  | String(64) |       ❌ | America/Mexico_City | IANA tz - preferencia usuario             |
+| dateFormat                | String(30) |       ❌ | DD/MM/YYYY          | preferencia formato fecha                 |
+| timeFormat                | String(30) |       ❌ | 24h                 | 12h / 24h                                 |
+| weekStartsOn              | Integer    |       ❌ | 0                   | 0=Sunday, 1=Monday, etc                   |
+| defaultCalendarId         | String(64) |       ❌ |                     | calendario por defecto para crear eventos |
+| notificationsEnabled      | Boolean    |       ❌ | true                | habilitar notificaciones in-app           |
+| emailNotificationsEnabled | Boolean    |       ❌ | true                | habilitar notificaciones email            |
+| pushNotificationsEnabled  | Boolean    |       ❌ | false               | habilitar notificaciones push             |
+| defaultReminderMinutes    | Integer    |       ❌ | 15                  | recordatorio por defecto (minutos antes)  |
+| soundEnabled              | Boolean    |       ❌ | true                | sonido para notificaciones                |
+| language                  | String(10) |       ❌ | es                  | código idioma (es, en, etc)               |
+| theme                     | Enum       |       ❌ | SYSTEM              | LIGHT / DARK / SYSTEM                     |
+| enabled                   | Boolean    |       ❌ | true                |                                           |
 
 ## N.2 Indexes
 
@@ -481,19 +482,19 @@
 
 ## O.1 Attributes
 
-| Field      | Type         | Required | Default | Notes                      |
-| ---------- | ------------ | -------: | ------- | -------------------------- |
-| groupId    | String(64)   |       ✅ |         | tenant                     |
-| profileId  | String(64)   |       ✅ |         | usuario                    |
-| endpoint   | String(512)  |       ✅ |         | Push API endpoint          |
-| p256dh     | String(128)  |       ✅ |         | clave pública p256dh       |
-| auth       | String(64)   |       ✅ |         | clave auth                 |
-| userAgent  | String(500)  |       ❌ |         | navegador/dispositivo      |
-| ipAddress  | IP           |       ❌ |         | IP de registro             |
-| isActive   | Boolean      |       ❌ | true    | si suscripción está activa |
-| lastUsedAt | Datetime     |       ❌ |         | última vez que se usó      |
-| createdAt  | Datetime     |       ✅ |         | set API/Function           |
-| enabled    | Boolean      |       ❌ | true    |                            |
+| Field      | Type        | Required | Default | Notes                      |
+| ---------- | ----------- | -------: | ------- | -------------------------- |
+| groupId    | String(64)  |       ✅ |         | tenant                     |
+| profileId  | String(64)  |       ✅ |         | usuario                    |
+| endpoint   | String(512) |       ✅ |         | Push API endpoint          |
+| p256dh     | String(128) |       ✅ |         | clave pública p256dh       |
+| auth       | String(64)  |       ✅ |         | clave auth                 |
+| userAgent  | String(500) |       ❌ |         | navegador/dispositivo      |
+| ipAddress  | IP          |       ❌ |         | IP de registro             |
+| isActive   | Boolean     |       ❌ | true    | si suscripción está activa |
+| lastUsedAt | Datetime    |       ❌ |         | última vez que se usó      |
+| createdAt  | Datetime    |       ✅ |         | set API/Function           |
+| enabled    | Boolean     |       ❌ | true    |                            |
 
 ## O.2 Indexes
 

@@ -3,13 +3,14 @@
  * Maneja operaciones de groups y group_members
  */
 import { ID, Query } from "appwrite";
-import { databases, functions } from "../../shared/appwrite/client";
+import { databases, functions, storage } from "../../shared/appwrite/client";
 import {
   APPWRITE,
   COLLECTIONS,
   ENUMS,
   FUNCTIONS,
   DEFAULTS,
+  BUCKETS,
 } from "../constants";
 
 const { databaseId } = APPWRITE;
@@ -237,4 +238,127 @@ export async function isGroupOwner(groupId, profileId) {
     ]
   );
   return response.documents.length > 0;
+}
+
+/**
+ * Salir de un grupo (solo para miembros, no owners)
+ */
+export async function leaveGroup(groupId, profileId) {
+  // Buscar la membresía
+  const membership = await databases.listDocuments(
+    databaseId,
+    COLLECTIONS.GROUP_MEMBERS,
+    [
+      Query.equal("groupId", groupId),
+      Query.equal("profileId", profileId),
+      Query.equal("enabled", true),
+      Query.limit(1),
+    ]
+  );
+
+  if (membership.documents.length === 0) {
+    throw new Error("No eres miembro de este grupo");
+  }
+
+  const memberDoc = membership.documents[0];
+
+  // No permitir que el owner abandone el grupo
+  if (memberDoc.role === ENUMS.GROUP_MEMBER_ROLE.OWNER) {
+    throw new Error(
+      "El propietario no puede abandonar el grupo. Debes eliminarlo o transferir la propiedad."
+    );
+  }
+
+  // Soft delete de la membresía
+  return databases.updateDocument(
+    databaseId,
+    COLLECTIONS.GROUP_MEMBERS,
+    memberDoc.$id,
+    { enabled: false }
+  );
+}
+
+/**
+ * Sube un logo para un grupo y actualiza el grupo
+ */
+export async function uploadGroupLogo(groupId, file) {
+  const bucketId = BUCKETS.AVATARS; // Usamos el mismo bucket que avatares
+
+  if (!bucketId) {
+    throw new Error("Bucket de imágenes no configurado");
+  }
+
+  // Subir el archivo
+  const uploadedFile = await storage.createFile(bucketId, ID.unique(), file);
+
+  // Obtener el grupo actual para ver si hay logo anterior
+  const currentGroup = await getGroup(groupId);
+
+  // Si había un logo anterior, eliminarlo
+  if (currentGroup.logoFileId) {
+    try {
+      await storage.deleteFile(bucketId, currentGroup.logoFileId);
+    } catch (error) {
+      console.warn("Could not delete old logo:", error);
+    }
+  }
+
+  // Actualizar el grupo con el nuevo logoFileId
+  const updatedGroup = await databases.updateDocument(
+    databaseId,
+    COLLECTIONS.GROUPS,
+    groupId,
+    { logoFileId: uploadedFile.$id }
+  );
+
+  return {
+    group: updatedGroup,
+    fileId: uploadedFile.$id,
+  };
+}
+
+/**
+ * Elimina el logo de un grupo
+ */
+export async function deleteGroupLogo(groupId) {
+  const bucketId = BUCKETS.AVATARS;
+  const currentGroup = await getGroup(groupId);
+
+  if (currentGroup.logoFileId) {
+    try {
+      await storage.deleteFile(bucketId, currentGroup.logoFileId);
+    } catch (error) {
+      console.warn("Could not delete logo file:", error);
+    }
+  }
+
+  return databases.updateDocument(databaseId, COLLECTIONS.GROUPS, groupId, {
+    logoFileId: null,
+  });
+}
+
+/**
+ * Obtiene la URL de vista del logo del grupo
+ */
+export function getGroupLogoUrl(logoFileId, width = 200, height = 200) {
+  if (!logoFileId || !BUCKETS.AVATARS) return null;
+
+  return storage.getFilePreview(
+    BUCKETS.AVATARS,
+    logoFileId,
+    width,
+    height,
+    "center",
+    100
+  );
+}
+
+/**
+ * Verifica si el usuario es owner o solo miembro de un grupo
+ */
+export function getMembershipType(group, profileId) {
+  if (group.ownerProfileId === profileId) {
+    return "owner";
+  }
+  return "member";
 }

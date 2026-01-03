@@ -17,49 +17,59 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const base = clsx(
-    "relative inline-flex items-center justify-center gap-2.5 select-none font-semibold",
-    "transition-all duration-200 overflow-hidden",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-1))] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--bg))]"
+    "relative inline-flex items-center justify-center gap-2 select-none font-medium",
+    "transition-all duration-200",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-primary))] focus-visible:ring-offset-2"
   );
 
   const sizes = {
-    sm: "min-h-10 px-4 text-sm rounded-xl",
-    md: "min-h-12 px-5 text-base rounded-2xl",
-    lg: "min-h-14 px-6 text-lg rounded-2xl",
+    xs: "h-8 px-3 text-xs rounded-lg",
+    sm: "h-9 px-3.5 text-sm rounded-lg",
+    md: "h-10 px-4 text-sm rounded-xl",
+    lg: "h-11 px-5 text-base rounded-xl",
+    xl: "h-12 px-6 text-base rounded-xl",
   }[size];
 
   const variants = {
     primary: clsx(
-      "gradient-brand text-white shadow-lg",
-      "hover:shadow-xl hover:scale-[1.02]",
+      "bg-[rgb(var(--brand-primary))] text-white",
+      "hover:bg-[rgb(var(--brand-dark))]",
       "active:scale-[0.98]",
+      "shadow-sm hover:shadow-md",
       isDisabled &&
-        "opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-lg"
+        "opacity-50 cursor-not-allowed hover:bg-[rgb(var(--brand-primary))]"
     ),
     secondary: clsx(
-      "bg-[rgb(var(--bg-subtle))] text-[rgb(var(--text))]",
-      "border-2 border-[rgb(var(--card-hover))]",
-      "hover:border-[rgb(var(--brand-1))] hover:bg-[rgb(var(--card))]",
+      "bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-primary))]",
+      "border border-[rgb(var(--border-base))]",
+      "hover:bg-[rgb(var(--bg-hover))] hover:border-[rgb(var(--border-strong))]",
       "active:scale-[0.98]",
       isDisabled && "opacity-50 cursor-not-allowed"
     ),
     soft: clsx(
-      "bg-[rgb(var(--brand-1))]/10 text-[rgb(var(--brand-1))]",
-      "hover:bg-[rgb(var(--brand-1))]/20",
+      "bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))]",
+      "hover:bg-[rgb(var(--brand-primary))]/20",
       "active:scale-[0.98]",
       isDisabled && "opacity-50 cursor-not-allowed"
     ),
     ghost: clsx(
-      "bg-transparent text-[rgb(var(--text))]",
-      "hover:bg-[rgb(var(--bg-subtle))]",
+      "bg-transparent text-[rgb(var(--text-secondary))]",
+      "hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))]",
+      "active:scale-[0.98]",
+      isDisabled && "opacity-50 cursor-not-allowed"
+    ),
+    outline: clsx(
+      "bg-transparent text-[rgb(var(--text-primary))]",
+      "border border-[rgb(var(--border-base))]",
+      "hover:bg-[rgb(var(--bg-hover))]",
       "active:scale-[0.98]",
       isDisabled && "opacity-50 cursor-not-allowed"
     ),
     danger: clsx(
-      "bg-[rgb(var(--bad))] text-white",
-      "hover:opacity-90 hover:scale-[1.02]",
+      "bg-[rgb(var(--error))] text-white",
+      "hover:opacity-90",
       "active:scale-[0.98]",
-      isDisabled && "opacity-50 cursor-not-allowed hover:scale-100"
+      isDisabled && "opacity-50 cursor-not-allowed"
     ),
   }[variant];
 
@@ -71,36 +81,15 @@ export function Button({
       disabled={isDisabled}
       {...rest}
     >
-      {/* Shimmer effect on primary */}
-      {variant === "primary" && !isDisabled && (
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-          initial={{ x: "-100%" }}
-          animate={{ x: "100%" }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            repeatDelay: 3,
-            ease: "easeInOut",
-          }}
-        />
-      )}
-
       {loading ? (
         <>
-          <motion.span
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="shrink-0"
-          >
-            <Loader2 className="w-5 h-5" />
-          </motion.span>
-          <span className="relative">Cargando...</span>
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Cargando...</span>
         </>
       ) : (
         <>
           {leftIcon && <span className="shrink-0">{leftIcon}</span>}
-          <span className="relative">{children}</span>
+          <span>{children}</span>
           {rightIcon && <span className="shrink-0">{rightIcon}</span>}
         </>
       )}

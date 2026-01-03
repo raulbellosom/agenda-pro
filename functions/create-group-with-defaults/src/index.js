@@ -63,7 +63,6 @@ export default async ({ req, res, log, error }) => {
     // Optional env vars
     const defaultTimezone =
       process.env.DEFAULT_TIMEZONE || "America/Mexico_City";
-    const defaultCalendarColor = process.env.DEFAULT_CALENDAR_COLOR || "f97316";
 
     const payload = safeBodyJson(req);
 
@@ -268,7 +267,8 @@ export default async ({ req, res, log, error }) => {
       groupId,
       ownerProfileId,
       name: "Personal",
-      color: defaultCalendarColor,
+      color: "violet", // Using color token (violet/blue/green/etc)
+      icon: "calendar", // Default Lucide icon name
       visibility: "GROUP", // Using GROUP as it's the default enum value
       isDefault: true,
       enabled: true,
@@ -298,7 +298,8 @@ export default async ({ req, res, log, error }) => {
           groupId,
           ownerProfileId,
           name: "Equipo",
-          color: "3b82f6", // blue
+          color: "blue", // Using color token
+          icon: "users", // Team icon
           visibility: "GROUP",
           isDefault: false,
           enabled: true,

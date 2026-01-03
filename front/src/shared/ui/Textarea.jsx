@@ -22,17 +22,17 @@ export const Textarea = forwardRef(
             rows={rows}
             className={clsx(
               "w-full rounded-2xl",
-              "bg-[rgb(var(--bg-subtle))]",
+              "bg-[rgb(var(--bg-muted))]",
               "px-4 py-3 text-base",
-              "placeholder:text-[rgb(var(--muted))]",
+              "placeholder:text-[rgb(var(--text-muted))]",
               "border-2 border-transparent",
-              "focus:border-[rgb(var(--brand-1))] focus:bg-[rgb(var(--bg))]",
-              "hover:bg-[rgb(var(--bg))]",
+              "focus:border-[rgb(var(--brand-primary))] focus:bg-[rgb(var(--bg-base))]",
+              "hover:bg-[rgb(var(--bg-base))]",
               "outline-none transition-all duration-200",
               "resize-none",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               error &&
-                "border-[rgb(var(--bad))] focus:border-[rgb(var(--bad))]",
+                "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]",
               className
             )}
             {...props}
@@ -42,7 +42,7 @@ export const Textarea = forwardRef(
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="mt-2 text-sm text-[rgb(var(--bad))] flex items-center gap-2"
+            className="mt-2 text-sm text-[rgb(var(--error))] flex items-center gap-2"
           >
             {error}
           </motion.div>

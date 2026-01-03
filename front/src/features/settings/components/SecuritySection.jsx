@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import clsx from "clsx";
 import {
   Lock,
   Eye,
@@ -9,10 +10,19 @@ import {
   Loader2,
   Check,
   AlertTriangle,
+  Smartphone,
+  Monitor,
+  CheckCircle,
+  Info,
+  KeyRound,
+  Hash,
+  UserX,
+  Ban,
 } from "lucide-react";
 import { useUpdatePassword } from "../../../lib/hooks";
 import { Button } from "../../../components/ui/Button";
-import { Input } from "../../../components/ui/Input";
+import { SettingsCard, SettingsCardHeader } from "./SettingsCard";
+import { SettingsAlert, SettingsStrength } from "./SettingsWidgets";
 
 export function SecuritySection() {
   const updatePassword = useUpdatePassword();
@@ -82,11 +92,11 @@ export function SecuritySection() {
 
     const levels = [
       { score: 0, label: "", color: "" },
-      { score: 1, label: "Muy débil", color: "rgb(var(--bad))" },
-      { score: 2, label: "Débil", color: "rgb(var(--warn))" },
-      { score: 3, label: "Aceptable", color: "rgb(var(--warn))" },
-      { score: 4, label: "Fuerte", color: "rgb(var(--ok))" },
-      { score: 5, label: "Muy fuerte", color: "rgb(var(--ok))" },
+      { score: 1, label: "Muy débil", color: "rgb(var(--error))" },
+      { score: 2, label: "Débil", color: "rgb(var(--warning))" },
+      { score: 3, label: "Aceptable", color: "rgb(var(--warning))" },
+      { score: 4, label: "Fuerte", color: "rgb(var(--success))" },
+      { score: 5, label: "Muy fuerte", color: "rgb(var(--success))" },
     ];
 
     return levels[Math.min(score, 5)];
@@ -100,56 +110,98 @@ export function SecuritySection() {
   const passwordsMismatch =
     form.confirmPassword && form.newPassword !== form.confirmPassword;
 
+  // Password Input Component
+  const PasswordInput = ({
+    value,
+    onChange,
+    placeholder,
+    label,
+    error,
+    autoFocus,
+  }) => {
+    const [show, setShow] = useState(false);
+    return (
+      <div className="space-y-2">
+        {label && (
+          <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[rgb(var(--text-muted))]" />
+          <input
+            type={show ? "text" : "password"}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            autoFocus={autoFocus}
+            className={clsx(
+              "w-full pl-12 pr-12 py-3 rounded-xl text-sm",
+              "bg-[rgb(var(--bg-muted))] border",
+              error
+                ? "border-[rgb(var(--error))] focus:ring-[rgb(var(--error))]"
+                : "border-[rgb(var(--border-base))] focus:ring-[rgb(var(--brand-primary))]",
+              "text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))]",
+              "focus:outline-none focus:ring-2 focus:border-transparent focus:bg-[rgb(var(--bg-surface))]",
+              "transition-all duration-200"
+            )}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(!show)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-hover))] transition-all"
+          >
+            {show ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        {error && (
+          <p className="text-xs text-[rgb(var(--error))] pl-1">{error}</p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Success Message */}
-      {success && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card rounded-3xl p-6 border-[rgb(var(--ok))]/30 bg-[rgb(var(--ok))]/5"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[rgb(var(--ok))]/10 flex items-center justify-center">
-              <Check className="w-5 h-5 text-[rgb(var(--ok))]" />
-            </div>
-            <div>
-              <h3 className="font-medium text-[rgb(var(--ok))]">
-                Contraseña actualizada
-              </h3>
-              <p className="text-sm text-[rgb(var(--text-secondary))]">
-                Tu contraseña ha sido cambiada exitosamente.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {success && (
+          <SettingsAlert
+            type="success"
+            title="Contraseña actualizada"
+            description="Tu contraseña ha sido cambiada exitosamente."
+            icon={CheckCircle}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Password Section */}
-      <div className="glass-card rounded-3xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-[rgb(var(--brand-1))]/10 flex items-center justify-center">
-            <Key className="w-5 h-5 text-[rgb(var(--brand-1))]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
-              Contraseña
-            </h2>
-            <p className="text-sm text-[rgb(var(--muted))]">
-              Cambia tu contraseña de acceso
-            </p>
-          </div>
-        </div>
+      <SettingsCard>
+        <SettingsCardHeader
+          icon={Key}
+          title="Contraseña"
+          description="Cambia tu contraseña de acceso"
+        />
 
         {!showForm ? (
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-[rgb(var(--bg-subtle))]">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[rgb(var(--bg-muted))]/50"
+          >
             <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-[rgb(var(--muted))]" />
+              <div className="w-10 h-10 rounded-xl bg-[rgb(var(--bg-surface))] flex items-center justify-center">
+                <Lock className="w-5 h-5 text-[rgb(var(--text-muted))]" />
+              </div>
               <div>
                 <div className="font-medium text-[rgb(var(--text-primary))]">
                   Contraseña actual
                 </div>
-                <div className="text-sm text-[rgb(var(--muted))]">
+                <div className="text-sm text-[rgb(var(--text-muted))]">
                   ••••••••••••
                 </div>
               </div>
@@ -157,84 +209,72 @@ export function SecuritySection() {
             <Button variant="soft" size="sm" onClick={() => setShowForm(true)}>
               Cambiar
             </Button>
-          </div>
+          </motion.div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
+          <motion.form
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            onSubmit={handleSubmit}
+            className="space-y-5"
+          >
+            <PasswordInput
               label="Contraseña actual"
-              type="password"
-              placeholder="Tu contraseña actual"
               value={form.currentPassword}
               onChange={handleChange("currentPassword")}
-              icon={<Lock className="w-4 h-4" />}
-              required
+              placeholder="Tu contraseña actual"
               autoFocus
             />
 
-            <div className="pt-4 border-t border-[rgb(var(--glass-border))]">
-              <Input
+            <div className="h-px bg-gradient-to-r from-transparent via-[rgb(var(--border-base))] to-transparent" />
+
+            <div className="space-y-4">
+              <PasswordInput
                 label="Nueva contraseña"
-                type="password"
-                placeholder="Mínimo 8 caracteres"
                 value={form.newPassword}
                 onChange={handleChange("newPassword")}
-                icon={<Key className="w-4 h-4" />}
-                required
+                placeholder="Mínimo 8 caracteres"
               />
 
               {/* Strength indicator */}
               {form.newPassword && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
-                    {[1, 2, 3, 4, 5].map((level) => (
-                      <div
-                        key={level}
-                        className="h-1 flex-1 rounded-full transition-colors"
-                        style={{
-                          backgroundColor:
-                            level <= strength.score
-                              ? strength.color
-                              : "rgb(var(--bg-subtle))",
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs" style={{ color: strength.color }}>
-                    {strength.label}
-                  </p>
-                </div>
+                <SettingsStrength
+                  score={strength.score}
+                  label={strength.label}
+                />
               )}
-            </div>
 
-            <div>
-              <Input
+              <PasswordInput
                 label="Confirmar nueva contraseña"
-                type="password"
-                placeholder="Repite la nueva contraseña"
                 value={form.confirmPassword}
                 onChange={handleChange("confirmPassword")}
-                icon={<Key className="w-4 h-4" />}
-                required
+                placeholder="Repite la nueva contraseña"
                 error={
                   passwordsMismatch ? "Las contraseñas no coinciden" : undefined
                 }
               />
 
               {passwordsMatch && (
-                <p className="mt-1 text-xs text-[rgb(var(--ok))] flex items-center gap-1">
-                  <Check className="w-3 h-3" />
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-xs text-[rgb(var(--success))] flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5" />
                   Las contraseñas coinciden
-                </p>
+                </motion.p>
               )}
             </div>
 
             {updatePassword.isError && (
-              <div className="p-3 rounded-xl bg-[rgb(var(--bad))]/10 border border-[rgb(var(--bad))]/20">
-                <p className="text-sm text-[rgb(var(--bad))]">
-                  {updatePassword.error?.message ||
-                    "Error al cambiar la contraseña. Verifica que la contraseña actual sea correcta."}
-                </p>
-              </div>
+              <SettingsAlert
+                type="error"
+                title="Error"
+                description={
+                  updatePassword.error?.message ||
+                  "Error al cambiar la contraseña. Verifica que la contraseña actual sea correcta."
+                }
+              />
             )}
 
             <div className="flex gap-3 pt-2">
@@ -256,58 +296,83 @@ export function SecuritySection() {
                   form.newPassword.length < 8 ||
                   form.newPassword !== form.confirmPassword
                 }
-                isLoading={updatePassword.isPending}
+                loading={updatePassword.isPending}
                 className="flex-1"
               >
                 Cambiar contraseña
               </Button>
             </div>
-          </form>
+          </motion.form>
         )}
-      </div>
+      </SettingsCard>
 
       {/* Security Tips */}
-      <div className="glass-card rounded-3xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Shield className="w-5 h-5 text-[rgb(var(--brand-1))]" />
-          <h3 className="font-medium text-[rgb(var(--text-primary))]">
-            Consejos de seguridad
-          </h3>
-        </div>
+      <SettingsCard>
+        <SettingsCardHeader
+          icon={Shield}
+          title="Consejos de seguridad"
+          description="Mantén tu cuenta segura"
+          iconColor="success"
+        />
 
-        <ul className="space-y-3 text-sm text-[rgb(var(--text-secondary))]">
-          <li className="flex items-start gap-2">
-            <span className="text-[rgb(var(--brand-1))]">•</span>
-            Usa al menos 12 caracteres para mayor seguridad
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[rgb(var(--brand-1))]">•</span>
-            Combina mayúsculas, minúsculas, números y símbolos
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[rgb(var(--brand-1))]">•</span>
-            No uses información personal fácil de adivinar
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-[rgb(var(--brand-1))]">•</span>
-            No reutilices contraseñas de otros sitios
-          </li>
-        </ul>
-      </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              text: "Usa al menos 12 caracteres para mayor seguridad",
+              Icon: KeyRound,
+              color: "text-emerald-500",
+            },
+            {
+              text: "Combina mayúsculas, minúsculas, números y símbolos",
+              Icon: Hash,
+              color: "text-violet-500",
+            },
+            {
+              text: "No uses información personal fácil de adivinar",
+              Icon: UserX,
+              color: "text-rose-500",
+            },
+            {
+              text: "No reutilices contraseñas de otros sitios",
+              Icon: Ban,
+              color: "text-amber-500",
+            },
+          ].map((tip, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="flex items-start gap-3 p-3 rounded-xl bg-[rgb(var(--bg-muted))]/50"
+            >
+              <div className="mt-0.5 shrink-0">
+                <tip.Icon className={`w-4 h-4 ${tip.color}`} />
+              </div>
+              <span className="text-sm text-[rgb(var(--text-secondary))]">
+                {tip.text}
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </SettingsCard>
 
       {/* Sessions Info (placeholder for future) */}
-      <div className="glass-card rounded-3xl p-6 opacity-60">
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="w-5 h-5 text-[rgb(var(--warn))]" />
-          <h3 className="font-medium text-[rgb(var(--text-primary))]">
-            Sesiones activas
-          </h3>
+      <SettingsCard className="opacity-60">
+        <SettingsCardHeader
+          icon={Monitor}
+          title="Sesiones activas"
+          description="Gestiona tus dispositivos conectados"
+          iconColor="warning"
+        />
+
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-[rgb(var(--warning))]/5 border border-[rgb(var(--warning))]/20">
+          <Info className="w-5 h-5 text-[rgb(var(--warning))] shrink-0" />
+          <p className="text-sm text-[rgb(var(--text-secondary))]">
+            Próximamente podrás ver y cerrar tus sesiones activas en otros
+            dispositivos.
+          </p>
         </div>
-        <p className="text-sm text-[rgb(var(--muted))]">
-          Próximamente podrás ver y cerrar tus sesiones activas en otros
-          dispositivos.
-        </p>
-      </div>
+      </SettingsCard>
     </div>
   );
 }

@@ -9,21 +9,26 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false, // Don't auto-inject registration script
+      devOptions: {
+        enabled: false, // Disable PWA in development to avoid workbox logs
+        type: "module",
+      },
       includeAssets: ["favicon.svg", "pwa-192.png", "pwa-512.png"],
       manifest: {
         name: "Agenda Pro",
         short_name: "AgendaPro",
         description: "Agenda hermosa, rápida y fácil para todos.",
-        theme_color: "#0ea5e9",
-        background_color: "#0b0b10",
+        theme_color: "#7c3aed",
+        background_color: "#09090b",
         display: "standalone",
         start_url: "/",
         icons: [
           { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/pwa-512.png", sizes: "512x512", type: "image/png" }
-        ]
-      }
-    })
+          { src: "/pwa-512.png", sizes: "512x512", type: "image/png" },
+        ],
+      },
+    }),
   ],
-  server: { port: 5173 }
+  server: { port: 5173 },
 });

@@ -47,8 +47,11 @@ export function WorkspaceProvider({ children }) {
     refetch: refetchGroups,
   } = useGroups(profile?.$id);
 
-  const { data: calendars, isLoading: calendarsLoading } =
-    useCalendars(activeGroupId);
+  const {
+    data: calendars,
+    isLoading: calendarsLoading,
+    refetch: refetchCalendars,
+  } = useCalendars(activeGroupId);
 
   // Mutation para crear grupo
   const createGroupMutation = useCreateGroup();
@@ -128,6 +131,7 @@ export function WorkspaceProvider({ children }) {
       // Calendarios del grupo activo
       calendars: calendars || [],
       calendarsLoading,
+      refetchCalendars,
 
       // Helpers
       isOwner: activeGroup?.membershipRole === "OWNER",
@@ -149,6 +153,7 @@ export function WorkspaceProvider({ children }) {
       createGroupMutation.isPending,
       calendars,
       calendarsLoading,
+      refetchCalendars,
     ]
   );
 

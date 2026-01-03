@@ -66,6 +66,7 @@ export async function createCalendar(data) {
     ownerProfileId: data.ownerProfileId,
     name: data.name,
     color: data.color || DEFAULTS.CALENDAR_COLOR,
+    icon: data.icon || "calendar",
     visibility: data.visibility || ENUMS.CALENDAR_VISIBILITY.GROUP,
     isDefault: data.isDefault || false,
     enabled: true,

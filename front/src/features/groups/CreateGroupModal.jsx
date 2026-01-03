@@ -64,16 +64,16 @@ export function CreateGroupModal({ isOpen, onClose, onSuccess }) {
           >
             <div className="glass-elevated rounded-3xl overflow-hidden">
               {/* Header */}
-              <div className="px-6 py-5 border-b border-[rgb(var(--glass-border))] flex items-center justify-between">
+              <div className="px-6 py-5 border-b border-[rgb(var(--border-base))] flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[rgb(var(--brand-1))]/10 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-[rgb(var(--brand-1))]" />
+                  <div className="w-10 h-10 rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-[rgb(var(--brand-primary))]" />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
                       Crear espacio
                     </h2>
-                    <p className="text-sm text-[rgb(var(--muted))]">
+                    <p className="text-sm text-[rgb(var(--text-muted))]">
                       Tu espacio de trabajo
                     </p>
                   </div>
@@ -81,20 +81,20 @@ export function CreateGroupModal({ isOpen, onClose, onSuccess }) {
                 <button
                   onClick={handleClose}
                   disabled={createGroup.isPending}
-                  className="w-8 h-8 rounded-lg hover:bg-[rgb(var(--bg-subtle))] flex items-center justify-center transition-colors disabled:opacity-50"
+                  className="w-8 h-8 rounded-lg hover:bg-[rgb(var(--bg-muted))] flex items-center justify-center transition-colors disabled:opacity-50"
                 >
-                  <X className="w-5 h-5 text-[rgb(var(--muted))]" />
+                  <X className="w-5 h-5 text-[rgb(var(--text-muted))]" />
                 </button>
               </div>
 
               {/* Content */}
               <form onSubmit={handleSubmit} className="p-6 space-y-5">
                 {/* Info card */}
-                <div className="p-4 rounded-2xl bg-[rgb(var(--brand-1))]/5 border border-[rgb(var(--brand-1))]/20">
+                <div className="p-4 rounded-2xl bg-[rgb(var(--brand-primary))]/5 border border-[rgb(var(--brand-primary))]/20">
                   <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-[rgb(var(--brand-1))] flex-shrink-0 mt-0.5" />
+                    <Sparkles className="w-5 h-5 text-[rgb(var(--brand-primary))] flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-[rgb(var(--text-secondary))]">
-                      <p className="font-medium text-[rgb(var(--brand-1))]">
+                      <p className="font-medium text-[rgb(var(--brand-primary))]">
                         Un espacio para organizarte
                       </p>
                       <p className="mt-1">
@@ -125,8 +125,8 @@ export function CreateGroupModal({ isOpen, onClose, onSuccess }) {
                 />
 
                 {createGroup.isError && (
-                  <div className="p-3 rounded-xl bg-[rgb(var(--bad))]/10 border border-[rgb(var(--bad))]/20">
-                    <p className="text-sm text-[rgb(var(--bad))]">
+                  <div className="p-3 rounded-xl bg-[rgb(var(--error))]/10 border border-[rgb(var(--error))]/20">
+                    <p className="text-sm text-[rgb(var(--error))]">
                       {createGroup.error?.message ||
                         "Error al crear el espacio. Intenta de nuevo."}
                     </p>

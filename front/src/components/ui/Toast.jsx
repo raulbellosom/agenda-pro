@@ -20,10 +20,10 @@ export function ToastViewport({ toasts, onDismiss }) {
                 <div
                   className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
                     t.type === "success"
-                      ? "bg-[rgb(var(--ok))]/15 text-[rgb(var(--ok))]"
+                      ? "bg-[rgb(var(--success))]/15 text-[rgb(var(--success))]"
                       : t.type === "info"
                       ? "bg-[rgb(var(--info))]/15 text-[rgb(var(--info))]"
-                      : "bg-[rgb(var(--bad))]/15 text-[rgb(var(--bad))]"
+                      : "bg-[rgb(var(--error))]/15 text-[rgb(var(--error))]"
                   }`}
                 >
                   {t.type === "success" ? (
@@ -35,7 +35,7 @@ export function ToastViewport({ toasts, onDismiss }) {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-[rgb(var(--text))]">
+                  <div className="font-semibold text-[rgb(var(--text-primary))]">
                     {t.title}
                   </div>
                   {t.message && (
@@ -47,7 +47,7 @@ export function ToastViewport({ toasts, onDismiss }) {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgb(var(--bg-subtle))] text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                  className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-primary))] transition-colors"
                   onClick={() => onDismiss(t.id)}
                 >
                   <X className="w-4 h-4" />

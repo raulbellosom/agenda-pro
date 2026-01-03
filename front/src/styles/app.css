@@ -1,216 +1,213 @@
 @import "tailwindcss";
-@import "./tokens.css";
 
-:root {
-  color-scheme: light dark;
+/* ================================================
+   AGENDA PRO - Design Tokens & Theme
+   ================================================ */
+
+/* ===== LIGHT THEME ===== */
+:root,
+.light {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --bg-base: 250 250 250;
+  --bg-surface: 255 255 255;
+  --bg-elevated: 255 255 255;
+  --bg-muted: 243 244 246;
+  --bg-subtle: 249 250 251;
+  --bg-hover: 243 244 246;
+  --bg-active: 229 231 235;
+
+  /* Text */
+  --text-primary: 17 24 39;
+  --text-secondary: 75 85 99;
+  --text-muted: 156 163 175;
+  --text-inverted: 255 255 255;
+
+  /* Borders */
+  --border-base: 229 231 235;
+  --border-muted: 243 244 246;
+  --border-strong: 209 213 219;
+  --border-hover: 209 213 219;
+
+  /* Brand (RGB for use with rgb()) */
+  --brand-primary: 124 58 237;
+  --brand-secondary: 139 92 246;
+  --brand-light: 167 139 250;
+  --brand-dark: 109 40 217;
+
+  /* Semantic */
+  --success: 34 197 94;
+  --warning: 234 179 8;
+  --error: 239 68 68;
+  --info: 59 130 246;
+
+  /* Calendar colors */
+  --cal-violet: 139 92 246;
+  --cal-blue: 59 130 246;
+  --cal-cyan: 6 182 212;
+  --cal-teal: 20 184 166;
+  --cal-emerald: 16 185 129;
+  --cal-amber: 245 158 11;
+  --cal-orange: 249 115 22;
+  --cal-rose: 244 63 94;
+  --cal-pink: 236 72 153;
 }
 
-.bg-app {
-  background: rgb(var(--bg));
-}
-.bg-app-subtle {
-  background: rgb(var(--bg-subtle));
-}
-.text-app {
-  color: rgb(var(--text));
-}
-.text-secondary {
-  color: rgb(var(--text-secondary));
+/* ===== DARK THEME ===== */
+.dark {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --bg-base: 9 9 11;
+  --bg-surface: 24 24 27;
+  --bg-elevated: 39 39 42;
+  --bg-muted: 39 39 42;
+  --bg-subtle: 24 24 27;
+  --bg-hover: 39 39 42;
+  --bg-active: 63 63 70;
+
+  /* Text */
+  --text-primary: 250 250 250;
+  --text-secondary: 161 161 170;
+  --text-muted: 113 113 122;
+  --text-inverted: 9 9 11;
+
+  /* Borders */
+  --border-base: 39 39 42;
+  --border-muted: 24 24 27;
+  --border-strong: 63 63 70;
+  --border-hover: 63 63 70;
+
+  /* Brand */
+  --brand-primary: 139 92 246;
+  --brand-secondary: 167 139 250;
+  --brand-light: 196 181 253;
+  --brand-dark: 124 58 237;
 }
 
+/* ===== GLOBAL STYLES ===== */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background-color: rgb(var(--bg-base));
+  color: rgb(var(--text-primary));
+  min-height: 100dvh;
+}
+
+/* Remove tap highlight on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
-  margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
-    "Apple Color Emoji", "Segoe UI Emoji";
-  line-height: 1.4;
-  background: rgb(var(--bg));
-  color: rgb(var(--text));
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--text-muted) / 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--text-muted) / 0.5);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--text-muted) / 0.3) transparent;
+}
+
+/* Selection */
+::selection {
+  background: rgb(var(--brand-primary) / 0.2);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid rgb(var(--brand-primary));
+  outline-offset: 2px;
+}
+
+/* Links */
 a {
   color: inherit;
+  text-decoration: none;
 }
 
-::selection {
-  background: rgba(var(--brand-1) / 0.35);
-}
-
-:focus-visible {
-  outline: 2px solid rgba(var(--brand-1) / 0.9);
-  outline-offset: 2px;
-  border-radius: 12px;
-}
-
-/* Glass morphism utilities - Dark mode optimized */
-.glass {
-  background: rgba(var(--glass-bg) / 0.85);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(var(--glass-border) / 0.3);
-}
-
-.glass-card {
-  background: rgba(var(--glass-bg) / 0.9);
-  backdrop-filter: blur(32px) saturate(160%);
-  -webkit-backdrop-filter: blur(32px) saturate(160%);
-  border: 1px solid rgba(var(--glass-border) / 0.4);
-  box-shadow: var(--shadow-md);
-}
-
-.glass-elevated {
-  background: rgba(var(--glass-bg) / 0.95);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(var(--glass-border) / 0.5);
-  box-shadow: var(--shadow-lg);
-}
-
-/* Light mode glass adjustments */
-@media (prefers-color-scheme: light) {
-  .glass {
-    background: rgba(var(--glass-bg) / 0.7);
-    border: 1px solid rgba(var(--glass-border) / 0.5);
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-
-  .glass-card {
-    background: rgba(var(--glass-bg) / 0.8);
-    border: 1px solid rgba(var(--glass-border) / 0.6);
-  }
-
-  .glass-elevated {
-    background: rgba(var(--glass-bg) / 0.9);
-    border: 1px solid rgba(var(--glass-border) / 0.7);
-  }
-}
-
-/* Gradient utilities */
-.bg-mesh {
-  background: var(--gradient-mesh);
-}
-.gradient-brand {
-  background: var(--gradient-brand);
-}
-.gradient-glow {
-  background: var(--gradient-glow);
-}
-
-/* Glow effects */
-.glow-brand {
-  box-shadow: var(--shadow-glow);
-}
-
-.glow-brand-lg {
-  box-shadow: var(--shadow-glow-lg);
-}
-
-/* Text gradient */
-.text-gradient-brand {
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Animated gradient border */
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
-.animated-border {
-  --angle: 0deg;
-  border: 2px solid transparent;
-  background: linear-gradient(rgb(var(--card)), rgb(var(--card))) padding-box,
-    conic-gradient(
-        from var(--angle),
-        rgb(var(--brand-1)),
-        rgb(var(--accent-1)),
-        rgb(var(--accent-2)),
-        rgb(var(--brand-1))
-      )
-      border-box;
-  animation: rotate-border 4s linear infinite;
-}
-
-@keyframes rotate-border {
   to {
-    --angle: 360deg;
+    opacity: 1;
   }
 }
 
-/* Shimmer effect */
-.shimmer {
-  position: relative;
-  overflow: hidden;
-}
-
-.shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* Float animation */
-@keyframes float {
+@keyframes pulse {
   0%,
   100% {
-    transform: translateY(0px);
+    opacity: 1;
   }
   50% {
-    transform: translateY(-10px);
+    opacity: 0.5;
   }
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-/* Pulse glow */
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 20px rgba(var(--brand-1) / 0.3);
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
   }
-  50% {
-    box-shadow: 0 0 40px rgba(var(--brand-1) / 0.5),
-      0 0 60px rgba(var(--brand-1) / 0.2);
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out;
+}
+.animate-slideUp {
+  animation: slideUp 200ms ease-out;
+}
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-    animation-duration: 0.001ms !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-  .shimmer::after {
-    animation: none;
-  }
-  .animated-border {
-    animation: none;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

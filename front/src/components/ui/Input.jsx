@@ -30,24 +30,25 @@ export function Input({
       )}
       <div className="relative group">
         {Icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--muted))] group-focus-within:text-[rgb(var(--brand-1))] transition-colors duration-200">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--text-muted))] group-focus-within:text-[rgb(var(--brand-primary))] transition-colors duration-200">
             <Icon className="w-5 h-5" />
           </div>
         )}
         <input
           type={inputType}
           className={clsx(
-            "w-full min-h-[var(--tap)] rounded-2xl",
-            "bg-[rgb(var(--bg-subtle))]",
-            "px-4 text-base",
-            "placeholder:text-[rgb(var(--muted))]",
-            "border-2 border-transparent",
-            "focus:border-[rgb(var(--brand-1))] focus:bg-[rgb(var(--bg))]",
-            "hover:bg-[rgb(var(--bg))]",
+            "w-full min-h-[var(--tap)] rounded-xl",
+            "bg-[rgb(var(--bg-muted))]",
+            "px-4 text-base text-[rgb(var(--text-primary))]",
+            "placeholder:text-[rgb(var(--text-muted))]",
+            "border border-[rgb(var(--border-base))]",
+            "focus:border-[rgb(var(--brand-primary))] focus:bg-[rgb(var(--bg-surface))]",
+            "hover:border-[rgb(var(--border-hover))]",
             "outline-none transition-all duration-200",
             Icon && "pl-12",
             isPassword && "pr-12",
-            error && "border-[rgb(var(--bad))] focus:border-[rgb(var(--bad))]",
+            error &&
+              "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]",
             className
           )}
           {...rest}
@@ -58,9 +59,9 @@ export function Input({
             onClick={() => setShowPassword(!showPassword)}
             className={clsx(
               "absolute right-4 top-1/2 -translate-y-1/2",
-              "text-[rgb(var(--muted))] hover:text-[rgb(var(--text))]",
+              "text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-primary))]",
               "transition-colors duration-200",
-              "p-1 rounded-lg hover:bg-white/5"
+              "p-1 rounded-lg hover:bg-[rgb(var(--bg-muted))]"
             )}
             tabIndex={-1}
           >
@@ -89,7 +90,7 @@ export function Input({
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="mt-2 text-sm text-[rgb(var(--bad))] flex items-center gap-1.5"
+            className="mt-2 text-sm text-[rgb(var(--error))] flex items-center gap-1.5"
           >
             <AlertCircle className="w-4 h-4" />
             {error}
@@ -100,7 +101,7 @@ export function Input({
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="mt-2 text-sm text-[rgb(var(--muted))]"
+            className="mt-2 text-sm text-[rgb(var(--text-muted))]"
           >
             {hint}
           </motion.div>
