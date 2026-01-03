@@ -73,11 +73,8 @@ export function useLongPress(
 
   const start = useCallback(
     (event) => {
-      // IMPORTANTE: Detener propagación inmediatamente para prevenir
-      // que las celdas/contenedores padres reciban el evento
-      if (event && event.stopPropagation) {
-        event.stopPropagation();
-      }
+      // NO detener propagación al inicio - permitir que el gesto de swipe detecte el evento
+      // Solo detendremos propagación cuando se confirme el long press
 
       // Ignorar si es multitouch (más de un dedo)
       if (event.touches && event.touches.length > 1) {
@@ -122,8 +119,8 @@ export function useLongPress(
 
   const clear = useCallback(
     (event, shouldTriggerClick = true) => {
-      // Detener propagación también al terminar
-      if (event && event.stopPropagation) {
+      // Solo detener propagación si fue un long press confirmado
+      if (isLongPress.current && event && event.stopPropagation) {
         event.stopPropagation();
       }
 
@@ -168,10 +165,7 @@ export function useLongPress(
   // Cancelar si hay un segundo toque
   const handleTouchStart = useCallback(
     (event) => {
-      // Detener propagación inmediatamente
-      if (event && event.stopPropagation) {
-        event.stopPropagation();
-      }
+      // NO detener propagación inmediatamente - permitir que el swipe funcione
 
       if (event.touches && event.touches.length > 1) {
         // Multitouch detectado, cancelar
@@ -189,17 +183,23 @@ export function useLongPress(
 
   return {
     onMouseDown: (e) => {
-      if (e && e.stopPropagation) e.stopPropagation();
+      // NO detener propagación - permitir que el swipe funcione
       start(e);
     },
     onTouchStart: handleTouchStart,
     onMouseUp: (e) => {
-      if (e && e.stopPropagation) e.stopPropagation();
+      // Solo detener propagación si fue long press
+      if (isLongPress.current && e && e.stopPropagation) {
+        e.stopPropagation();
+      }
       clear(e);
     },
     onMouseLeave: (e) => clear(e, false),
     onTouchEnd: (e) => {
-      if (e && e.stopPropagation) e.stopPropagation();
+      // Solo detener propagación si fue long press
+      if (isLongPress.current && e && e.stopPropagation) {
+        e.stopPropagation();
+      }
       clear(e);
     },
     onTouchCancel: (e) => clear(e, false),

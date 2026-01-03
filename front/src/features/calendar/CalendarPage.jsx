@@ -1724,12 +1724,14 @@ function SingleMonthSwipeView({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Month header - fijo */}
-      <div className="shrink-0 py-2 px-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))]">
-        <h2 className="text-base font-semibold text-[rgb(var(--text-primary))] capitalize text-center">
-          {format(currentDate, "MMMM yyyy", { locale: es })}
-        </h2>
-      </div>
+      {/* Month header - solo visible durante swipe */}
+      {isDragging && (
+        <div className="shrink-0 py-2 px-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))]">
+          <h2 className="text-base font-semibold text-[rgb(var(--text-primary))] capitalize text-center">
+            {format(currentDate, "MMMM yyyy", { locale: es })}
+          </h2>
+        </div>
+      )}
 
       {/* Week days header - fijo */}
       <div className="grid grid-cols-7 shrink-0 border-b border-[rgb(var(--border-base))]">
@@ -1748,7 +1750,7 @@ function SingleMonthSwipeView({
         {...swipeBindings()}
         className="flex-1 overflow-hidden"
         style={{
-          touchAction: "pan-x", // Permitir scroll horizontal pero controlar vertical
+          touchAction: "none", // Controlar completamente los gestos
           ...swipeStyle,
         }}
       >
@@ -1779,85 +1781,108 @@ function SingleMonthSwipeView({
             }}
             className="h-full grid grid-cols-7 auto-rows-fr border-l border-t border-[rgb(var(--border-base))]"
           >
-            {calendarDays.map((day) => {
-              const dateKey = format(day, "yyyy-MM-dd");
-              const dayEvents = eventsByDay[dateKey] || [];
-              const isCurrentMonth = isSameMonth(day, currentDate);
-              const isSelected = isSameDay(day, selectedDate);
-              const isTodayDate = isToday(day);
-
-              const handleDayClick = () => {
-                onSelectDate(day);
-              };
-
-              const dayLongPress = useLongPress(
-                (e, position) => {
-                  onDayLongPress?.(day, position || { x: 0, y: 0 });
-                },
-                null,
-                { delay: 500 }
-              );
-
-              return (
-                <button
-                  key={day.toISOString()}
-                  onClick={handleDayClick}
-                  {...dayLongPress}
-                  className={`
-                    flex flex-col p-1 sm:p-1.5 min-h-[70px] sm:min-h-[90px] lg:min-h-[100px] h-full border-r border-b border-[rgb(var(--border-base))] transition-all text-left
-                    ${
-                      isSelected
-                        ? "bg-[rgb(var(--brand-primary))]/10 ring-2 ring-inset ring-[rgb(var(--brand-primary))]"
-                        : isTodayDate
-                        ? "bg-[rgb(var(--brand-primary))]/5"
-                        : "hover:bg-[rgb(var(--bg-hover))]"
-                    }
-                    ${!isCurrentMonth ? "opacity-40" : ""}
-                  `}
-                >
-                  <div className="flex items-center justify-center mb-1">
-                    <span
-                      className={`text-xs sm:text-sm font-medium ${
-                        isTodayDate
-                          ? "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center text-[10px] sm:text-xs"
-                          : isSelected
-                          ? "text-[rgb(var(--brand-primary))]"
-                          : "text-[rgb(var(--text-primary))]"
-                      }`}
-                    >
-                      {format(day, "d")}
-                    </span>
-                  </div>
-
-                  {/* Events */}
-                  <div className="flex-1 space-y-0.5 overflow-hidden">
-                    {dayEvents.slice(0, 3).map((event) => (
-                      <MonthEventCard
-                        key={event.$id}
-                        event={event}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick(event);
-                        }}
-                        onLongPress={(e, pos) => {
-                          e?.stopPropagation?.();
-                          onEventLongPress(event, pos);
-                        }}
-                      />
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <div className="text-[9px] text-[rgb(var(--text-muted))] pl-1">
-                        +{dayEvents.length - 3} más
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+            {calendarDays.map((day) => (
+              <MobileDayCell
+                key={day.toISOString()}
+                day={day}
+                currentDate={currentDate}
+                selectedDate={selectedDate}
+                eventsByDay={eventsByDay}
+                onSelectDate={onSelectDate}
+                onEventClick={onEventClick}
+                onEventLongPress={onEventLongPress}
+                onDayLongPress={onDayLongPress}
+              />
+            ))}
           </motion.div>
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+// Mobile Day Cell Component (extracted to avoid hooks in loop)
+function MobileDayCell({
+  day,
+  currentDate,
+  selectedDate,
+  eventsByDay,
+  onSelectDate,
+  onEventClick,
+  onEventLongPress,
+  onDayLongPress,
+}) {
+  const dateKey = format(day, "yyyy-MM-dd");
+  const dayEvents = eventsByDay[dateKey] || [];
+  const isCurrentMonth = isSameMonth(day, currentDate);
+  const isSelected = isSameDay(day, selectedDate);
+  const isTodayDate = isToday(day);
+
+  const handleDayClick = () => {
+    onSelectDate(day);
+  };
+
+  const dayLongPress = useLongPress(
+    (e, position) => {
+      onDayLongPress?.(day, position || { x: 0, y: 0 });
+    },
+    null,
+    { delay: 500 }
+  );
+
+  return (
+    <button
+      onClick={handleDayClick}
+      {...dayLongPress}
+      className={`
+        flex flex-col p-1 sm:p-1.5 min-h-[70px] sm:min-h-[90px] lg:min-h-[100px] h-full border-r border-b border-[rgb(var(--border-base))] transition-all text-left
+        ${
+          isSelected
+            ? "bg-[rgb(var(--brand-primary))]/10 ring-2 ring-inset ring-[rgb(var(--brand-primary))]"
+            : isTodayDate
+            ? "bg-[rgb(var(--brand-primary))]/5"
+            : "hover:bg-[rgb(var(--bg-hover))]"
+        }
+        ${!isCurrentMonth ? "opacity-40" : ""}
+      `}
+    >
+      <div className="flex items-center justify-center mb-1">
+        <span
+          className={`text-xs sm:text-sm font-medium ${
+            isTodayDate
+              ? "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center text-[10px] sm:text-xs"
+              : isSelected
+              ? "text-[rgb(var(--brand-primary))]"
+              : "text-[rgb(var(--text-primary))]"
+          }`}
+        >
+          {format(day, "d")}
+        </span>
+      </div>
+
+      {/* Events */}
+      <div className="flex-1 space-y-0.5 overflow-hidden">
+        {dayEvents.slice(0, 3).map((event) => (
+          <MonthEventCard
+            key={event.$id}
+            event={event}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEventClick(event);
+            }}
+            onLongPress={(e, pos) => {
+              e?.stopPropagation?.();
+              onEventLongPress(event, pos);
+            }}
+          />
+        ))}
+        {dayEvents.length > 3 && (
+          <div className="text-[9px] text-[rgb(var(--text-muted))] pl-1">
+            +{dayEvents.length - 3} más
+          </div>
+        )}
+      </div>
+    </button>
   );
 }
 
@@ -1895,7 +1920,7 @@ function MonthView({
   const weekDaysMobile = getWeekDayNames(weekStartsOn, "short");
 
   return (
-    <div className="h-full flex flex-col border-l border-t border-[rgb(var(--border-base))]">
+    <div className="h-full flex flex-col border-l border-t border-[rgb(var(--border-base))] overflow-hidden">
       {/* Week days header */}
       <div className="grid grid-cols-7">
         {weekDays.map((day, i) => (
@@ -2860,8 +2885,8 @@ export function CalendarPage() {
           ) : (
             // Contenedor con gestos de swipe para navegación
             <div
-              {...swipeBindings()}
               className="flex-1 overflow-hidden"
+              {...swipeBindings()}
               style={{
                 touchAction: "pan-y",
                 ...swipeStyle,
@@ -2879,7 +2904,7 @@ export function CalendarPage() {
                     duration: isDragging ? 0 : 0.25,
                     ease: "easeInOut",
                   }}
-                  className="h-full overflow-hidden"
+                  className="h-full"
                 >
                   {viewMode === VIEW_MODES.DAY && (
                     <DayView
