@@ -10,9 +10,35 @@ function must(key) {
 // This helper makes it safe and always returns an object.
 function safeBodyJson(req) {
   try {
+    // Try bodyJson first (Appwrite Functions 1.6+)
     const val = req?.bodyJson;
-    if (!val) return {};
-    if (typeof val === "object") return val;
+    if (val && typeof val === "object") return val;
+
+    // Fallback: try to parse body as string
+    if (req?.body) {
+      if (typeof req.body === "object") return req.body;
+      if (typeof req.body === "string" && req.body.trim()) {
+        try {
+          return JSON.parse(req.body);
+        } catch {
+          // Not valid JSON
+        }
+      }
+    }
+
+    // Fallback: try bodyText
+    if (
+      req?.bodyText &&
+      typeof req.bodyText === "string" &&
+      req.bodyText.trim()
+    ) {
+      try {
+        return JSON.parse(req.bodyText);
+      } catch {
+        // Not valid JSON
+      }
+    }
+
     return {};
   } catch {
     return {};

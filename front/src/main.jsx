@@ -7,7 +7,10 @@ import { QueryClient } from "@tanstack/react-query";
 
 import "./styles/app.css";
 import { router } from "./app/router/router";
-import { AppProviders } from "./app/providers/AppProviders";
+import { AuthProvider } from "./app/providers/AuthProvider";
+import { WorkspaceProvider } from "./app/providers/WorkspaceProvider";
+import { ThemeProvider } from "./shared/theme/ThemeProvider";
+import { RenderErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,19 +18,28 @@ const queryClient = new QueryClient({
       retry: 1,
       staleTime: 30_000,
       gcTime: 1000 * 60 * 60 * 24,
-      refetchOnWindowFocus: false
-    }
-  }
+      refetchOnWindowFocus: false,
+    },
+  },
 });
 
 const persister = createSyncStoragePersister({ storage: window.localStorage });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-      <AppProviders>
-        <RouterProvider router={router} />
-      </AppProviders>
-    </PersistQueryClientProvider>
+    <RenderErrorBoundary>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister }}
+      >
+        <ThemeProvider defaultTheme="system" storageKey="agenda-pro-theme">
+          <AuthProvider>
+            <WorkspaceProvider>
+              <RouterProvider router={router} />
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </PersistQueryClientProvider>
+    </RenderErrorBoundary>
   </React.StrictMode>
 );

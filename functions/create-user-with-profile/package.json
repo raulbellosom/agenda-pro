@@ -4,7 +4,7 @@
   "type": "module",
   "main": "src/index.js",
   "dependencies": {
-    "node-appwrite": "20.0.0"
+    "node-appwrite": "17.0.0"
   },
   "name": "create-user-with-profile"
 }

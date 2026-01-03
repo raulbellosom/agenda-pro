@@ -16,6 +16,7 @@ export default async ({ req, res, log, error }) => {
   let createdProfile = null;
   let groupMemberDoc = null;
   let userRoleDoc = null;
+  let userSettingsDoc = null;
 
   try {
     const client = new Client()
@@ -33,6 +34,8 @@ export default async ({ req, res, log, error }) => {
     const groupMembersCollectionId =
       process.env.COLLECTION_GROUP_MEMBERS_ID || "";
     const userRolesCollectionId = process.env.COLLECTION_USER_ROLES_ID || "";
+    const userSettingsCollectionId =
+      process.env.COLLECTION_USER_SETTINGS_ID || "";
     const defaultGroupRole = process.env.DEFAULT_GROUP_ROLE || "MEMBER";
     const defaultRoleId = process.env.DEFAULT_ROLE_ID || "";
 
@@ -176,12 +179,53 @@ export default async ({ req, res, log, error }) => {
       }
     }
 
+    // 5) Optional: create user_settings with defaults (if groupId provided)
+    // user_settings is per-group, so we only create it when user joins a group
+    if (payload.groupId && userSettingsCollectionId) {
+      try {
+        log?.("Creating user settings with defaults...");
+        userSettingsDoc = await databases.createDocument(
+          databaseId,
+          userSettingsCollectionId,
+          ID.unique(),
+          {
+            // Required fields
+            groupId: String(payload.groupId),
+            profileId: createdProfile.$id,
+            // Optional with defaults (from schema)
+            timezone: String(payload.timezone || "America/Mexico_City"),
+            dateFormat: String(payload.dateFormat || "DD/MM/YYYY"),
+            timeFormat: String(payload.timeFormat || "24h"),
+            weekStartsOn: Number(payload.weekStartsOn ?? 0), // 0 = Sunday
+            notificationsEnabled: payload.notificationsEnabled ?? true,
+            emailNotificationsEnabled:
+              payload.emailNotificationsEnabled ?? true,
+            pushNotificationsEnabled: payload.pushNotificationsEnabled ?? false,
+            defaultReminderMinutes: Number(
+              payload.defaultReminderMinutes ?? 15
+            ),
+            soundEnabled: payload.soundEnabled ?? true,
+            language: String(payload.language || "es"),
+            theme: String(payload.theme || "SYSTEM"),
+            enabled: true,
+          }
+        );
+        log?.(`User settings created: ${userSettingsDoc.$id}`);
+      } catch (settingsError) {
+        log?.(
+          `Warning: Failed to create user settings: ${settingsError.message}`
+        );
+        // No fallar todo el proceso - settings pueden crearse después
+      }
+    }
+
     return json(res, 201, {
       ok: true,
       user: createdUser,
       profile: createdProfile,
       groupMember: groupMemberDoc,
       userRole: userRoleDoc,
+      userSettings: userSettingsDoc,
     });
   } catch (e) {
     try {
