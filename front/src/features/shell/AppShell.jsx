@@ -52,10 +52,12 @@ import {
   Car,
   BookOpen,
   Gamepad2,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 import { useTheme } from "../../shared/theme/useTheme";
+import { useDeleteCalendar } from "../../lib/hooks/useCalendars";
 import { getAvatarUrl } from "../../lib/services/profileService";
 import { getGroupLogoUrl } from "../../lib/hooks/useGroups";
 import { CreateCalendarModal } from "../calendar/CreateCalendarModal";
@@ -245,6 +247,7 @@ export function AppShell() {
     createFirstGroup,
   } = useWorkspace();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const deleteCalendar = useDeleteCalendar();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -266,6 +269,8 @@ export function AppShell() {
   // Estados para calendarios en móvil
   const [mobileVisibleCalendars, setMobileVisibleCalendars] = useState([]);
   const [mobileCalendarMenuId, setMobileCalendarMenuId] = useState(null);
+  const [sharingCalendar, setSharingCalendar] = useState(null);
+  const [deletingCalendar, setDeletingCalendar] = useState(null);
 
   // Debounce para guardar tema - evita múltiples peticiones
   const themeTimeoutRef = useRef(null);
@@ -444,8 +449,12 @@ export function AppShell() {
       >
         {/* Logo */}
         <div className="flex items-center h-[65px] px-4 border-b border-[rgb(var(--border-base))]">
-          <div className="w-9 h-9 rounded-xl bg-[rgb(var(--brand-primary))] flex items-center justify-center shrink-0">
-            <Calendar className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0">
+            <img
+              src="/logo.png"
+              alt="Agenda Pro"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div
             className={`flex items-center flex-1 ml-3 overflow-hidden transition-all duration-300 ${
@@ -453,13 +462,10 @@ export function AppShell() {
             }`}
           >
             <div className="whitespace-nowrap flex-1">
-              <span className="font-bold text-[rgb(var(--text-primary))]">
+              <span className="font-bold text-[rgb(var(--brand-primary))]">
                 Agenda
               </span>
-              <span className="font-bold text-[rgb(var(--brand-primary))]">
-                {" "}
-                Pro
-              </span>
+              <span className="font-bold text-orange-500"> Pro</span>
             </div>
           </div>
         </div>
@@ -676,15 +682,17 @@ export function AppShell() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[rgb(var(--brand-primary))] flex items-center justify-center">
-              <Calendar className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="Agenda Pro"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <span className="font-bold text-[rgb(var(--text-primary))]">
+            <span className="font-bold text-[rgb(var(--brand-primary))]">
               Agenda
             </span>
-            <span className="font-bold text-[rgb(var(--brand-primary))]">
-              Pro
-            </span>
+            <span className="font-bold text-orange-500">Pro</span>
           </div>
 
           {/* Notification & Theme toggle en móvil */}
@@ -1404,17 +1412,18 @@ export function AppShell() {
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-[rgb(var(--border-base))]">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[rgb(var(--brand-primary))] flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-white" />
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center">
+                    <img
+                      src="/logo.png"
+                      alt="Agenda Pro"
+                      className="w-full h-full object-contain"
+                    />
                   </div>
                   <div>
-                    <span className="font-bold text-[rgb(var(--text-primary))]">
+                    <span className="font-bold text-[rgb(var(--brand-primary))]">
                       Agenda
                     </span>
-                    <span className="font-bold text-[rgb(var(--brand-primary))]">
-                      {" "}
-                      Pro
-                    </span>
+                    <span className="font-bold text-orange-500"> Pro</span>
                   </div>
                 </div>
                 <button
@@ -1670,8 +1679,8 @@ export function AppShell() {
                                     </button>
                                     <button
                                       onClick={() => {
-                                        // TODO: Share calendar
                                         setMobileCalendarMenuId(null);
+                                        setSharingCalendar(calendar);
                                       }}
                                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
                                     >
@@ -1680,8 +1689,8 @@ export function AppShell() {
                                     </button>
                                     <button
                                       onClick={() => {
-                                        // TODO: Delete calendar
                                         setMobileCalendarMenuId(null);
+                                        setDeletingCalendar(calendar);
                                       }}
                                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
                                     >
@@ -1792,6 +1801,86 @@ export function AppShell() {
           bucketId={env.bucketAvatarsId}
         />
       )}
+
+      {/* Delete Calendar Confirmation */}
+      <AnimatePresence>
+        {deletingCalendar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50"
+              onClick={() =>
+                !deleteCalendar.isPending && setDeletingCalendar(null)
+              }
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-[rgb(var(--bg-elevated))] rounded-2xl shadow-xl border border-[rgb(var(--border-base))] p-6 max-w-sm w-full"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[rgb(var(--error))]/10 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-[rgb(var(--error))]" />
+                </div>
+                <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-2">
+                  Eliminar calendario
+                </h3>
+                <p className="text-sm text-[rgb(var(--text-muted))] mb-6">
+                  ¿Estás seguro de que deseas eliminar{" "}
+                  <span className="font-medium text-[rgb(var(--text-secondary))]">
+                    "{deletingCalendar.name}"
+                  </span>
+                  ? Esta acción eliminará también todos los eventos asociados.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeletingCalendar(null)}
+                    disabled={deleteCalendar.isPending}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[rgb(var(--text-secondary))] bg-[rgb(var(--bg-muted))] hover:bg-[rgb(var(--bg-hover))] transition-colors disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      deleteCalendar.mutate(deletingCalendar.$id, {
+                        onSuccess: () => {
+                          // Remover de calendarios visibles
+                          setMobileVisibleCalendars((prev) =>
+                            prev.filter((id) => id !== deletingCalendar.$id)
+                          );
+                          setDeletingCalendar(null);
+                        },
+                      });
+                    }}
+                    disabled={deleteCalendar.isPending}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[rgb(var(--error))] hover:opacity-90 transition-opacity disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {deleteCalendar.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Eliminando...
+                      </>
+                    ) : (
+                      "Eliminar"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

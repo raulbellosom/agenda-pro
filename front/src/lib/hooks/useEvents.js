@@ -123,6 +123,57 @@ export function useDeleteEvent() {
 }
 
 /**
+ * Hook para duplicar un evento
+ */
+export function useDuplicateEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ eventId, newData }) => {
+      // Obtener el evento original
+      const originalEvent = await eventService.getEvent(eventId);
+
+      // Crear el nuevo evento con los datos del original más las modificaciones
+      const duplicatedEvent = {
+        ...originalEvent,
+        title: newData?.title || `${originalEvent.title} (copia)`,
+        startAt: newData?.startAt || originalEvent.startAt,
+        endAt: newData?.endAt || originalEvent.endAt,
+      };
+
+      // Eliminar campos que no deben duplicarse
+      delete duplicatedEvent.$id;
+      delete duplicatedEvent.$createdAt;
+      delete duplicatedEvent.$updatedAt;
+      delete duplicatedEvent.$permissions;
+      delete duplicatedEvent.$collectionId;
+      delete duplicatedEvent.$databaseId;
+
+      return eventService.createEvent(duplicatedEvent);
+    },
+    onSuccess: (newEvent) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
+    },
+  });
+}
+
+/**
+ * Hook para mover un evento a otro calendario
+ */
+export function useMoveEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ eventId, newCalendarId }) => {
+      return eventService.updateEvent(eventId, { calendarId: newCalendarId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });
+    },
+  });
+}
+
+/**
  * Hook para buscar eventos
  */
 export function useSearchEvents(groupId, searchTerm) {

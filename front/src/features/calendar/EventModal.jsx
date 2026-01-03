@@ -160,19 +160,9 @@ const getCalendarIcon = (iconId) => CALENDAR_ICONS[iconId] || Calendar;
 const getCalendarColor = (color) =>
   CALENDAR_COLORS[color] || CALENDAR_COLORS.violet;
 
-// Time options for dropdowns
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const hours = Math.floor(i / 2);
-  const minutes = (i % 2) * 30;
-  return {
-    value: `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`,
-    label: `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`,
-  };
-});
+// Generate hours and minutes arrays for time picker
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 // Duration options
 const DURATION_OPTIONS = [
@@ -255,7 +245,7 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
               setShowAll(false);
             }}
             placeholder="Buscar calendario..."
-            className={`w-full h-10 pl-10 rounded-xl border-2 border-[rgb(var(--border-base))] bg-[rgb(var(--bg-elevated))] text-sm text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:border-[rgb(var(--brand-primary))] transition-colors ${
+            className={`w-full h-10 pl-10 rounded-xl border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-elevated))] text-sm text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all ${
               searchQuery ? "pr-10" : "pr-4"
             }`}
           />
@@ -290,9 +280,9 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => onChange(calendar.$id)}
-                className={`w-full p-3 rounded-xl border-2 transition-all duration-200 text-left flex items-center gap-3 ${
+                className={`w-full p-3 rounded-xl border transition-all duration-200 text-left flex items-center gap-3 ${
                   isSelected
-                    ? `border-[rgb(var(--brand-primary))] bg-[rgb(var(--brand-primary))]/10`
+                    ? `border-[rgb(var(--brand-primary))] bg-[rgb(var(--brand-primary))]/10 ring-2 ring-[rgb(var(--brand-primary))]/20`
                     : "border-[rgb(var(--border-base))] hover:border-[rgb(var(--border-hover))] bg-[rgb(var(--bg-elevated))]"
                 }`}
               >
@@ -350,7 +340,7 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={() => setShowAll(true)}
-            className="w-full py-2.5 rounded-xl border-2 border-dashed border-[rgb(var(--border-base))] text-sm text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-secondary))] hover:border-[rgb(var(--border-hover))] transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl border border-dashed border-[rgb(var(--border-base))] text-sm text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-secondary))] hover:border-[rgb(var(--border-hover))] transition-colors flex items-center justify-center gap-2"
           >
             <ChevronDown className="w-4 h-4" />
             Ver {hiddenCount} calendario{hiddenCount > 1 ? "s" : ""} más
@@ -364,7 +354,7 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={() => setShowAll(false)}
-            className="w-full py-2.5 rounded-xl border-2 border-dashed border-[rgb(var(--border-base))] text-sm text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-secondary))] hover:border-[rgb(var(--border-hover))] transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl border border-dashed border-[rgb(var(--border-base))] text-sm text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-secondary))] hover:border-[rgb(var(--border-hover))] transition-colors flex items-center justify-center gap-2"
           >
             <ChevronUp className="w-4 h-4" />
             Ver menos
@@ -376,26 +366,204 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
 }
 
 function TimeInput({ label, value, onChange, error }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = React.useRef(null);
+  const hoursRef = React.useRef(null);
+  const minutesRef = React.useRef(null);
+
+  // Parse current value
+  const [hours, minutes] = value.split(":").map(Number);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Scroll to selected values when picker opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        hoursRef.current
+          ?.querySelector(`[data-value="${hours}"]`)
+          ?.scrollIntoView({ block: "center", behavior: "auto" });
+        minutesRef.current
+          ?.querySelector(`[data-value="${minutes}"]`)
+          ?.scrollIntoView({ block: "center", behavior: "auto" });
+      }, 50);
+    }
+  }, [isOpen, hours, minutes]);
+
+  const handleHourChange = (h) => {
+    onChange(
+      `${h.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+    );
+  };
+
+  const handleMinuteChange = (m) => {
+    onChange(
+      `${hours.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+    );
+  };
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 relative z-10" ref={containerRef}>
       <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
         {label}
       </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-12 px-4 rounded-xl border-2 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] focus:outline-none transition-colors appearance-none cursor-pointer ${
+
+      {/* Display button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={`w-full h-12 px-4 rounded-xl border bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all flex items-center justify-between ${
           error
-            ? "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]"
-            : "border-[rgb(var(--border-base))] focus:border-[rgb(var(--brand-primary))]"
+            ? "border-[rgb(var(--error))] focus:ring-[rgb(var(--error))]/20"
+            : "border-[rgb(var(--border-base))] hover:border-[rgb(var(--border-hover))]"
         }`}
       >
-        {TIME_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <span className="text-base font-medium tabular-nums">
+          {hours.toString().padStart(2, "0")}:
+          {minutes.toString().padStart(2, "0")}
+        </span>
+        <Clock
+          className={`w-4 h-4 transition-colors ${
+            isOpen
+              ? "text-[rgb(var(--brand-primary))]"
+              : "text-[rgb(var(--text-muted))]"
+          }`}
+        />
+      </button>
+
+      {/* Time picker dropdown */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 mt-2 bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-base))] shadow-2xl overflow-hidden z-50"
+            style={{ top: "calc(100% + 0.5rem)" }}
+          >
+            <div className="flex divide-x divide-[rgb(var(--border-base))]">
+              {/* Hours column */}
+              <div className="flex-1 flex flex-col">
+                <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--text-muted))] text-center bg-[rgb(var(--bg-muted))] border-b border-[rgb(var(--border-base))]">
+                  Hora
+                </div>
+                <div
+                  ref={hoursRef}
+                  className="h-40 overflow-y-auto overscroll-contain scrollbar-thin"
+                >
+                  {HOURS.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      data-value={h}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleHourChange(h);
+                      }}
+                      className={`w-full py-2 px-3 text-center text-sm transition-colors ${
+                        h === hours
+                          ? "bg-[rgb(var(--brand-primary))] text-white font-medium"
+                          : "hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-primary))]"
+                      }`}
+                    >
+                      {h.toString().padStart(2, "0")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Minutes column */}
+              <div className="flex-1 flex flex-col">
+                <div className="px-3 py-2 text-xs font-medium text-[rgb(var(--text-muted))] text-center bg-[rgb(var(--bg-muted))] border-b border-[rgb(var(--border-base))]">
+                  Min
+                </div>
+                <div
+                  ref={minutesRef}
+                  className="h-40 overflow-y-auto overscroll-contain scrollbar-thin"
+                >
+                  {MINUTES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      data-value={m}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleMinuteChange(m);
+                      }}
+                      className={`w-full py-2 px-3 text-center text-sm transition-colors ${
+                        m === minutes
+                          ? "bg-[rgb(var(--brand-primary))] text-white font-medium"
+                          : "hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-primary))]"
+                      }`}
+                    >
+                      {m.toString().padStart(2, "0")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick select minutes */}
+            <div className="px-2 py-2 border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-muted))]">
+              <div className="flex gap-1 justify-center">
+                {[0, 15, 30, 45].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleMinuteChange(m);
+                    }}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                      m === minutes
+                        ? "bg-[rgb(var(--brand-primary))] text-white"
+                        : "bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                    }`}
+                  >
+                    :{m.toString().padStart(2, "0")}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Done button */}
+            <div className="px-3 py-2 border-t border-[rgb(var(--border-base))]">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
+                className="w-full py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                Listo
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -404,18 +572,21 @@ function TimeInput({ label, value, onChange, error }) {
 // STEP COMPONENTS
 // ================================================
 
-// Step 1: Basic Info (Title, Calendar Selection)
+// Step 1: Title & Date/Time
 function StepBasicInfo({
   title,
-  calendarId,
-  calendars,
+  date,
+  startTime,
+  endTime,
+  allDay,
   onTitleChange,
-  onCalendarChange,
-  onNext,
+  onDateChange,
+  onStartTimeChange,
+  onEndTimeChange,
+  onAllDayChange,
   errors,
+  timezone,
 }) {
-  const isValid = title.trim().length >= 2 && calendarId;
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -438,13 +609,14 @@ function StepBasicInfo({
           Nuevo evento
         </h3>
         <p className="text-sm text-[rgb(var(--text-muted))]">
-          ¿Qué tienes planeado?
+          ¿Qué tienes planeado y cuándo?
         </p>
       </div>
 
       {/* Title Input */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+        <label className="text-sm font-medium text-[rgb(var(--text-secondary))] flex items-center gap-2">
+          <Type className="w-4 h-4" />
           Título del evento
         </label>
         <div className="relative">
@@ -455,16 +627,11 @@ function StepBasicInfo({
             placeholder="Ej: Reunión de equipo, Cita médica..."
             maxLength={200}
             autoFocus
-            className={`w-full h-14 pl-4 pr-16 rounded-xl border-2 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] text-lg placeholder:text-[rgb(var(--text-muted))] focus:outline-none transition-colors ${
+            className={`w-full h-14 pl-4 pr-16 rounded-xl border bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] text-lg placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all ${
               errors?.title
-                ? "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]"
-                : "border-[rgb(var(--border-base))] focus:border-[rgb(var(--brand-primary))]"
+                ? "border-[rgb(var(--error))] focus:ring-[rgb(var(--error))]/20"
+                : "border-[rgb(var(--border-base))]"
             }`}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && isValid) {
-                onNext();
-              }
-            }}
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[rgb(var(--text-muted))] bg-[rgb(var(--bg-surface))] px-1 rounded">
             {title.length}/200
@@ -478,94 +645,13 @@ function StepBasicInfo({
         )}
       </div>
 
-      {/* Calendar Selection */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
-          Calendario
-        </label>
-        {calendars.length > 0 ? (
-          <CalendarSelector
-            calendars={calendars}
-            selectedId={calendarId}
-            onChange={onCalendarChange}
-          />
-        ) : (
-          <div className="p-4 rounded-xl bg-[rgb(var(--bg-muted))] text-center">
-            <p className="text-sm text-[rgb(var(--text-muted))]">
-              No hay calendarios disponibles
-            </p>
-          </div>
-        )}
-        {errors?.calendarId && (
-          <p className="text-sm text-[rgb(var(--error))] flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4" />
-            {errors.calendarId}
-          </p>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// Helper para formatear nombre de zona horaria
-function formatTimezoneLabel(timezone) {
-  // Extraer ciudad del formato "America/Mexico_City" -> "Mexico City"
-  const city = timezone.split("/").pop().replace(/_/g, " ");
-
-  // Obtener offset actual
-  try {
-    const now = new Date();
-    const formatted = formatInTimeZone(now, timezone, "xxx"); // +HH:mm format
-    return `${city} (GMT${formatted})`;
-  } catch {
-    return city;
-  }
-}
-
-// Step 2: Date & Time
-function StepDateTime({
-  date,
-  startTime,
-  endTime,
-  allDay,
-  onDateChange,
-  onStartTimeChange,
-  onEndTimeChange,
-  onAllDayChange,
-  errors,
-  timezone,
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-6"
-    >
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
-        >
-          <Clock className="w-8 h-8 text-white" />
-        </motion.div>
-        <h3 className="text-xl font-semibold text-[rgb(var(--text-primary))]">
-          ¿Cuándo será?
-        </h3>
-        <p className="text-sm text-[rgb(var(--text-muted))]">
-          Selecciona la fecha y hora del evento
-        </p>
-        {timezone && (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mt-1 rounded-full bg-[rgb(var(--bg-muted))] text-xs text-[rgb(var(--text-muted))]">
-            <Globe className="w-3 h-3" />
-            <span>{formatTimezoneLabel(timezone)}</span>
-          </div>
-        )}
-      </div>
+      {/* Timezone Info */}
+      {timezone && (
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgb(var(--bg-muted))] text-xs text-[rgb(var(--text-muted))]">
+          <Globe className="w-3 h-3" />
+          <span>{formatTimezoneLabel(timezone)}</span>
+        </div>
+      )}
 
       {/* All Day Toggle */}
       <motion.button
@@ -573,9 +659,9 @@ function StepDateTime({
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
         onClick={() => onAllDayChange(!allDay)}
-        className={`w-full p-4 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
+        className={`w-full p-4 rounded-xl border transition-all duration-200 flex items-center gap-3 ${
           allDay
-            ? "border-[rgb(var(--brand-primary))] bg-[rgb(var(--brand-primary))]/5"
+            ? "border-[rgb(var(--brand-primary))] bg-[rgb(var(--brand-primary))]/5 ring-2 ring-[rgb(var(--brand-primary))]/20"
             : "border-[rgb(var(--border-base))] hover:border-[rgb(var(--border-hover))] bg-[rgb(var(--bg-surface))]"
         }`}
       >
@@ -619,19 +705,22 @@ function StepDateTime({
 
       {/* Date Input */}
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[rgb(var(--text-secondary))]">
+        <label className="text-sm font-medium text-[rgb(var(--text-secondary))] flex items-center gap-2">
+          <Calendar className="w-4 h-4" />
           Fecha
         </label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => onDateChange(e.target.value)}
-          className={`w-full h-12 px-4 rounded-xl border-2 bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] focus:outline-none transition-colors ${
-            errors?.date
-              ? "border-[rgb(var(--error))] focus:border-[rgb(var(--error))]"
-              : "border-[rgb(var(--border-base))] focus:border-[rgb(var(--brand-primary))]"
-          }`}
-        />
+        <div className="relative">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => onDateChange(e.target.value)}
+            className={`w-full h-12 px-4 rounded-xl border bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer ${
+              errors?.date
+                ? "border-[rgb(var(--error))] focus:ring-[rgb(var(--error))]/20"
+                : "border-[rgb(var(--border-base))]"
+            }`}
+          />
+        </div>
         {errors?.date && (
           <p className="text-sm text-[rgb(var(--error))] flex items-center gap-1.5">
             <AlertCircle className="w-4 h-4" />
@@ -640,76 +729,44 @@ function StepDateTime({
         )}
       </div>
 
-      {/* Time Inputs - Only show if not all day */}
-      <AnimatePresence>
-        {!allDay && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-2 gap-4 overflow-hidden"
-          >
-            <TimeInput
-              label="Hora inicio"
-              value={startTime}
-              onChange={onStartTimeChange}
-              error={errors?.startTime}
-            />
-            <TimeInput
-              label="Hora fin"
-              value={endTime}
-              onChange={onEndTimeChange}
-              error={errors?.endTime}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Quick Duration Buttons */}
+      {/* Time inputs (only if not all day) */}
       {!allDay && (
-        <div className="space-y-2">
-          <span className="text-xs text-[rgb(var(--text-muted))]">
-            Duración rápida
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {[30, 60, 90, 120].map((mins) => {
-              const label =
-                mins < 60
-                  ? `${mins} min`
-                  : mins === 60
-                  ? "1 hora"
-                  : `${mins / 60}h ${mins % 60 ? `${mins % 60}m` : ""}`;
-              return (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => {
-                    const [hours, minutes] = startTime.split(":").map(Number);
-                    const startDate = setMinutes(
-                      setHours(new Date(), hours),
-                      minutes
-                    );
-                    const endDate = new Date(
-                      startDate.getTime() + mins * 60 * 1000
-                    );
-                    onEndTimeChange(format(endDate, "HH:mm"));
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-[rgb(var(--bg-muted))] text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          <TimeInput
+            label="Hora de inicio"
+            value={startTime}
+            onChange={onStartTimeChange}
+            error={errors?.startTime}
+          />
+          <TimeInput
+            label="Hora de fin"
+            value={endTime}
+            onChange={onEndTimeChange}
+            error={errors?.endTime}
+          />
         </div>
       )}
     </motion.div>
   );
 }
 
-// Step 3: Additional Details (Location, Description)
-function StepDetails({
+// Helper para formatear nombre de zona horaria
+function formatTimezoneLabel(timezone) {
+  // Extraer ciudad del formato "America/Mexico_City" -> "Mexico City"
+  const city = timezone.split("/").pop().replace(/_/g, " ");
+
+  // Obtener offset actual
+  try {
+    const now = new Date();
+    const formatted = formatInTimeZone(now, timezone, "xxx"); // +HH:mm format
+    return `${city} (GMT${formatted})`;
+  } catch {
+    return city;
+  }
+}
+
+// Step 2: Optional Details (Location, Description)
+function StepOptionalDetails({
   location,
   description,
   onLocationChange,
@@ -753,7 +810,7 @@ function StepDetails({
           onChange={(e) => onLocationChange(e.target.value)}
           placeholder="Ej: Oficina principal, Sala de reuniones..."
           maxLength={300}
-          className="w-full h-12 px-4 rounded-xl border-2 border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:border-[rgb(var(--brand-primary))] transition-colors"
+          className="w-full h-12 px-4 rounded-xl border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all"
         />
       </div>
 
@@ -769,7 +826,7 @@ function StepDetails({
           placeholder="Agrega notas o detalles sobre el evento..."
           maxLength={3000}
           rows={4}
-          className="w-full px-4 py-3 rounded-xl border-2 border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:border-[rgb(var(--brand-primary))] transition-colors resize-none"
+          className="w-full px-4 py-3 rounded-xl border border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--brand-primary))]/20 transition-all resize-none"
         />
         <div className="text-right text-xs text-[rgb(var(--text-muted))]">
           {description.length}/3000
@@ -782,8 +839,62 @@ function StepDetails({
           <span className="font-medium text-[rgb(var(--text-secondary))]">
             Tip:
           </span>{" "}
-          Puedes agregar estos detalles después si lo prefieres.
+          Puedes dejar estos campos vacíos y agregar la información después.
         </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// Step 3: Calendar Selection
+function StepCalendar({ calendarId, calendars, onCalendarChange, errors }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.1 }}
+          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
+        >
+          <Calendar className="w-8 h-8 text-white" />
+        </motion.div>
+        <h3 className="text-xl font-semibold text-[rgb(var(--text-primary))]">
+          ¿Dónde guardarlo?
+        </h3>
+        <p className="text-sm text-[rgb(var(--text-muted))]">
+          Selecciona el calendario para este evento
+        </p>
+      </div>
+
+      {/* Calendar Selection */}
+      <div className="space-y-3">
+        {calendars.length > 0 ? (
+          <CalendarSelector
+            calendars={calendars}
+            selectedId={calendarId}
+            onChange={onCalendarChange}
+          />
+        ) : (
+          <div className="p-4 rounded-xl bg-[rgb(var(--bg-muted))] text-center">
+            <p className="text-sm text-[rgb(var(--text-muted))]">
+              No hay calendarios disponibles
+            </p>
+          </div>
+        )}
+        {errors?.calendarId && (
+          <p className="text-sm text-[rgb(var(--error))] flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4" />
+            {errors.calendarId}
+          </p>
+        )}
       </div>
     </motion.div>
   );
@@ -909,15 +1020,10 @@ export function EventModal({
       const newErrors = {};
 
       if (stepNumber === 1) {
+        // Validar título y fecha/hora
         if (!formData.title.trim() || formData.title.trim().length < 2) {
           newErrors.title = "El título debe tener al menos 2 caracteres";
         }
-        if (!formData.calendarId) {
-          newErrors.calendarId = "Selecciona un calendario";
-        }
-      }
-
-      if (stepNumber === 2) {
         if (!formData.date) {
           newErrors.date = "Selecciona una fecha";
         }
@@ -937,6 +1043,17 @@ export function EventModal({
               newErrors.endTime = "La hora de fin debe ser posterior al inicio";
             }
           }
+        }
+      }
+
+      if (stepNumber === 2) {
+        // Paso 2 es opcional (ubicación y descripción), siempre válido
+      }
+
+      if (stepNumber === 3) {
+        // Validar selección de calendario
+        if (!formData.calendarId) {
+          newErrors.calendarId = "Selecciona un calendario";
         }
       }
 
@@ -961,7 +1078,7 @@ export function EventModal({
   }, [step]);
 
   const handleSubmit = async () => {
-    if (!validateStep(1) || !validateStep(2)) {
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       return;
     }
 
@@ -1048,9 +1165,8 @@ export function EventModal({
   const isPending = createEvent.isPending || updateEvent.isPending;
   const isStepValid = useMemo(() => {
     if (step === 1) {
-      return formData.title.trim().length >= 2 && formData.calendarId;
-    }
-    if (step === 2) {
+      // Validar título y fecha/hora
+      if (formData.title.trim().length < 2) return false;
       if (!formData.date) return false;
       if (!formData.allDay) {
         if (!formData.startTime || !formData.endTime) return false;
@@ -1061,6 +1177,14 @@ export function EventModal({
         if (endMinutes <= startMinutes) return false;
       }
       return true;
+    }
+    if (step === 2) {
+      // Paso 2 es opcional (ubicación y descripción)
+      return true;
+    }
+    if (step === 3) {
+      // Validar calendario seleccionado
+      return !!formData.calendarId;
     }
     return true;
   }, [step, formData]);
@@ -1091,7 +1215,7 @@ export function EventModal({
             style={{ maxHeight: "calc(100dvh - 2rem)" }}
           >
             <div
-              className="bg-[rgb(var(--bg-surface))] rounded-3xl shadow-2xl border border-[rgb(var(--border-base))] overflow-hidden flex flex-col w-full"
+              className="bg-[rgb(var(--bg-surface))] rounded-3xl shadow-2xl border border-[rgb(var(--border-base))] flex flex-col w-full overflow-hidden"
               style={{ maxHeight: "calc(100dvh - 2rem)" }}
             >
               {/* Header - Always visible */}
@@ -1130,28 +1254,17 @@ export function EventModal({
               </div>
 
               {/* Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-6 overscroll-contain">
+              <div className="flex-1 overflow-y-auto p-6 overscroll-contain relative">
                 <AnimatePresence mode="wait">
                   {step === 1 && (
                     <StepBasicInfo
                       key="step1"
                       title={formData.title}
-                      calendarId={formData.calendarId}
-                      calendars={calendars}
-                      onTitleChange={(v) => updateField("title", v)}
-                      onCalendarChange={(v) => updateField("calendarId", v)}
-                      onNext={handleNext}
-                      errors={errors}
-                    />
-                  )}
-
-                  {step === 2 && (
-                    <StepDateTime
-                      key="step2"
                       date={formData.date}
                       startTime={formData.startTime}
                       endTime={formData.endTime}
                       allDay={formData.allDay}
+                      onTitleChange={(v) => updateField("title", v)}
                       onDateChange={(v) => updateField("date", v)}
                       onStartTimeChange={(v) => updateField("startTime", v)}
                       onEndTimeChange={(v) => updateField("endTime", v)}
@@ -1161,13 +1274,23 @@ export function EventModal({
                     />
                   )}
 
-                  {step === 3 && (
-                    <StepDetails
-                      key="step3"
+                  {step === 2 && (
+                    <StepOptionalDetails
+                      key="step2"
                       location={formData.location}
                       description={formData.description}
                       onLocationChange={(v) => updateField("location", v)}
                       onDescriptionChange={(v) => updateField("description", v)}
+                    />
+                  )}
+
+                  {step === 3 && (
+                    <StepCalendar
+                      key="step3"
+                      calendarId={formData.calendarId}
+                      calendars={calendars}
+                      onCalendarChange={(v) => updateField("calendarId", v)}
+                      errors={errors}
                     />
                   )}
                 </AnimatePresence>

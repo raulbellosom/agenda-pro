@@ -46,16 +46,18 @@ export function AuthLayout({ children, title, subtitle }) {
         <div className="bg-[rgb(var(--bg-surface))]/80 backdrop-blur-xl rounded-2xl border border-[rgb(var(--border-base))] p-8 shadow-xl">
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-[rgb(var(--brand-primary))] flex items-center justify-center mb-4 shadow-lg shadow-[rgb(var(--brand-primary))]/20">
-              <Calendar className="w-7 h-7 text-white" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4">
+              <img
+                src="/logo.png"
+                alt="Agenda Pro"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">
+              <span className="text-xl font-bold text-[rgb(var(--brand-primary))]">
                 Agenda
               </span>
-              <span className="text-xl font-bold text-[rgb(var(--brand-primary))]">
-                Pro
-              </span>
+              <span className="text-xl font-bold text-orange-500">Pro</span>
             </div>
           </div>
 

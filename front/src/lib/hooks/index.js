@@ -4,3 +4,4 @@ export * from "./useGroups";
 export * from "./useCalendars";
 export * from "./useEvents";
 export * from "./useUserSettings";
+export * from "./useLongPress";

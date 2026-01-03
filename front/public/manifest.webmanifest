@@ -1,21 +1,52 @@
 {
-  "name": "Agenda Pro",
+  "name": "Agenda Pro - Tu calendario inteligente",
   "short_name": "Agenda Pro",
-  "description": "Aplicación de calendario y productividad",
+  "description": "Organiza tu tiempo, eventos y actividades de manera eficiente con Agenda Pro",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/pwa-192.png",
+      "src": "/web/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/pwa-512.png",
+      "src": "/web/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/web/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/web/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Nuevo evento",
+      "short_name": "Nuevo",
+      "description": "Crear un nuevo evento",
+      "url": "/?action=new-event",
+      "icons": [
+        {
+          "src": "/web/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

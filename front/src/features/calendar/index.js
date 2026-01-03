@@ -4,4 +4,5 @@ export { CreateCalendarModal } from "./CreateCalendarModal";
 export { EventModal } from "./EventModal";
 export { EventDetailsModal } from "./EventDetailsModal";
 export { DeleteEventModal } from "./DeleteEventModal";
+export { MoveEventModal } from "./MoveEventModal";
 export { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";

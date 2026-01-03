@@ -567,6 +567,20 @@ export function StatusPage({
           variants={itemVariants}
           className="mt-12 pt-6 border-t border-(--border-base)"
         >
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <img
+              src="/logo.png"
+              alt="Agenda Pro"
+              className="w-8 h-8 object-contain opacity-60"
+            />
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-semibold text-[rgb(var(--brand-primary))]">
+                Agenda
+              </span>
+              <span className="text-sm font-semibold text-orange-500">Pro</span>
+            </div>
+          </div>
           <p className="text-xs text-(--text-muted)">
             ¿Necesitas ayuda?{" "}
             <a

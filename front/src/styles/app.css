@@ -200,6 +200,40 @@ a {
   animation: spin 1s linear infinite;
 }
 
+/* ===== FORM INPUTS ===== */
+
+/* Date inputs - prevent overflow on mobile */
+input[type="date"],
+input[type="time"] {
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+
+/* Prevent date input from becoming too wide on mobile */
+input[type="date"]::-webkit-datetime-edit {
+  min-width: 0;
+  padding: 0;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+/* Custom time picker scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(var(--text-muted) / 0.4);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,

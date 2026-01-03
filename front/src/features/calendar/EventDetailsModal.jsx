@@ -8,6 +8,8 @@ import {
   AlignLeft,
   Pencil,
   Trash2,
+  Copy,
+  FolderInput,
   CalendarDays,
   CalendarCheck,
   CalendarClock,
@@ -222,6 +224,8 @@ export function EventDetailsModal({
   calendar,
   onEdit,
   onDelete,
+  onDuplicate,
+  onMove,
   canEdit = true,
 }) {
   // Memoize computed values
@@ -442,7 +446,29 @@ export function EventDetailsModal({
                       className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[rgb(var(--error))] bg-[rgb(var(--error))]/10 hover:bg-[rgb(var(--error))]/20 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Eliminar
+                      <span className="hidden sm:inline">Eliminar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onDuplicate?.(event);
+                      }}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[rgb(var(--text-primary))] bg-[rgb(var(--bg-muted))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span className="hidden sm:inline">Duplicar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onMove?.(event);
+                      }}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-[rgb(var(--text-primary))] bg-[rgb(var(--bg-muted))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                    >
+                      <FolderInput className="w-4 h-4" />
+                      <span className="hidden sm:inline">Mover</span>
                     </button>
                     <button
                       type="button"
@@ -453,7 +479,7 @@ export function EventDetailsModal({
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[rgb(var(--brand-primary))] hover:opacity-90 transition-opacity"
                     >
                       <Pencil className="w-4 h-4" />
-                      Editar evento
+                      Editar
                     </button>
                   </div>
                 </div>

@@ -48,6 +48,7 @@ import {
   Share2,
   Trash2,
   Loader2,
+  Globe,
 } from "lucide-react";
 import { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 import { CreateCalendarModal } from "./CreateCalendarModal";
@@ -74,9 +75,18 @@ import {
   setHours,
 } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatInTimeZone } from "date-fns-tz";
 import { useMonthEvents } from "../../lib/hooks/useEvents";
 import { useDeleteCalendar } from "../../lib/hooks/useCalendars";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
+import {
+  useUserSettings,
+  SETTINGS_OPTIONS,
+  useDuplicateEvent,
+  useLongPress,
+} from "../../lib/hooks";
+import { ContextMenu, MENU_ITEMS } from "./ContextMenu";
+import { MoveEventModal } from "./MoveEventModal";
 
 // ================================================
 // CONSTANTS & UTILITIES
@@ -205,18 +215,317 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 // Animation variants for view transitions
 const viewTransitionVariants = {
   enter: (direction) => ({
-    x: direction > 0 ? 100 : -100,
-    opacity: 0,
+    x: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
+    opacity: direction === 0 ? 1 : 0,
   }),
   center: {
     x: 0,
     opacity: 1,
   },
   exit: (direction) => ({
-    x: direction < 0 ? 100 : -100,
-    opacity: 0,
+    x: direction < 0 ? "100%" : direction > 0 ? "-100%" : 0,
+    opacity: direction === 0 ? 1 : 0,
   }),
 };
+
+// ================================================
+// DATE PICKER COMPONENT (for Day View)
+// ================================================
+
+function DatePicker({ selectedDate, onDateChange, isOpen, onClose }) {
+  const [currentMonth, setCurrentMonth] = useState(
+    startOfMonth(selectedDate || new Date())
+  );
+
+  useEffect(() => {
+    if (isOpen && selectedDate) {
+      setCurrentMonth(startOfMonth(selectedDate));
+    }
+  }, [isOpen, selectedDate]);
+
+  if (!isOpen) return null;
+
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+  const days = [];
+  let day = calendarStart;
+  while (day <= calendarEnd) {
+    days.push(day);
+    day = addDays(day, 1);
+  }
+
+  const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
+
+  const handleDateClick = (date) => {
+    onDateChange(date);
+    onClose();
+  };
+
+  const goToPreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-[rgb(var(--bg-elevated))] rounded-2xl shadow-xl border border-[rgb(var(--border-base))] p-6 w-full max-w-sm"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={goToPreviousMonth}
+              className="p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))] capitalize">
+              {format(currentMonth, "MMMM yyyy", { locale: es })}
+            </h3>
+            <button
+              onClick={goToNextMonth}
+              className="p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="select-none">
+            {/* Week days */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {weekDays.map((day, i) => (
+                <div
+                  key={i}
+                  className="text-center text-xs font-medium text-[rgb(var(--text-muted))] py-1"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Days */}
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((day, i) => {
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const isSelectedDay =
+                  selectedDate && isSameDay(day, selectedDate);
+                const isTodayDate = isToday(day);
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleDateClick(day)}
+                    className={`
+                      aspect-square rounded-lg text-sm font-medium transition-colors
+                      ${
+                        !isCurrentMonth
+                          ? "text-[rgb(var(--text-muted))]/50"
+                          : ""
+                      }
+                      ${
+                        isSelectedDay
+                          ? "bg-[rgb(var(--brand-primary))] text-white"
+                          : isTodayDate
+                          ? "bg-[rgb(var(--brand-primary))]/20 text-[rgb(var(--brand-primary))]"
+                          : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                      }
+                    `}
+                  >
+                    {format(day, "d")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Today button */}
+          <button
+            onClick={() => handleDateClick(new Date())}
+            className="w-full mt-4 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[rgb(var(--brand-primary))] hover:opacity-90 transition-opacity"
+          >
+            Hoy
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ================================================
+// MONTH YEAR PICKER COMPONENT
+// ================================================
+
+function MonthYearPicker({ selectedDate, onDateChange, isOpen, onClose }) {
+  const [currentYear, setCurrentYear] = useState(
+    selectedDate ? selectedDate.getFullYear() : new Date().getFullYear()
+  );
+
+  useEffect(() => {
+    if (isOpen && selectedDate) {
+      setCurrentYear(selectedDate.getFullYear());
+    }
+  }, [isOpen, selectedDate]);
+
+  if (!isOpen) return null;
+
+  // Generate array of 11 years (5 before, current, 5 after)
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+
+  const months = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+
+  const handleYearClick = (year) => {
+    setCurrentYear(year);
+  };
+
+  const handleMonthClick = (monthIndex) => {
+    const newDate = new Date(currentYear, monthIndex, 1);
+    onDateChange(newDate);
+    onClose();
+  };
+
+  const selectedYear = selectedDate ? selectedDate.getFullYear() : null;
+  const selectedMonth = selectedDate ? selectedDate.getMonth() : null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-[rgb(var(--bg-elevated))] rounded-2xl shadow-xl border border-[rgb(var(--border-base))] p-6 w-full max-w-sm"
+        >
+          {/* Header */}
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))] text-center">
+              Seleccionar Mes y Año
+            </h3>
+          </div>
+
+          {/* Year Grid */}
+          <div className="mb-6">
+            <div className="text-sm font-medium text-[rgb(var(--text-muted))] mb-2">
+              Año
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {years.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => handleYearClick(year)}
+                  className={`
+                    px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    ${
+                      year === currentYear
+                        ? "bg-[rgb(var(--brand-primary))] text-white"
+                        : year === selectedYear
+                        ? "bg-[rgb(var(--brand-primary))]/20 text-[rgb(var(--brand-primary))]"
+                        : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                    }
+                  `}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Month Grid */}
+          <div>
+            <div className="text-sm font-medium text-[rgb(var(--text-muted))] mb-2">
+              Mes
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {months.map((month, index) => {
+                const isSelected =
+                  currentYear === selectedYear && index === selectedMonth;
+                const isCurrent =
+                  currentYear === new Date().getFullYear() &&
+                  index === new Date().getMonth();
+
+                return (
+                  <button
+                    key={month}
+                    onClick={() => handleMonthClick(index)}
+                    className={`
+                      px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                      ${
+                        isSelected
+                          ? "bg-[rgb(var(--brand-primary))] text-white"
+                          : isCurrent
+                          ? "bg-[rgb(var(--brand-primary))]/20 text-[rgb(var(--brand-primary))]"
+                          : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                      }
+                    `}
+                  >
+                    {month.substring(0, 3)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Today button */}
+          <button
+            onClick={() => {
+              const today = new Date();
+              setCurrentYear(today.getFullYear());
+              handleMonthClick(today.getMonth());
+            }}
+            className="w-full mt-4 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[rgb(var(--brand-primary))] hover:opacity-90 transition-opacity"
+          >
+            Hoy
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 // ================================================
 // MINI CALENDAR COMPONENT
@@ -529,20 +838,51 @@ function CalendarsList({
 // EVENT CARD COMPONENT
 // ================================================
 
-function EventCard({ event, compact = false, onClick }) {
+function EventCard({ event, compact = false, onClick, onLongPress }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
   const startTime = event.startAt
     ? format(parseISO(event.startAt), "HH:mm")
     : "";
   const endTime = event.endAt ? format(parseISO(event.endAt), "HH:mm") : "";
 
+  // Solo usamos useLongPress para detectar long press en móvil
+  const longPressHandlers = useLongPress(
+    (e) => {
+      e?.stopPropagation?.();
+      // Extraer coordenadas del evento
+      const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
+      const y =
+        e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
+      onLongPress?.(event, { x, y });
+    },
+    null, // No manejamos onClick aquí
+    { delay: 500 }
+  );
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Extraer coordenadas del evento de contexto
+    const x = e.clientX || window.innerWidth / 2;
+    const y = e.clientY || window.innerHeight / 2;
+    onLongPress?.(event, { x, y });
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    onClick?.(event);
+  };
+
   if (compact) {
     return (
       <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick?.(event);
-        }}
+        onMouseDown={longPressHandlers.onMouseDown}
+        onMouseUp={longPressHandlers.onMouseUp}
+        onMouseLeave={longPressHandlers.onMouseLeave}
+        onTouchStart={longPressHandlers.onTouchStart}
+        onTouchEnd={longPressHandlers.onTouchEnd}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
         className={`px-2 py-1 rounded-md text-xs truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-offset-1 hover:ring-[rgb(var(--brand-primary))]/30 transition-all`}
       >
         {startTime && <span className="opacity-75 mr-1">{startTime}</span>}
@@ -553,9 +893,15 @@ function EventCard({ event, compact = false, onClick }) {
 
   return (
     <motion.div
+      onMouseDown={longPressHandlers.onMouseDown}
+      onMouseUp={longPressHandlers.onMouseUp}
+      onMouseLeave={longPressHandlers.onMouseLeave}
+      onTouchStart={longPressHandlers.onTouchStart}
+      onTouchEnd={longPressHandlers.onTouchEnd}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      onClick={() => onClick?.(event)}
       className={`group p-3 rounded-xl border-l-4 ${colors.border} bg-[rgb(var(--bg-surface))] shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -582,7 +928,10 @@ function EventCard({ event, compact = false, onClick }) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onClick?.(event);
+            // Extraer coordenadas del clic para posicionar el menú contextual
+            const x = e.clientX || window.innerWidth / 2;
+            const y = e.clientY || window.innerHeight / 2;
+            onLongPress?.(event, { x, y });
           }}
           className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] opacity-0 group-hover:opacity-100 transition-opacity"
         >
@@ -597,6 +946,54 @@ function EventCard({ event, compact = false, onClick }) {
 // DAY CELL COMPONENT (for Month View)
 // ================================================
 
+// Mini event component for day cells
+function DayCellEvent({ event, onEventClick, onEventLongPress }) {
+  const colors = getCalendarColor(event.calendar?.color || "violet");
+
+  // Solo usamos useLongPress para detectar long press en móvil
+  const longPressHandlers = useLongPress(
+    (e) => {
+      e?.stopPropagation?.();
+      // Extraer coordenadas del evento
+      const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
+      const y =
+        e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
+      onEventLongPress?.(event, { x, y });
+    },
+    null, // No manejamos onClick aquí
+    { delay: 500 }
+  );
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Extraer coordenadas del evento de contexto
+    const x = e.clientX || window.innerWidth / 2;
+    const y = e.clientY || window.innerHeight / 2;
+    onEventLongPress?.(event, { x, y });
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    onEventClick?.(event);
+  };
+
+  return (
+    <div
+      onMouseDown={longPressHandlers.onMouseDown}
+      onMouseUp={longPressHandlers.onMouseUp}
+      onMouseLeave={longPressHandlers.onMouseLeave}
+      onTouchStart={longPressHandlers.onTouchStart}
+      onTouchEnd={longPressHandlers.onTouchEnd}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all`}
+    >
+      {event.title}
+    </div>
+  );
+}
+
 function DayCell({
   date,
   events,
@@ -604,15 +1001,35 @@ function DayCell({
   isSelected,
   isTodayDate,
   onClick,
+  onLongPress,
+  onContextMenu,
+  onEventClick,
+  onEventLongPress,
 }) {
   const maxVisible = 3;
   const visibleEvents = events.slice(0, maxVisible);
   const remaining = events.length - maxVisible;
 
+  const longPressHandlers = useLongPress(
+    () => onLongPress?.(date),
+    () => onClick(),
+    { delay: 500 }
+  );
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    onLongPress?.(date);
+  };
+
   return (
     <motion.button
+      {...longPressHandlers}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, date);
+      }}
       whileTap={{ scale: 0.98 }}
-      onClick={onClick}
       className={`
         flex flex-col p-1 sm:p-1.5 min-h-[70px] sm:min-h-[90px] lg:min-h-[100px] h-full border-r border-b border-[rgb(var(--border-base))] transition-all text-left
         ${!isCurrentMonth ? "opacity-40 bg-[rgb(var(--bg-muted))]/30" : ""}
@@ -633,19 +1050,15 @@ function DayCell({
       >
         {format(date, "d")}
       </span>
-      <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-hidden">
-        {visibleEvents.map((event, i) => {
-          const colors = getCalendarColor(event.calendar?.color || "violet");
-          return (
-            <div
-              key={event.$id || i}
-              className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium`}
-            >
-              <span className="hidden sm:inline">{event.title}</span>
-              <span className="sm:hidden">•</span>
-            </div>
-          );
-        })}
+      <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-y-auto overflow-x-visible">
+        {visibleEvents.map((event, i) => (
+          <DayCellEvent
+            key={event.$id || i}
+            event={event}
+            onEventClick={onEventClick}
+            onEventLongPress={onEventLongPress}
+          />
+        ))}
         {remaining > 0 && (
           <div className="text-[10px] sm:text-xs text-[rgb(var(--text-muted))] px-1 font-medium">
             +{remaining}
@@ -660,7 +1073,7 @@ function DayCell({
 // TIME GRID EVENT (for Day/Week views)
 // ================================================
 
-function TimeGridEvent({ event, dayStart, onClick }) {
+function TimeGridEvent({ event, dayStart, onClick, onLongPress }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
   const eventStart = parseISO(event.startAt);
   const eventEnd = event.endAt ? parseISO(event.endAt) : addDays(eventStart, 0);
@@ -671,11 +1084,45 @@ function TimeGridEvent({ event, dayStart, onClick }) {
   const top = (startMinutes / 60) * 60; // 60px per hour
   const height = Math.max((duration / 60) * 60, 24); // min height 24px
 
+  // Solo usamos useLongPress para detectar long press en móvil
+  const longPressHandlers = useLongPress(
+    (e) => {
+      e?.stopPropagation?.();
+      // Extraer coordenadas del evento
+      const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
+      const y =
+        e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
+      onLongPress?.(event, { x, y });
+    },
+    null, // No manejamos onClick aquí
+    { delay: 500 }
+  );
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Extraer coordenadas del evento de contexto
+    const x = e.clientX || window.innerWidth / 2;
+    const y = e.clientY || window.innerHeight / 2;
+    onLongPress?.(event, { x, y });
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    onClick?.(event);
+  };
+
   return (
     <motion.div
+      onMouseDown={longPressHandlers.onMouseDown}
+      onMouseUp={longPressHandlers.onMouseUp}
+      onMouseLeave={longPressHandlers.onMouseLeave}
+      onTouchStart={longPressHandlers.onTouchStart}
+      onTouchEnd={longPressHandlers.onTouchEnd}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      onClick={() => onClick?.(event)}
       className={`absolute left-1 right-1 ${colors.bg} ${colors.border} border-l-2 rounded-md px-2 py-1 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[rgb(var(--brand-primary))]/30 transition-all z-10`}
       style={{
         top: `${top}px`,
@@ -740,7 +1187,13 @@ function EmptyDayMessage({ onDismiss }) {
 // DAY VIEW COMPONENT
 // ================================================
 
-function DayView({ selectedDate, events, onEventClick }) {
+function DayView({
+  selectedDate,
+  events,
+  onEventClick,
+  onEventLongPress,
+  onDateClick,
+}) {
   const scrollRef = useRef(null);
   const dayStart = startOfDay(selectedDate);
   const [showEmptyMessage, setShowEmptyMessage] = useState(true);
@@ -766,7 +1219,10 @@ function DayView({ selectedDate, events, onEventClick }) {
   return (
     <div className="h-full flex flex-col relative">
       {/* Day Header */}
-      <div className="flex items-center justify-center py-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))]">
+      <button
+        onClick={onDateClick}
+        className="flex items-center justify-center py-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] hover:bg-[rgb(var(--bg-hover))] transition-colors active:scale-95"
+      >
         <div className="text-center">
           <div className="text-sm text-[rgb(var(--text-muted))] uppercase tracking-wide">
             {format(selectedDate, "EEEE", { locale: es })}
@@ -781,7 +1237,7 @@ function DayView({ selectedDate, events, onEventClick }) {
             {format(selectedDate, "d")}
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Time Grid */}
       <div ref={scrollRef} className="flex-1 overflow-auto">
@@ -813,7 +1269,10 @@ function DayView({ selectedDate, events, onEventClick }) {
                   {format(setHours(new Date(), hour), "HH:mm")}
                 </span>
               </div>
-              <div className="flex-1 relative hover:bg-[rgb(var(--bg-hover))]/50 transition-colors" />
+              <div
+                className="flex-1 relative hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
+                onDoubleClick={() => onDateClick()}
+              />
             </div>
           ))}
 
@@ -825,6 +1284,7 @@ function DayView({ selectedDate, events, onEventClick }) {
                 event={event}
                 dayStart={dayStart}
                 onClick={onEventClick}
+                onLongPress={onEventLongPress}
               />
             ))}
           </div>
@@ -849,7 +1309,13 @@ function DayView({ selectedDate, events, onEventClick }) {
 // WEEK VIEW COMPONENT
 // ================================================
 
-function WeekView({ selectedDate, events, onSelectDate, onEventClick }) {
+function WeekView({
+  selectedDate,
+  events,
+  onSelectDate,
+  onEventClick,
+  onEventLongPress,
+}) {
   const scrollRef = useRef(null);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -872,108 +1338,127 @@ function WeekView({ selectedDate, events, onSelectDate, onEventClick }) {
     <div className="h-full flex flex-col">
       {/* Week Header */}
       <div className="flex border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] shrink-0">
-        <div className="w-16 sm:w-20 shrink-0" />
-        {weekDays.map((day) => (
-          <button
-            key={day.toISOString()}
-            onClick={() => onSelectDate(day)}
-            className={`flex-1 py-3 text-center transition-colors ${
-              isSameDay(day, selectedDate)
-                ? "bg-[rgb(var(--brand-primary))]/5"
-                : "hover:bg-[rgb(var(--bg-hover))]"
-            }`}
-          >
-            <div className="text-xs text-[rgb(var(--text-muted))] uppercase tracking-wide">
-              {format(day, "EEE", { locale: es })}
-            </div>
-            <div
-              className={`text-lg font-semibold mt-1 ${
-                isToday(day)
-                  ? "w-8 h-8 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center mx-auto"
-                  : isSameDay(day, selectedDate)
-                  ? "text-[rgb(var(--brand-primary))]"
-                  : "text-[rgb(var(--text-primary))]"
-              }`}
-            >
-              {format(day, "d")}
-            </div>
-          </button>
-        ))}
+        {/* Time column header - sticky */}
+        <div className="w-16 sm:w-20 shrink-0 sticky left-0 z-10 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]" />
+
+        {/* Scrollable week days */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex min-w-max">
+            {weekDays.map((day) => (
+              <button
+                key={day.toISOString()}
+                onClick={() => onSelectDate(day)}
+                className={`w-28 sm:w-32 py-3 text-center transition-colors shrink-0 ${
+                  isSameDay(day, selectedDate)
+                    ? "bg-[rgb(var(--brand-primary))]/5"
+                    : "hover:bg-[rgb(var(--bg-hover))]"
+                }`}
+              >
+                <div className="text-xs text-[rgb(var(--text-muted))] uppercase tracking-wide">
+                  {format(day, "EEE", { locale: es })}
+                </div>
+                <div
+                  className={`text-lg font-semibold mt-1 ${
+                    isToday(day)
+                      ? "w-8 h-8 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center mx-auto"
+                      : isSameDay(day, selectedDate)
+                      ? "text-[rgb(var(--brand-primary))]"
+                      : "text-[rgb(var(--text-primary))]"
+                  }`}
+                >
+                  {format(day, "d")}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Time Grid */}
-      <div ref={scrollRef} className="flex-1 overflow-auto">
-        <div
-          className="relative min-w-[600px]"
-          style={{ height: `${24 * 60}px` }}
-        >
-          {/* Current time indicator */}
-          {weekDays.some((d) => isToday(d)) && (
-            <div
-              className="absolute z-20 pointer-events-none"
-              style={{
-                top: `${
-                  new Date().getHours() * 60 + new Date().getMinutes()
-                }px`,
-                left: "80px",
-                right: 0,
-              }}
-            >
-              <div className="flex items-center">
-                <div className="w-2 h-2 rounded-full bg-[rgb(var(--error))] -ml-1" />
-                <div className="flex-1 h-0.5 bg-[rgb(var(--error))]" />
-              </div>
-            </div>
-          )}
-
-          {/* Hour rows */}
-          {HOURS.map((hour) => (
-            <div
-              key={hour}
-              className="absolute left-0 right-0 flex border-t border-[rgb(var(--border-base))]"
-              style={{ top: `${hour * 60}px`, height: "60px" }}
-            >
-              <div className="w-16 sm:w-20 shrink-0 pr-2 text-right">
+      <div ref={scrollRef} className="flex-1 overflow-auto flex">
+        {/* Time column - sticky */}
+        <div className="w-16 sm:w-20 shrink-0 sticky left-0 z-10 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]">
+          <div style={{ height: `${24 * 60}px` }} className="relative">
+            {HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="absolute left-0 right-0 border-t border-[rgb(var(--border-base))] pr-2 text-right"
+                style={{ top: `${hour * 60}px`, height: "60px" }}
+              >
                 <span className="text-xs text-[rgb(var(--text-muted))] -translate-y-2 inline-block">
                   {format(setHours(new Date(), hour), "HH:mm")}
                 </span>
               </div>
-              <div className="flex-1 flex">
+            ))}
+          </div>
+        </div>
+
+        {/* Scrollable day columns */}
+        <div className="flex-1 relative" style={{ height: `${24 * 60}px` }}>
+          <div className="absolute inset-0 flex min-w-max">
+            {/* Current time indicator */}
+            {weekDays.some((d) => isToday(d)) && (
+              <div
+                className="absolute z-20 pointer-events-none"
+                style={{
+                  top: `${
+                    new Date().getHours() * 60 + new Date().getMinutes()
+                  }px`,
+                  left: 0,
+                  right: 0,
+                }}
+              >
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-[rgb(var(--error))] -ml-1" />
+                  <div className="flex-1 h-0.5 bg-[rgb(var(--error))]" />
+                </div>
+              </div>
+            )}
+
+            {/* Hour rows background */}
+            {HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="absolute left-0 right-0 flex border-t border-[rgb(var(--border-base))]"
+                style={{ top: `${hour * 60}px`, height: "60px" }}
+              >
                 {weekDays.map((day) => (
                   <div
                     key={day.toISOString()}
-                    className={`flex-1 border-l border-[rgb(var(--border-base))] hover:bg-[rgb(var(--bg-hover))]/50 transition-colors ${
+                    className={`w-28 sm:w-32 shrink-0 border-l border-[rgb(var(--border-base))] hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer ${
                       isSameDay(day, selectedDate)
                         ? "bg-[rgb(var(--brand-primary))]/5"
                         : ""
                     }`}
+                    onDoubleClick={() => onSelectDate(day)}
                   />
                 ))}
               </div>
-            </div>
-          ))}
+            ))}
 
-          {/* Events per day */}
-          <div className="absolute top-0 left-16 sm:left-20 right-0 bottom-0 flex">
-            {weekDays.map((day) => {
-              const dayEvents = getEventsForDay(day);
-              const dayStart = startOfDay(day);
-              return (
-                <div
-                  key={day.toISOString()}
-                  className="flex-1 relative border-l border-[rgb(var(--border-base))]"
-                >
-                  {dayEvents.map((event) => (
-                    <TimeGridEvent
-                      key={event.$id}
-                      event={event}
-                      dayStart={dayStart}
-                      onClick={onEventClick}
-                    />
-                  ))}
-                </div>
-              );
-            })}
+            {/* Events per day */}
+            <div className="absolute top-0 left-0 right-0 bottom-0 flex">
+              {weekDays.map((day) => {
+                const dayEvents = getEventsForDay(day);
+                const dayStart = startOfDay(day);
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className="w-28 sm:w-32 shrink-0 relative border-l border-[rgb(var(--border-base))]"
+                  >
+                    {dayEvents.map((event) => (
+                      <TimeGridEvent
+                        key={event.$id}
+                        event={event}
+                        dayStart={dayStart}
+                        onClick={onEventClick}
+                        onLongPress={onEventLongPress}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -985,7 +1470,16 @@ function WeekView({ selectedDate, events, onSelectDate, onEventClick }) {
 // MONTH VIEW COMPONENT
 // ================================================
 
-function MonthView({ currentDate, selectedDate, onSelectDate, eventsByDay }) {
+function MonthView({
+  currentDate,
+  selectedDate,
+  onSelectDate,
+  eventsByDay,
+  onEventClick,
+  onEventLongPress,
+  onDayLongPress,
+  onDayContextMenu,
+}) {
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -1034,6 +1528,10 @@ function MonthView({ currentDate, selectedDate, onSelectDate, eventsByDay }) {
               isSelected={isSameDay(day, selectedDate)}
               isTodayDate={isToday(day)}
               onClick={() => onSelectDate(day)}
+              onLongPress={onDayLongPress}
+              onContextMenu={onDayContextMenu}
+              onEventClick={onEventClick}
+              onEventLongPress={onEventLongPress}
             />
           );
         })}
@@ -1046,7 +1544,13 @@ function MonthView({ currentDate, selectedDate, onSelectDate, eventsByDay }) {
 // AGENDA VIEW COMPONENT
 // ================================================
 
-function AgendaView({ events, selectedDate, onEventClick, onCreateEvent }) {
+function AgendaView({
+  events,
+  selectedDate,
+  onEventClick,
+  onEventLongPress,
+  onCreateEvent,
+}) {
   // Group events by date
   const groupedEvents = useMemo(() => {
     const groups = {};
@@ -1158,6 +1662,7 @@ function AgendaView({ events, selectedDate, onEventClick, onCreateEvent }) {
                         key={event.$id}
                         event={event}
                         onClick={onEventClick}
+                        onLongPress={onEventLongPress}
                       />
                     ))}
                   </div>
@@ -1179,8 +1684,15 @@ function SelectedDayPanel({
   selectedDate,
   events,
   onEventClick,
+  onEventLongPress,
   onCreateEvent,
 }) {
+  const { activeGroup, profile } = useWorkspace();
+  const { data: userSettings } = useUserSettings(
+    activeGroup?.$id,
+    profile?.$id
+  );
+
   // Estado para el reloj en tiempo real
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -1197,6 +1709,8 @@ function SelectedDayPanel({
     if (!e.startAt) return false;
     return isSameDay(parseISO(e.startAt), selectedDate);
   });
+
+  const currentTimezone = userSettings?.timezone || "America/Mexico_City";
 
   return (
     <div className="h-full flex flex-col">
@@ -1219,11 +1733,28 @@ function SelectedDayPanel({
         <div className="text-sm text-[rgb(var(--text-secondary))] capitalize mt-1">
           {format(selectedDate, "EEEE, MMMM yyyy", { locale: es })}
         </div>
-        {isToday(selectedDate) && (
-          <span className="inline-block mt-1 text-xs text-[rgb(var(--brand-primary))] font-medium">
-            Hoy
-          </span>
-        )}
+        <div className="flex items-center gap-2 mt-1.5">
+          {isToday(selectedDate) && (
+            <span className="inline-block text-xs text-[rgb(var(--brand-primary))] font-medium">
+              Hoy
+            </span>
+          )}
+          <div
+            className="inline-flex items-center gap-1.5 text-xs text-[rgb(var(--text-muted))] group relative"
+            title="Zona horaria configurada para tus eventos"
+          >
+            <Globe className="w-3 h-3" />
+            <span>
+              {SETTINGS_OPTIONS.timezones.find(
+                (tz) => tz.value === currentTimezone
+              )?.label || currentTimezone}
+            </span>
+            {/* Tooltip */}
+            <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute left-0 top-full mt-1 px-2 py-1 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-base))] rounded-lg shadow-lg text-xs text-[rgb(var(--text-primary))] whitespace-nowrap z-10">
+              Zona horaria de configuración
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Events */}
@@ -1250,7 +1781,12 @@ function SelectedDayPanel({
         ) : (
           <div className="space-y-3">
             {dayEvents.map((event) => (
-              <EventCard key={event.$id} event={event} onClick={onEventClick} />
+              <EventCard
+                key={event.$id}
+                event={event}
+                onClick={onEventClick}
+                onLongPress={onEventLongPress}
+              />
             ))}
           </div>
         )}
@@ -1335,17 +1871,39 @@ export function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [viewingEvent, setViewingEvent] = useState(null);
   const [deletingEvent, setDeletingEvent] = useState(null);
+  const [movingEvent, setMovingEvent] = useState(null);
+  const [defaultEventDate, setDefaultEventDate] = useState(null);
+
+  // Context menu states
+  const [contextMenu, setContextMenu] = useState({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    items: [],
+  });
+
+  // Date picker states
+  const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const { activeGroup, calendars = [], profile } = useWorkspace();
   const deleteCalendar = useDeleteCalendar();
+  const duplicateEvent = useDuplicateEvent();
   const hasCalendars = calendars.length > 0;
   const groupId = activeGroup?.$id;
 
-  const { data: events = [] } = useMonthEvents(
+  const { data: rawEvents = [] } = useMonthEvents(
     groupId,
     currentDate,
     visibleCalendars.length > 0 ? visibleCalendars : undefined
   );
+
+  // Enrich events with calendar information
+  const events = useMemo(() => {
+    return rawEvents.map((event) => ({
+      ...event,
+      calendar: calendars.find((c) => c.$id === event.calendarId),
+    }));
+  }, [rawEvents, calendars]);
 
   // Initialize visible calendars
   React.useEffect(() => {
@@ -1353,6 +1911,26 @@ export function CalendarPage() {
       setVisibleCalendars(calendars.map((c) => c.$id));
     }
   }, [calendars, visibleCalendars.length]);
+
+  // Handle view mode change animation direction
+  const prevViewModeRef = React.useRef(viewMode);
+  React.useEffect(() => {
+    const viewOrder = [
+      VIEW_MODES.DAY,
+      VIEW_MODES.WEEK,
+      VIEW_MODES.MONTH,
+      VIEW_MODES.AGENDA,
+    ];
+    const prevIndex = viewOrder.indexOf(prevViewModeRef.current);
+    const currentIndex = viewOrder.indexOf(viewMode);
+
+    if (prevIndex !== -1 && currentIndex !== -1 && prevIndex !== currentIndex) {
+      // Cambio de vista: determinar dirección
+      setNavigationDirection(currentIndex > prevIndex ? 1 : -1);
+    }
+
+    prevViewModeRef.current = viewMode;
+  }, [viewMode]);
 
   // Filter events by visible calendars
   const filteredEvents = useMemo(() => {
@@ -1428,7 +2006,8 @@ export function CalendarPage() {
   };
 
   // Event handlers
-  const handleCreateEvent = useCallback(() => {
+  const handleCreateEvent = useCallback((date = null) => {
+    setDefaultEventDate(date);
     setEditingEvent(null);
     setShowEventModal(true);
   }, []);
@@ -1438,13 +2017,132 @@ export function CalendarPage() {
   }, []);
 
   const handleEditEvent = useCallback((event) => {
+    setViewingEvent(null);
     setEditingEvent(event);
     setShowEventModal(true);
   }, []);
 
   const handleDeleteEvent = useCallback((event) => {
+    setViewingEvent(null);
     setDeletingEvent(event);
   }, []);
+
+  const handleMoveEvent = useCallback((event) => {
+    setViewingEvent(null);
+    setMovingEvent(event);
+  }, []);
+
+  const handleDuplicateEvent = useCallback(
+    async (event) => {
+      try {
+        await duplicateEvent.mutateAsync({
+          eventId: event.$id,
+        });
+        setViewingEvent(null);
+      } catch (error) {
+        console.error("Error duplicating event:", error);
+      }
+    },
+    [duplicateEvent]
+  );
+
+  // Date picker handlers
+  const handleMonthYearChange = useCallback((date) => {
+    setNavigationDirection(0);
+    setCurrentDate(date);
+    setSelectedDate(date);
+    setShowMonthYearPicker(false);
+  }, []);
+
+  const handleDateChange = useCallback((date) => {
+    setNavigationDirection(0);
+    setCurrentDate(date);
+    setSelectedDate(date);
+    setShowDatePicker(false);
+  }, []);
+
+  // Context menu handlers
+  const showContextMenu = useCallback((position, items) => {
+    setContextMenu({
+      isOpen: true,
+      position,
+      items,
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, items: [] });
+  }, []);
+
+  // Handler for long press on a day (create event)
+  const handleDayLongPress = useCallback(
+    (date) => {
+      setDefaultEventDate(date);
+      handleCreateEvent(date);
+    },
+    [handleCreateEvent]
+  );
+
+  // Handler for context menu on a day (right-click or two-finger tap)
+  const handleDayContextMenu = useCallback(
+    (e, date) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const x = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+      const y = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+
+      showContextMenu({ x, y }, [
+        MENU_ITEMS.createEvent(() => {
+          closeContextMenu();
+          setDefaultEventDate(date);
+          handleCreateEvent(date);
+        }),
+      ]);
+    },
+    [showContextMenu, closeContextMenu, handleCreateEvent]
+  );
+
+  // Handler for long press on event (show context menu)
+  const handleEventLongPress = useCallback(
+    (event, position) => {
+      // position ya viene con { x, y } desde los componentes
+      const x = position?.x || window.innerWidth / 2;
+      const y = position?.y || window.innerHeight / 2;
+
+      showContextMenu({ x, y }, [
+        MENU_ITEMS.viewEvent(() => {
+          closeContextMenu();
+          handleEventClick(event);
+        }),
+        MENU_ITEMS.editEvent(() => {
+          closeContextMenu();
+          handleEditEvent(event);
+        }),
+        MENU_ITEMS.duplicateEvent(() => {
+          closeContextMenu();
+          handleDuplicateEvent(event);
+        }),
+        MENU_ITEMS.moveEvent(() => {
+          closeContextMenu();
+          handleMoveEvent(event);
+        }),
+        MENU_ITEMS.deleteEvent(() => {
+          closeContextMenu();
+          handleDeleteEvent(event);
+        }),
+      ]);
+    },
+    [
+      showContextMenu,
+      closeContextMenu,
+      handleEventClick,
+      handleEditEvent,
+      handleDuplicateEvent,
+      handleMoveEvent,
+      handleDeleteEvent,
+    ]
+  );
 
   // Get calendar for an event
   const getCalendarForEvent = useCallback(
@@ -1515,9 +2213,13 @@ export function CalendarPage() {
             </button>
           </div>
 
-          <h1 className="text-sm sm:text-lg font-semibold text-[rgb(var(--text-primary))] capitalize truncate">
+          <button
+            onClick={() => setShowMonthYearPicker(true)}
+            className="text-sm sm:text-lg font-semibold text-[rgb(var(--text-primary))] capitalize truncate hover:bg-[rgb(var(--bg-hover))] px-3 py-1 rounded-lg transition-colors flex items-center gap-1.5"
+          >
             {getNavigationTitle()}
-          </h1>
+            <ChevronDown className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1663,6 +2365,43 @@ export function CalendarPage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.25, ease: "easeInOut" }}
+                drag={viewMode === VIEW_MODES.MONTH ? "y" : "x"}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(e, { offset, velocity }) => {
+                  const swipeThreshold = 50;
+                  const swipeVelocityThreshold = 500;
+
+                  if (viewMode === VIEW_MODES.MONTH) {
+                    // Vertical swipe for mobile month view (continuous calendar)
+                    if (
+                      Math.abs(offset.y) > swipeThreshold ||
+                      Math.abs(velocity.y) > swipeVelocityThreshold
+                    ) {
+                      if (offset.y < 0) {
+                        // Swipe up = next month
+                        navigateNext();
+                      } else {
+                        // Swipe down = previous month
+                        navigatePrevious();
+                      }
+                    }
+                  } else {
+                    // Horizontal swipe for other views
+                    if (
+                      Math.abs(offset.x) > swipeThreshold ||
+                      Math.abs(velocity.x) > swipeVelocityThreshold
+                    ) {
+                      if (offset.x < 0) {
+                        // Swipe left = next
+                        navigateNext();
+                      } else {
+                        // Swipe right = previous
+                        navigatePrevious();
+                      }
+                    }
+                  }
+                }}
                 className="flex-1 overflow-hidden"
               >
                 {viewMode === VIEW_MODES.DAY && (
@@ -1670,6 +2409,8 @@ export function CalendarPage() {
                     selectedDate={selectedDate}
                     events={filteredEvents}
                     onEventClick={handleEventClick}
+                    onEventLongPress={handleEventLongPress}
+                    onDateClick={() => setShowDatePicker(true)}
                   />
                 )}
 
@@ -1682,6 +2423,7 @@ export function CalendarPage() {
                       setCurrentDate(d);
                     }}
                     onEventClick={handleEventClick}
+                    onEventLongPress={handleEventLongPress}
                   />
                 )}
 
@@ -1691,6 +2433,10 @@ export function CalendarPage() {
                     selectedDate={selectedDate}
                     eventsByDay={eventsByDay}
                     onSelectDate={setSelectedDate}
+                    onEventClick={handleEventClick}
+                    onEventLongPress={handleEventLongPress}
+                    onDayLongPress={handleDayLongPress}
+                    onDayContextMenu={handleDayContextMenu}
                   />
                 )}
 
@@ -1699,6 +2445,7 @@ export function CalendarPage() {
                     events={filteredEvents}
                     selectedDate={selectedDate}
                     onEventClick={handleEventClick}
+                    onEventLongPress={handleEventLongPress}
                     onCreateEvent={handleCreateEvent}
                   />
                 )}
@@ -1753,6 +2500,7 @@ export function CalendarPage() {
                       selectedDate={selectedDate}
                       events={filteredEvents}
                       onEventClick={handleEventClick}
+                      onEventLongPress={handleEventLongPress}
                       onCreateEvent={handleCreateEvent}
                     />
                   </div>
@@ -1924,13 +2672,15 @@ export function CalendarPage() {
         onClose={() => {
           setShowEventModal(false);
           setEditingEvent(null);
+          setDefaultEventDate(null);
         }}
         event={editingEvent}
         isEditing={!!editingEvent}
-        defaultDate={selectedDate}
+        defaultDate={defaultEventDate || selectedDate}
         onSuccess={() => {
           setShowEventModal(false);
           setEditingEvent(null);
+          setDefaultEventDate(null);
         }}
       />
 
@@ -1941,6 +2691,8 @@ export function CalendarPage() {
         calendar={getCalendarForEvent(viewingEvent)}
         onEdit={handleEditEvent}
         onDelete={handleDeleteEvent}
+        onDuplicate={handleDuplicateEvent}
+        onMove={handleMoveEvent}
       />
 
       <DeleteEventModal
@@ -1951,6 +2703,42 @@ export function CalendarPage() {
           setDeletingEvent(null);
           setViewingEvent(null);
         }}
+      />
+
+      <MoveEventModal
+        isOpen={!!movingEvent}
+        onClose={() => setMovingEvent(null)}
+        event={movingEvent}
+        currentCalendar={calendars.find(
+          (cal) => cal.$id === movingEvent?.calendarId
+        )}
+        onSuccess={() => {
+          setMovingEvent(null);
+          setViewingEvent(null);
+        }}
+      />
+
+      {/* Date Pickers */}
+      <MonthYearPicker
+        selectedDate={currentDate}
+        onDateChange={handleMonthYearChange}
+        isOpen={showMonthYearPicker}
+        onClose={() => setShowMonthYearPicker(false)}
+      />
+
+      <DatePicker
+        selectedDate={selectedDate}
+        onDateChange={handleDateChange}
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+      />
+
+      {/* Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        items={contextMenu.items}
+        onClose={closeContextMenu}
       />
     </div>
   );
