@@ -552,8 +552,8 @@ export function AppShell() {
 
       {/* Contenido Principal */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Header móvil */}
-        <header className="lg:hidden flex items-center justify-between px-4 h-14 bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-base))]">
+        {/* Header móvil - Fijo en la parte superior */}
+        <header className="lg:hidden flex items-center justify-between px-4 h-12 bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-base))] shrink-0">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 -ml-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-primary))]"
@@ -1073,12 +1073,12 @@ export function AppShell() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
           <Outlet />
         </main>
 
-        {/* Bottom Navigation - Mobile */}
-        <nav className="lg:hidden flex items-center justify-around px-2 py-2 bg-[rgb(var(--bg-surface))] border-t border-[rgb(var(--border-base))]">
+        {/* Bottom Navigation - Mobile - Fijo en la parte inferior */}
+        <nav className="lg:hidden flex items-center justify-around px-2 py-1 bg-[rgb(var(--bg-surface))] border-t border-[rgb(var(--border-base))] shrink-0">
           {/* Module buttons */}
           {MODULES.filter((m) => !m.disabled).map((item) => {
             const Icon = item.icon;
@@ -1088,14 +1088,14 @@ export function AppShell() {
               <NavLink
                 key={item.id}
                 to={item.path}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-colors ${
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
                   isActive
                     ? "text-[rgb(var(--brand-primary))]"
                     : "text-[rgb(var(--text-muted))]"
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="text-[10px] font-medium">{item.label}</span>
               </NavLink>
             );
           })}
@@ -1107,7 +1107,7 @@ export function AppShell() {
                 e.stopPropagation();
                 setShowMobileProfileMenu((prev) => !prev);
               }}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-colors ${
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
                 showMobileProfileMenu
                   ? "text-[rgb(var(--brand-primary))]"
                   : "text-[rgb(var(--text-muted))]"
@@ -1126,7 +1126,7 @@ export function AppShell() {
                   </div>
                 )}
               </div>
-              <span className="text-xs font-medium">Perfil</span>
+              <span className="text-[10px] font-medium">Perfil</span>
             </button>
 
             {/* Mobile Profile Menu */}
