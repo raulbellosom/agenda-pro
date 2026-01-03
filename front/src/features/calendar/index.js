@@ -6,3 +6,4 @@ export { EventDetailsModal } from "./EventDetailsModal";
 export { DeleteEventModal } from "./DeleteEventModal";
 export { MoveEventModal } from "./MoveEventModal";
 export { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
+export { SwipeableView } from "./SwipeableView";

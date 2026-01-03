@@ -86,9 +86,16 @@ import {
   SETTINGS_OPTIONS,
   useDuplicateEvent,
   useLongPress,
+  useCalendarSwipe,
 } from "../../lib/hooks";
 import { ContextMenu, MENU_ITEMS } from "./ContextMenu";
 import { MoveEventModal } from "./MoveEventModal";
+import {
+  formatDate,
+  formatTime,
+  formatTimeRange,
+  getWeekDayNames,
+} from "../../lib/utils/dateTimeFormat";
 
 // ================================================
 // CONSTANTS & UTILITIES
@@ -234,7 +241,13 @@ const viewTransitionVariants = {
 // DATE PICKER COMPONENT (for Day View)
 // ================================================
 
-function DatePicker({ selectedDate, onDateChange, isOpen, onClose }) {
+function DatePicker({
+  selectedDate,
+  onDateChange,
+  isOpen,
+  onClose,
+  weekStartsOn = 1,
+}) {
   const [currentMonth, setCurrentMonth] = useState(
     startOfMonth(selectedDate || new Date())
   );
@@ -249,8 +262,8 @@ function DatePicker({ selectedDate, onDateChange, isOpen, onClose }) {
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
 
   const days = [];
   let day = calendarStart;
@@ -259,7 +272,7 @@ function DatePicker({ selectedDate, onDateChange, isOpen, onClose }) {
     day = addDays(day, 1);
   }
 
-  const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekDays = getWeekDayNames(weekStartsOn, "short");
 
   const handleDateClick = (date) => {
     onDateChange(date);
@@ -533,11 +546,16 @@ function MonthYearPicker({ selectedDate, onDateChange, isOpen, onClose }) {
 // MINI CALENDAR COMPONENT
 // ================================================
 
-function MiniCalendar({ currentDate, selectedDate, onSelectDate }) {
+function MiniCalendar({
+  currentDate,
+  selectedDate,
+  onSelectDate,
+  weekStartsOn = 1,
+}) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
 
   const days = [];
   let day = calendarStart;
@@ -546,7 +564,7 @@ function MiniCalendar({ currentDate, selectedDate, onSelectDate }) {
     day = addDays(day, 1);
   }
 
-  const weekDays = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekDays = getWeekDayNames(weekStartsOn, "short");
 
   return (
     <div className="select-none">
@@ -846,12 +864,20 @@ function CalendarsList({
 // EVENT CARD COMPONENT
 // ================================================
 
-function EventCard({ event, compact = false, onClick, onLongPress }) {
+function EventCard({
+  event,
+  compact = false,
+  onClick,
+  onLongPress,
+  timeFormat = "24h",
+}) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
   const startTime = event.startAt
-    ? format(parseISO(event.startAt), "HH:mm")
+    ? formatTime(parseISO(event.startAt), timeFormat)
     : "";
-  const endTime = event.endAt ? format(parseISO(event.endAt), "HH:mm") : "";
+  const endTime = event.endAt
+    ? formatTime(parseISO(event.endAt), timeFormat)
+    : "";
 
   // Solo usamos useLongPress para detectar long press en móvil
   const longPressHandlers = useLongPress(
@@ -1323,13 +1349,14 @@ function WeekView({
   onSelectDate,
   onEventClick,
   onEventLongPress,
+  weekStartsOn = 1,
 }) {
   const scrollRef = useRef(null);
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Scroll to current time on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (scrollRef.current) {
       const currentHour = new Date().getHours();
       scrollRef.current.scrollTop = Math.max(0, (currentHour - 1) * 60);
@@ -1342,132 +1369,211 @@ function WeekView({
       return isSameDay(parseISO(e.startAt), day);
     });
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Week Header */}
-      <div className="flex border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] shrink-0">
-        {/* Time column header - sticky */}
-        <div className="w-16 sm:w-20 shrink-0 sticky left-0 z-10 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]" />
+  // Formateo de días para móvil y desktop
+  const formatDayName = (day) => {
+    return format(day, "EEEEE", { locale: es }); // Una sola letra: L, M, M, J, V, S, D
+  };
 
-        {/* Scrollable week days */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex min-w-max">
-            {weekDays.map((day) => (
-              <button
-                key={day.toISOString()}
-                onClick={() => onSelectDate(day)}
-                className={`w-28 sm:w-32 py-3 text-center transition-colors shrink-0 ${
-                  isSameDay(day, selectedDate)
-                    ? "bg-[rgb(var(--brand-primary))]/5"
-                    : "hover:bg-[rgb(var(--bg-hover))]"
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Week Header - Sticky - Siempre 7 columnas */}
+      <div className="flex border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))] shrink-0">
+        {/* Time column header placeholder */}
+        <div className="w-8 sm:w-12 md:w-14 shrink-0 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]" />
+
+        {/* Week days header - Grid de 7 columnas siempre */}
+        <div className="flex-1 grid grid-cols-7 relative">
+          {weekDays.map((day, index) => (
+            <button
+              key={day.toISOString()}
+              onClick={() => onSelectDate(day)}
+              className={`py-1.5 sm:py-2 md:py-3 text-center transition-colors relative ${
+                isSameDay(day, selectedDate)
+                  ? "bg-[rgb(var(--brand-primary))]/10"
+                  : "hover:bg-[rgb(var(--bg-hover))]"
+              } ${
+                index > 0
+                  ? 'before:content-[""] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-[rgb(var(--border-base))]'
+                  : ""
+              }`}
+            >
+              <div className="text-[9px] sm:text-[10px] md:text-xs text-[rgb(var(--text-muted))] uppercase tracking-wide">
+                <span className="md:hidden">{formatDayName(day)}</span>
+                <span className="hidden md:inline">
+                  {format(day, "EEE", { locale: es })}
+                </span>
+              </div>
+              <div
+                className={`text-xs sm:text-sm md:text-lg font-semibold mt-0.5 ${
+                  isToday(day)
+                    ? "w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center mx-auto text-[10px] sm:text-xs md:text-base"
+                    : isSameDay(day, selectedDate)
+                    ? "text-[rgb(var(--brand-primary))]"
+                    : "text-[rgb(var(--text-primary))]"
                 }`}
               >
-                <div className="text-xs text-[rgb(var(--text-muted))] uppercase tracking-wide">
-                  {format(day, "EEE", { locale: es })}
-                </div>
-                <div
-                  className={`text-lg font-semibold mt-1 ${
-                    isToday(day)
-                      ? "w-8 h-8 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center mx-auto"
-                      : isSameDay(day, selectedDate)
-                      ? "text-[rgb(var(--brand-primary))]"
-                      : "text-[rgb(var(--text-primary))]"
-                  }`}
-                >
-                  {format(day, "d")}
-                </div>
-              </button>
-            ))}
-          </div>
+                {format(day, "d")}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Time Grid */}
-      <div ref={scrollRef} className="flex-1 overflow-auto flex">
-        {/* Time column - sticky */}
-        <div className="w-16 sm:w-20 shrink-0 sticky left-0 z-10 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]">
-          <div style={{ height: `${24 * 60}px` }} className="relative">
-            {HOURS.map((hour) => (
-              <div
-                key={hour}
-                className="absolute left-0 right-0 border-t border-[rgb(var(--border-base))] pr-2 text-right"
-                style={{ top: `${hour * 60}px`, height: "60px" }}
-              >
-                <span className="text-xs text-[rgb(var(--text-muted))] -translate-y-2 inline-block">
-                  {format(setHours(new Date(), hour), "HH:mm")}
-                </span>
-              </div>
-            ))}
+      {/* Time Grid - Solo scroll vertical */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="flex h-[1440px]">
+          {" "}
+          {/* 24 horas * 60px */}
+          {/* Time column - Fixed/Sticky */}
+          <div className="w-8 sm:w-12 md:w-14 shrink-0 sticky left-0 z-10 bg-[rgb(var(--bg-surface))] border-r border-[rgb(var(--border-base))]">
+            <div className="relative h-full">
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  className="absolute left-0 right-0 border-t border-[rgb(var(--border-base))] flex items-start justify-end pr-0.5 sm:pr-1"
+                  style={{ top: `${hour * 60}px`, height: "60px" }}
+                >
+                  <span className="text-[8px] sm:text-[10px] md:text-xs text-[rgb(var(--text-muted))] -translate-y-1 sm:-translate-y-1.5">
+                    {format(setHours(new Date(), hour), "HH:mm")}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Scrollable day columns */}
-        <div className="flex-1 relative" style={{ height: `${24 * 60}px` }}>
-          <div className="absolute inset-0 flex min-w-max">
+          {/* Day columns - Grid de 7 columnas siempre */}
+          <div className="flex-1 grid grid-cols-7 h-full relative">
             {/* Current time indicator */}
             {weekDays.some((d) => isToday(d)) && (
               <div
-                className="absolute z-20 pointer-events-none"
+                className="absolute z-20 pointer-events-none left-0 right-0"
                 style={{
                   top: `${
                     new Date().getHours() * 60 + new Date().getMinutes()
                   }px`,
-                  left: 0,
-                  right: 0,
                 }}
               >
                 <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-[rgb(var(--error))] -ml-1" />
+                  <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[rgb(var(--error))] -ml-0.5" />
                   <div className="flex-1 h-0.5 bg-[rgb(var(--error))]" />
                 </div>
               </div>
             )}
 
-            {/* Hour rows background */}
+            {/* Hour grid lines background */}
             {HOURS.map((hour) => (
               <div
-                key={hour}
-                className="absolute left-0 right-0 flex border-t border-[rgb(var(--border-base))]"
-                style={{ top: `${hour * 60}px`, height: "60px" }}
-              >
-                {weekDays.map((day) => (
-                  <div
-                    key={day.toISOString()}
-                    className={`w-28 sm:w-32 shrink-0 border-l border-[rgb(var(--border-base))] hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer ${
-                      isSameDay(day, selectedDate)
-                        ? "bg-[rgb(var(--brand-primary))]/5"
-                        : ""
-                    }`}
-                    onDoubleClick={() => onSelectDate(day)}
-                  />
-                ))}
-              </div>
+                key={`hour-line-${hour}`}
+                className="absolute left-0 right-0 border-t border-[rgb(var(--border-base))]"
+                style={{ top: `${hour * 60}px` }}
+              />
             ))}
 
-            {/* Events per day */}
-            <div className="absolute top-0 left-0 right-0 bottom-0 flex">
-              {weekDays.map((day) => {
-                const dayEvents = getEventsForDay(day);
-                const dayStart = startOfDay(day);
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className="w-28 sm:w-32 shrink-0 relative border-l border-[rgb(var(--border-base))]"
-                  >
-                    {dayEvents.map((event) => (
-                      <TimeGridEvent
-                        key={event.$id}
-                        event={event}
-                        dayStart={dayStart}
-                        onClick={onEventClick}
-                        onLongPress={onEventLongPress}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+            {/* Day columns with events */}
+            {weekDays.map((day, index) => {
+              const dayEvents = getEventsForDay(day);
+              const dayStart = startOfDay(day);
+              const isSelected = isSameDay(day, selectedDate);
+              const isTodayDate = isToday(day);
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`relative ${
+                    isSelected ? "bg-[rgb(var(--brand-primary))]/5" : ""
+                  } ${
+                    isTodayDate && !isSelected
+                      ? "bg-[rgb(var(--brand-primary))]/[0.02]"
+                      : ""
+                  } ${
+                    index > 0
+                      ? 'before:content-[""] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-[rgb(var(--border-base))] before:z-10'
+                      : ""
+                  }`}
+                  onClick={() => onSelectDate(day)}
+                >
+                  {/* Hour cells for interaction */}
+                  {HOURS.map((hour) => (
+                    <div
+                      key={`${day.toISOString()}-${hour}`}
+                      className="absolute left-0 right-0 hover:bg-[rgb(var(--bg-hover))]/50 transition-colors cursor-pointer"
+                      style={{ top: `${hour * 60}px`, height: "60px" }}
+                    />
+                  ))}
+
+                  {/* Events */}
+                  {dayEvents.map((event) => (
+                    <TimeGridEventCompact
+                      key={event.$id}
+                      event={event}
+                      dayStart={dayStart}
+                      onClick={onEventClick}
+                      onLongPress={onEventLongPress}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================================================
+// COMPACT TIME GRID EVENT (for week view)
+// ================================================
+
+function TimeGridEventCompact({ event, dayStart, onClick, onLongPress }) {
+  const colors = getCalendarColor(event.calendar?.color);
+
+  const startTime = parseISO(event.startAt);
+  const endTime = event.endAt ? parseISO(event.endAt) : addDays(startTime, 0);
+
+  const minutesFromStart = differenceInMinutes(startTime, dayStart);
+  const duration = event.endAt
+    ? Math.max(differenceInMinutes(endTime, startTime), 30)
+    : 60;
+
+  const top = Math.max(0, minutesFromStart);
+  const height = Math.min(duration, 1440 - top);
+
+  const longPressHandlers = useLongPress(
+    (e, position) => {
+      if (onLongPress) {
+        onLongPress(
+          event,
+          position || { x: e.clientX || 0, y: e.clientY || 0 }
+        );
+      }
+    },
+    () => onClick?.(event),
+    { delay: 400, moveTolerance: 8 }
+  );
+
+  // Formatear hora de inicio
+  const timeStr = format(startTime, "HH:mm");
+
+  return (
+    <div
+      {...longPressHandlers}
+      className={`absolute left-0.5 right-0.5 sm:left-1 sm:right-1 rounded ${colors.bg} ${colors.border} border-l-2 overflow-hidden cursor-pointer hover:ring-1 hover:ring-[rgb(var(--brand-primary))]/50 transition-all z-10`}
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+        minHeight: "20px",
+      }}
+    >
+      <div className="p-0.5 sm:p-1 h-full flex flex-col">
+        <div
+          className={`text-[8px] sm:text-[10px] ${colors.text} font-medium truncate leading-tight`}
+        >
+          {timeStr}
+        </div>
+        <div
+          className={`text-[9px] sm:text-xs font-medium ${colors.text} truncate leading-tight`}
+        >
+          {event.title}
         </div>
       </div>
     </div>
@@ -1492,6 +1598,7 @@ function InfiniteScrollMonthView({
   onDayLongPress,
   onDayContextMenu,
   onMonthChange,
+  weekStartsOn = 1,
 }) {
   const containerRef = useRef(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -1503,20 +1610,23 @@ function InfiniteScrollMonthView({
   }, [currentDate]);
 
   // Calcular días para cada mes
-  const getMonthDays = useCallback((date) => {
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const getMonthDays = useCallback(
+    (date) => {
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+      const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
 
-    const days = [];
-    let day = calendarStart;
-    while (day <= calendarEnd) {
-      days.push(day);
-      day = addDays(day, 1);
-    }
-    return days;
-  }, []);
+      const days = [];
+      let day = calendarStart;
+      while (day <= calendarEnd) {
+        days.push(day);
+        day = addDays(day, 1);
+      }
+      return days;
+    },
+    [weekStartsOn]
+  );
 
   const monthsData = useMemo(() => {
     return months.map((month) => ({
@@ -1660,12 +1770,13 @@ function MonthView({
   onEventLongPress,
   onDayLongPress,
   onDayContextMenu,
+  weekStartsOn = 1,
 }) {
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
 
     const days = [];
     let day = calendarStart;
@@ -1674,10 +1785,10 @@ function MonthView({
       day = addDays(day, 1);
     }
     return days;
-  }, [currentDate]);
+  }, [currentDate, weekStartsOn]);
 
-  const weekDays = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
-  const weekDaysMobile = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekDays = getWeekDayNames(weekStartsOn, "medium");
+  const weekDaysMobile = getWeekDayNames(weekStartsOn, "short");
 
   return (
     <div className="h-full flex flex-col border-l border-t border-[rgb(var(--border-base))]">
@@ -2090,6 +2201,16 @@ export function CalendarPage() {
   const duplicateEvent = useDuplicateEvent();
   const hasCalendars = calendars.length > 0;
   const groupId = activeGroup?.$id;
+  const profileId = profile?.$id;
+
+  // Cargar preferencias del usuario
+  const { data: userSettings } = useUserSettings(groupId, profileId);
+
+  // Configuración con valores por defecto si no hay settings
+  const weekStartsOn = userSettings?.weekStartsOn ?? 1; // Default: Lunes
+  const dateFormat = userSettings?.dateFormat ?? "DD/MM/YYYY";
+  const timeFormat = userSettings?.timeFormat ?? "24h";
+  const currentTimezone = userSettings?.timezone ?? "America/Mexico_City";
 
   const { data: rawEvents = [] } = useMonthEvents(
     groupId,
@@ -2196,6 +2317,22 @@ export function CalendarPage() {
     setCurrentDate(new Date());
     setSelectedDate(new Date());
   }, []);
+
+  // Hook de swipe para navegación táctil en móviles
+  // Solo activo cuando no estamos en scroll infinito del mes móvil
+  const shouldEnableSwipe =
+    !needsFirstGroup &&
+    hasCalendars &&
+    !(isMobile && viewMode === VIEW_MODES.MONTH);
+  const {
+    bind: swipeBindings,
+    style: swipeStyle,
+    isDragging,
+  } = useCalendarSwipe({
+    onNext: navigateNext,
+    onPrevious: navigatePrevious,
+    enabled: shouldEnableSwipe,
+  });
 
   const toggleCalendarVisibility = (calId) => {
     setVisibleCalendars((prev) =>
@@ -2358,8 +2495,8 @@ export function CalendarPage() {
       case VIEW_MODES.DAY:
         return format(selectedDate, "d 'de' MMMM yyyy", { locale: es });
       case VIEW_MODES.WEEK: {
-        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-        const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn });
+        const weekEnd = endOfWeek(selectedDate, { weekStartsOn });
         if (isSameMonth(weekStart, weekEnd)) {
           return format(weekStart, "MMMM yyyy", { locale: es });
         }
@@ -2519,6 +2656,7 @@ export function CalendarPage() {
                               setSelectedDate(d);
                               setCurrentDate(d);
                             }}
+                            weekStartsOn={weekStartsOn}
                           />
                         </div>
                       </motion.div>
@@ -2585,89 +2723,82 @@ export function CalendarPage() {
                 setCurrentDate(newDate);
                 setNavigationDirection(newDate > currentDate ? 1 : -1);
               }}
+              weekStartsOn={weekStartsOn}
             />
           ) : (
-            <AnimatePresence mode="wait" custom={navigationDirection}>
-              <motion.div
-                key={viewMode + currentDate.toISOString()}
-                custom={navigationDirection}
-                variants={viewTransitionVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                drag={isMobile ? false : "x"}
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(e, { offset, velocity }) => {
-                  const swipeThreshold = 50;
-                  const swipeVelocityThreshold = 500;
+            // Contenedor con gestos de swipe para navegación
+            <div
+              {...swipeBindings()}
+              className="flex-1 overflow-hidden"
+              style={{
+                touchAction: "pan-y",
+                ...swipeStyle,
+              }}
+            >
+              <AnimatePresence mode="wait" custom={navigationDirection}>
+                <motion.div
+                  key={viewMode + currentDate.toISOString()}
+                  custom={navigationDirection}
+                  variants={viewTransitionVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{
+                    duration: isDragging ? 0 : 0.25,
+                    ease: "easeInOut",
+                  }}
+                  className="h-full overflow-hidden"
+                >
+                  {viewMode === VIEW_MODES.DAY && (
+                    <DayView
+                      selectedDate={selectedDate}
+                      events={filteredEvents}
+                      onEventClick={handleEventClick}
+                      onEventLongPress={handleEventLongPress}
+                      onDateClick={() => setShowDatePicker(true)}
+                    />
+                  )}
 
-                  if (!isMobile) {
-                    // Horizontal swipe for desktop
-                    if (
-                      Math.abs(offset.x) > swipeThreshold ||
-                      Math.abs(velocity.x) > swipeVelocityThreshold
-                    ) {
-                      if (offset.x < 0) {
-                        // Swipe left = next
-                        navigateNext();
-                      } else {
-                        // Swipe right = previous
-                        navigatePrevious();
-                      }
-                    }
-                  }
-                }}
-                className="flex-1 overflow-hidden"
-              >
-                {viewMode === VIEW_MODES.DAY && (
-                  <DayView
-                    selectedDate={selectedDate}
-                    events={filteredEvents}
-                    onEventClick={handleEventClick}
-                    onEventLongPress={handleEventLongPress}
-                    onDateClick={() => setShowDatePicker(true)}
-                  />
-                )}
+                  {viewMode === VIEW_MODES.WEEK && (
+                    <WeekView
+                      selectedDate={selectedDate}
+                      events={filteredEvents}
+                      onSelectDate={(d) => {
+                        setSelectedDate(d);
+                        setCurrentDate(d);
+                      }}
+                      onEventClick={handleEventClick}
+                      onEventLongPress={handleEventLongPress}
+                      weekStartsOn={weekStartsOn}
+                    />
+                  )}
 
-                {viewMode === VIEW_MODES.WEEK && (
-                  <WeekView
-                    selectedDate={selectedDate}
-                    events={filteredEvents}
-                    onSelectDate={(d) => {
-                      setSelectedDate(d);
-                      setCurrentDate(d);
-                    }}
-                    onEventClick={handleEventClick}
-                    onEventLongPress={handleEventLongPress}
-                  />
-                )}
+                  {viewMode === VIEW_MODES.MONTH && (
+                    <MonthView
+                      currentDate={currentDate}
+                      selectedDate={selectedDate}
+                      eventsByDay={eventsByDay}
+                      onSelectDate={setSelectedDate}
+                      onEventClick={handleEventClick}
+                      onEventLongPress={handleEventLongPress}
+                      onDayLongPress={handleDayLongPress}
+                      onDayContextMenu={handleDayContextMenu}
+                      weekStartsOn={weekStartsOn}
+                    />
+                  )}
 
-                {viewMode === VIEW_MODES.MONTH && (
-                  <MonthView
-                    currentDate={currentDate}
-                    selectedDate={selectedDate}
-                    eventsByDay={eventsByDay}
-                    onSelectDate={setSelectedDate}
-                    onEventClick={handleEventClick}
-                    onEventLongPress={handleEventLongPress}
-                    onDayLongPress={handleDayLongPress}
-                    onDayContextMenu={handleDayContextMenu}
-                  />
-                )}
-
-                {viewMode === VIEW_MODES.AGENDA && (
-                  <AgendaView
-                    events={filteredEvents}
-                    selectedDate={selectedDate}
-                    onEventClick={handleEventClick}
-                    onEventLongPress={handleEventLongPress}
-                    onCreateEvent={handleCreateEvent}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
+                  {viewMode === VIEW_MODES.AGENDA && (
+                    <AgendaView
+                      events={filteredEvents}
+                      selectedDate={selectedDate}
+                      onEventClick={handleEventClick}
+                      onEventLongPress={handleEventLongPress}
+                      onCreateEvent={handleCreateEvent}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           )}
         </div>
 
@@ -2948,6 +3079,7 @@ export function CalendarPage() {
         onDateChange={handleDateChange}
         isOpen={showDatePicker}
         onClose={() => setShowDatePicker(false)}
+        weekStartsOn={weekStartsOn}
       />
 
       {/* Context Menu */}
