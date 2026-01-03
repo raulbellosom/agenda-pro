@@ -53,7 +53,7 @@ import {
 import { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 import { CreateCalendarModal } from "./CreateCalendarModal";
 import { NoGroupsPrompt } from "../groups/NoGroupsPrompt";
-import { CreateGroupModal } from "../groups/CreateGroupModal";
+import { GroupModal } from "../groups/GroupModal";
 import { EventModal } from "./EventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
 import { DeleteEventModal } from "./DeleteEventModal";
@@ -87,6 +87,7 @@ import {
   useDuplicateEvent,
   useLongPress,
   useCalendarSwipe,
+  useSwipeNavigation,
 } from "../../lib/hooks";
 import { ContextMenu, MENU_ITEMS } from "./ContextMenu";
 import { MoveEventModal } from "./MoveEventModal";
@@ -1610,6 +1611,51 @@ function TimeGridEventCompact({ event, dayStart, onClick, onLongPress }) {
 // ================================================
 // MONTH VIEW COMPONENT
 // ================================================
+
+// Month Event Card Component (for month view)
+function MonthEventCard({ event, onClick, onLongPress }) {
+  const colors = getCalendarColor(event.calendar?.color || "violet");
+
+  const longPressHandlers = useLongPress(
+    (e) => {
+      e?.stopPropagation?.();
+      const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
+      const y =
+        e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
+      onLongPress?.(event, { x, y });
+    },
+    null,
+    { delay: 500 }
+  );
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = e.clientX || window.innerWidth / 2;
+    const y = e.clientY || window.innerHeight / 2;
+    onLongPress?.(event, { x, y });
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    onClick?.(e);
+  };
+
+  return (
+    <div
+      onMouseDown={longPressHandlers.onMouseDown}
+      onMouseUp={longPressHandlers.onMouseUp}
+      onMouseLeave={longPressHandlers.onMouseLeave}
+      onTouchStart={longPressHandlers.onTouchStart}
+      onTouchEnd={longPressHandlers.onTouchEnd}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all`}
+    >
+      {event.title}
+    </div>
+  );
+}
 
 // ================================================
 // SINGLE MONTH VIEW WITH SWIPE (Mobile)
@@ -3179,7 +3225,7 @@ export function CalendarPage() {
       />
 
       {/* Group Modal */}
-      <CreateGroupModal
+      <GroupModal
         isOpen={showCreateGroupModal}
         onClose={() => setShowCreateGroupModal(false)}
         onSuccess={() => setShowCreateGroupModal(false)}
