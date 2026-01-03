@@ -20,11 +20,11 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full flex items-center justify-center p-6"
+      className="min-h-full flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
     >
-      <div className="max-w-md w-full text-center">
+      <div className="max-w-md w-full text-center py-8">
         {/* Animated illustration */}
-        <div className="relative mb-8">
+        <div className="relative mb-6 sm:mb-8">
           {/* Background glow */}
           <motion.div
             className="absolute inset-0 blur-3xl"
@@ -48,7 +48,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
               damping: 15,
               delay: 0.2,
             }}
-            className="relative mx-auto w-32 h-32"
+            className="relative mx-auto w-24 h-24 sm:w-32 sm:h-32"
           >
             {/* Outer ring */}
             <motion.div
@@ -58,17 +58,17 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
             />
 
             {/* Inner container */}
-            <div className="absolute inset-4 rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 shadow-xl shadow-[rgb(var(--brand-primary))]/20 flex items-center justify-center">
-              <CalendarPlus className="w-12 h-12 text-white" />
+            <div className="absolute inset-3 sm:inset-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 shadow-xl shadow-[rgb(var(--brand-primary))]/20 flex items-center justify-center">
+              <CalendarPlus className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </div>
 
             {/* Floating sparkles */}
             <motion.div
               animate={{ y: [-5, 5, -5], x: [0, 3, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -top-2 -right-2"
+              className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2"
             >
-              <Sparkles className="w-6 h-6 text-amber-500" />
+              <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-amber-500" />
             </motion.div>
 
             <motion.div
@@ -76,7 +76,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
               transition={{ duration: 2.5, repeat: Infinity }}
               className="absolute -bottom-1 -left-1"
             >
-              <Sparkles className="w-5 h-5 text-pink-500" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500" />
             </motion.div>
           </motion.div>
         </div>
@@ -86,12 +86,12 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="space-y-4"
+          className="space-y-3 sm:space-y-4 px-2"
         >
-          <h2 className="text-2xl font-bold text-[rgb(var(--text-primary))]">
+          <h2 className="text-xl sm:text-2xl font-bold text-[rgb(var(--text-primary))]">
             ¡Comienza tu viaje!
           </h2>
-          <p className="text-[rgb(var(--text-muted))] max-w-sm mx-auto">
+          <p className="text-sm sm:text-base text-[rgb(var(--text-muted))] max-w-sm mx-auto">
             Crea tu primer calendario para empezar a organizar tus eventos y
             nunca perderte de nada importante.
           </p>
@@ -102,7 +102,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mt-8 grid grid-cols-3 gap-3"
+          className="mt-6 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-3 px-2"
         >
           {[
             { Icon: CalendarDays, label: "Organiza", color: "text-violet-500" },
@@ -114,12 +114,12 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 + idx * 0.1 }}
-              className="p-3 rounded-xl bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]"
+              className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]"
             >
               <div className="flex justify-center mb-1">
-                <item.Icon className={`w-6 h-6 ${item.color}`} />
+                <item.Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${item.color}`} />
               </div>
-              <div className="text-xs font-medium text-[rgb(var(--text-secondary))]">
+              <div className="text-[10px] sm:text-xs font-medium text-[rgb(var(--text-secondary))]">
                 {item.label}
               </div>
             </motion.div>
@@ -131,21 +131,21 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="mt-8"
+          className="mt-6 sm:mt-8 px-2"
         >
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={onCreateCalendar}
-            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300"
+            className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Crear mi primer calendario
             <motion.div
               animate={{ x: [0, 4, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.div>
             {/* Shine effect */}
             <motion.div
@@ -164,10 +164,10 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
-          className="mt-6 text-xs text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5"
+          className="mt-4 sm:mt-6 text-xs text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5 px-2"
         >
           Solo toma unos segundos
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
         </motion.p>
       </div>
     </motion.div>

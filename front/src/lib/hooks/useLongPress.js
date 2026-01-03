@@ -17,7 +17,7 @@ export function useLongPress(
   onClick,
   {
     shouldPreventDefault = true,
-    delay = 400, // Reducido de 500 para mejor respuesta en móvil
+    delay = 400,
     moveTolerance = 10,
     cancelOnMove = true,
   } = {}
@@ -73,6 +73,12 @@ export function useLongPress(
 
   const start = useCallback(
     (event) => {
+      // IMPORTANTE: Detener propagación inmediatamente para prevenir
+      // que las celdas/contenedores padres reciban el evento
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
       // Ignorar si es multitouch (más de un dedo)
       if (event.touches && event.touches.length > 1) {
         return;
@@ -116,6 +122,11 @@ export function useLongPress(
 
   const clear = useCallback(
     (event, shouldTriggerClick = true) => {
+      // Detener propagación también al terminar
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
       // Limpiar timeout
       if (timeout.current) {
         clearTimeout(timeout.current);
@@ -140,7 +151,12 @@ export function useLongPress(
       }
 
       // Prevenir default en touchend si fue long press
-      if (shouldPreventDefault && isLongPress.current && event.cancelable) {
+      if (
+        shouldPreventDefault &&
+        isLongPress.current &&
+        event &&
+        event.cancelable
+      ) {
         event.preventDefault();
       }
 
@@ -152,6 +168,11 @@ export function useLongPress(
   // Cancelar si hay un segundo toque
   const handleTouchStart = useCallback(
     (event) => {
+      // Detener propagación inmediatamente
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
       if (event.touches && event.touches.length > 1) {
         // Multitouch detectado, cancelar
         isCancelled.current = true;
@@ -167,11 +188,20 @@ export function useLongPress(
   );
 
   return {
-    onMouseDown: (e) => start(e),
+    onMouseDown: (e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      start(e);
+    },
     onTouchStart: handleTouchStart,
-    onMouseUp: (e) => clear(e),
+    onMouseUp: (e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      clear(e);
+    },
     onMouseLeave: (e) => clear(e, false),
-    onTouchEnd: (e) => clear(e),
+    onTouchEnd: (e) => {
+      if (e && e.stopPropagation) e.stopPropagation();
+      clear(e);
+    },
     onTouchCancel: (e) => clear(e, false),
     // Context menu handler para desktop (right click)
     onContextMenu: (e) => {

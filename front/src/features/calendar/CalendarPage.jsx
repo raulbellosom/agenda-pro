@@ -1612,10 +1612,10 @@ function TimeGridEventCompact({ event, dayStart, onClick, onLongPress }) {
 // ================================================
 
 // ================================================
-// INFINITE SCROLL MONTH VIEW (Mobile)
+// SINGLE MONTH VIEW WITH SWIPE (Mobile)
 // ================================================
 
-function InfiniteScrollMonthView({
+function SingleMonthSwipeView({
   currentDate,
   selectedDate,
   onSelectDate,
@@ -1627,16 +1627,31 @@ function InfiniteScrollMonthView({
   onMonthChange,
   weekStartsOn = 1,
 }) {
-  const containerRef = useRef(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const lastScrollTop = useRef(0);
+  const [swipeDirection, setSwipeDirection] = useState(0);
 
-  // Generar 3 meses: anterior, actual, siguiente
-  const months = useMemo(() => {
-    return [subMonths(currentDate, 1), currentDate, addMonths(currentDate, 1)];
-  }, [currentDate]);
+  // Configurar gestos de swipe vertical
+  const {
+    bind: swipeBindings,
+    isDragging,
+    dragOffset,
+    style: swipeStyle,
+  } = useSwipeNavigation({
+    onSwipeUp: () => {
+      setSwipeDirection(1);
+      onMonthChange(addMonths(currentDate, 1));
+    },
+    onSwipeDown: () => {
+      setSwipeDirection(-1);
+      onMonthChange(subMonths(currentDate, 1));
+    },
+    horizontal: false,
+    vertical: true,
+    threshold: 50,
+    velocityThreshold: 0.3,
+    preventScroll: false, // No prevenir scroll para permitir scroll dentro del mes si es necesario
+  });
 
-  // Calcular días para cada mes
+  // Calcular días para el mes actual
   const getMonthDays = useCallback(
     (date) => {
       const monthStart = startOfMonth(date);
@@ -1655,71 +1670,21 @@ function InfiniteScrollMonthView({
     [weekStartsOn]
   );
 
-  const monthsData = useMemo(() => {
-    return months.map((month) => ({
-      date: month,
-      days: getMonthDays(month),
-    }));
-  }, [months, getMonthDays]);
-
-  // Centrar en el mes actual al montar o cambiar mes
-  useEffect(() => {
-    if (containerRef.current && !isTransitioning) {
-      const container = containerRef.current;
-      const monthElements = container.querySelectorAll("[data-month]");
-
-      if (monthElements[1]) {
-        // Scroll al mes del medio (índice 1)
-        monthElements[1].scrollIntoView({ block: "start" });
-        lastScrollTop.current = container.scrollTop;
-      }
-    }
-  }, [currentDate, isTransitioning]);
-
-  // Manejar scroll con detección de threshold
-  const handleScroll = useCallback(
-    (e) => {
-      if (isTransitioning) return;
-
-      const container = e.target;
-      const scrollTop = container.scrollTop;
-      const scrollHeight = container.scrollHeight;
-      const clientHeight = container.clientHeight;
-
-      // Detectar si hemos scrolleado significativamente hacia arriba o abajo
-      const scrollDelta = scrollTop - lastScrollTop.current;
-      const monthElements = container.querySelectorAll("[data-month]");
-
-      if (monthElements.length === 3) {
-        const firstMonthBottom =
-          monthElements[0].offsetTop + monthElements[0].offsetHeight;
-        const secondMonthTop = monthElements[1].offsetTop;
-        const secondMonthBottom =
-          monthElements[1].offsetTop + monthElements[1].offsetHeight;
-
-        // Si scrolleamos hacia arriba y pasamos el mes anterior
-        if (scrollTop < secondMonthTop - clientHeight / 3) {
-          setIsTransitioning(true);
-          onMonthChange(subMonths(currentDate, 1));
-          setTimeout(() => setIsTransitioning(false), 100);
-        }
-        // Si scrolleamos hacia abajo y pasamos el mes siguiente
-        else if (scrollTop > secondMonthBottom - clientHeight / 2) {
-          setIsTransitioning(true);
-          onMonthChange(addMonths(currentDate, 1));
-          setTimeout(() => setIsTransitioning(false), 100);
-        }
-      }
-
-      lastScrollTop.current = scrollTop;
-    },
-    [currentDate, onMonthChange, isTransitioning]
+  const calendarDays = useMemo(
+    () => getMonthDays(currentDate),
+    [currentDate, getMonthDays]
   );
-
-  const weekDaysMobile = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekDaysMobile = getWeekDayNames(weekStartsOn, "short");
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      {/* Month header - fijo */}
+      <div className="shrink-0 py-2 px-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))]">
+        <h2 className="text-base font-semibold text-[rgb(var(--text-primary))] capitalize text-center">
+          {format(currentDate, "MMMM yyyy", { locale: es })}
+        </h2>
+      </div>
+
       {/* Week days header - fijo */}
       <div className="grid grid-cols-7 shrink-0 border-b border-[rgb(var(--border-base))]">
         {weekDaysMobile.map((day, idx) => (
@@ -1732,53 +1697,119 @@ function InfiniteScrollMonthView({
         ))}
       </div>
 
-      {/* Scroll container con 3 meses */}
+      {/* Calendar grid con gestos swipe */}
       <div
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden"
+        {...swipeBindings()}
+        className="flex-1 overflow-hidden"
         style={{
-          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-x", // Permitir scroll horizontal pero controlar vertical
+          ...swipeStyle,
         }}
       >
-        {monthsData.map((monthData, monthIndex) => (
-          <div
-            key={monthData.date.toISOString()}
-            data-month={monthIndex}
-            className="border-l border-t border-[rgb(var(--border-base))]"
+        <AnimatePresence mode="wait" custom={swipeDirection}>
+          <motion.div
+            key={format(currentDate, "yyyy-MM")}
+            custom={swipeDirection}
+            variants={{
+              enter: (direction) => ({
+                y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
+                opacity: 0,
+              }),
+              center: {
+                y: 0,
+                opacity: 1,
+              },
+              exit: (direction) => ({
+                y: direction < 0 ? "100%" : direction > 0 ? "-100%" : 0,
+                opacity: 0,
+              }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              duration: isDragging ? 0 : 0.25,
+              ease: "easeInOut",
+            }}
+            className="h-full grid grid-cols-7 auto-rows-fr border-l border-t border-[rgb(var(--border-base))]"
           >
-            {/* Título del mes - sticky */}
-            <div className="sticky top-0 z-10 bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-base))] px-4 py-2 shadow-sm">
-              <div className="text-sm font-semibold text-[rgb(var(--text-primary))] capitalize">
-                {format(monthData.date, "MMMM yyyy", { locale: es })}
-              </div>
-            </div>
+            {calendarDays.map((day) => {
+              const dateKey = format(day, "yyyy-MM-dd");
+              const dayEvents = eventsByDay[dateKey] || [];
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isSelected = isSameDay(day, selectedDate);
+              const isTodayDate = isToday(day);
 
-            {/* Days grid */}
-            <div className="grid grid-cols-7">
-              {monthData.days.map((day) => {
-                const dateKey = format(day, "yyyy-MM-dd");
-                const dayEvents = eventsByDay[dateKey] || [];
+              const handleDayClick = () => {
+                onSelectDate(day);
+              };
 
-                return (
-                  <DayCell
-                    key={dateKey}
-                    date={day}
-                    events={dayEvents}
-                    isCurrentMonth={isSameMonth(day, monthData.date)}
-                    isSelected={isSameDay(day, selectedDate)}
-                    isTodayDate={isToday(day)}
-                    onClick={() => onSelectDate(day)}
-                    onLongPress={onDayLongPress}
-                    onContextMenu={onDayContextMenu}
-                    onEventClick={onEventClick}
-                    onEventLongPress={onEventLongPress}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ))}
+              const dayLongPress = useLongPress(
+                (e, position) => {
+                  onDayLongPress?.(day, position || { x: 0, y: 0 });
+                },
+                null,
+                { delay: 500 }
+              );
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  onClick={handleDayClick}
+                  {...dayLongPress}
+                  className={`
+                    flex flex-col p-1 sm:p-1.5 min-h-[70px] sm:min-h-[90px] lg:min-h-[100px] h-full border-r border-b border-[rgb(var(--border-base))] transition-all text-left
+                    ${
+                      isSelected
+                        ? "bg-[rgb(var(--brand-primary))]/10 ring-2 ring-inset ring-[rgb(var(--brand-primary))]"
+                        : isTodayDate
+                        ? "bg-[rgb(var(--brand-primary))]/5"
+                        : "hover:bg-[rgb(var(--bg-hover))]"
+                    }
+                    ${!isCurrentMonth ? "opacity-40" : ""}
+                  `}
+                >
+                  <div className="flex items-center justify-center mb-1">
+                    <span
+                      className={`text-xs sm:text-sm font-medium ${
+                        isTodayDate
+                          ? "w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center text-[10px] sm:text-xs"
+                          : isSelected
+                          ? "text-[rgb(var(--brand-primary))]"
+                          : "text-[rgb(var(--text-primary))]"
+                      }`}
+                    >
+                      {format(day, "d")}
+                    </span>
+                  </div>
+
+                  {/* Events */}
+                  <div className="flex-1 space-y-0.5 overflow-hidden">
+                    {dayEvents.slice(0, 3).map((event) => (
+                      <MonthEventCard
+                        key={event.$id}
+                        event={event}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEventClick(event);
+                        }}
+                        onLongPress={(e, pos) => {
+                          e?.stopPropagation?.();
+                          onEventLongPress(event, pos);
+                        }}
+                      />
+                    ))}
+                    {dayEvents.length > 3 && (
+                      <div className="text-[9px] text-[rgb(var(--text-muted))] pl-1">
+                        +{dayEvents.length - 3} más
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -2764,8 +2795,8 @@ export function CalendarPage() {
               onCreateCalendar={() => setShowCreateCalendarModal(true)}
             />
           ) : isMobile && viewMode === VIEW_MODES.MONTH ? (
-            // Scroll infinito vertical para móvil en vista de mes
-            <InfiniteScrollMonthView
+            // Vista de mes con swipe vertical para móvil (un mes a la vez)
+            <SingleMonthSwipeView
               currentDate={currentDate}
               selectedDate={selectedDate}
               eventsByDay={eventsByDay}

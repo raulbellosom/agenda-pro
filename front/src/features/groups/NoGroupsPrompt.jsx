@@ -18,11 +18,11 @@ export function NoGroupsPrompt({ onCreateGroup }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full flex items-center justify-center p-6"
+      className="min-h-full flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
     >
-      <div className="max-w-md w-full text-center">
+      <div className="max-w-md w-full text-center py-8">
         {/* Animated illustration */}
-        <div className="relative mb-8">
+        <div className="relative mb-6 sm:mb-8">
           {/* Background glow */}
           <motion.div
             className="absolute inset-0 blur-3xl"
@@ -46,9 +46,12 @@ export function NoGroupsPrompt({ onCreateGroup }) {
               damping: 15,
               delay: 0.2,
             }}
-            className="relative w-32 h-32 mx-auto rounded-3xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-2xl shadow-[rgb(var(--brand-primary))]/30"
+            className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-2xl sm:rounded-3xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-2xl shadow-[rgb(var(--brand-primary))]/30"
           >
-            <Users className="w-16 h-16 text-white" strokeWidth={1.5} />
+            <Users
+              className="w-12 h-12 sm:w-16 sm:h-16 text-white"
+              strokeWidth={1.5}
+            />
 
             {/* Floating icons */}
             <motion.div
@@ -61,9 +64,12 @@ export function NoGroupsPrompt({ onCreateGroup }) {
                 repeat: Infinity,
                 delay: 0.5,
               }}
-              className="absolute -top-2 -right-2 w-12 h-12 rounded-2xl bg-linear-to-br from-[rgb(var(--brand-secondary))] to-[rgb(var(--brand-secondary))]/60 flex items-center justify-center shadow-xl"
+              className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-linear-to-br from-[rgb(var(--brand-secondary))] to-[rgb(var(--brand-secondary))]/60 flex items-center justify-center shadow-xl"
             >
-              <Calendar className="w-6 h-6 text-white" strokeWidth={2} />
+              <Calendar
+                className="w-5 h-5 sm:w-6 sm:h-6 text-white"
+                strokeWidth={2}
+              />
             </motion.div>
 
             <motion.div
@@ -76,9 +82,12 @@ export function NoGroupsPrompt({ onCreateGroup }) {
                 repeat: Infinity,
                 delay: 1,
               }}
-              className="absolute -bottom-2 -left-2 w-10 h-10 rounded-xl bg-linear-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl"
+              className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-linear-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl"
             >
-              <Sparkles className="w-5 h-5 text-white" strokeWidth={2} />
+              <Sparkles
+                className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                strokeWidth={2}
+              />
             </motion.div>
           </motion.div>
         </div>
@@ -88,12 +97,12 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="space-y-4"
+          className="space-y-3 sm:space-y-4 px-2"
         >
-          <h2 className="text-3xl font-bold text-[rgb(var(--text-primary))]">
+          <h2 className="text-2xl sm:text-3xl font-bold text-[rgb(var(--text-primary))]">
             ¡Bienvenido a Agenda Pro!
           </h2>
-          <p className="text-base text-[rgb(var(--text-secondary))] max-w-sm mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-[rgb(var(--text-secondary))] max-w-sm mx-auto leading-relaxed">
             Para comenzar, necesitas crear tu primer{" "}
             <span className="font-semibold text-[rgb(var(--brand-primary))]">
               espacio de trabajo
@@ -107,7 +116,7 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mt-8 space-y-3"
+          className="mt-6 sm:mt-8 space-y-2 sm:space-y-3 px-2"
         >
           {[
             {
@@ -128,12 +137,12 @@ export function NoGroupsPrompt({ onCreateGroup }) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.7 + index * 0.1 }}
-              className="flex items-center gap-3 text-left bg-[rgb(var(--bg-surface))] rounded-2xl p-4 border border-[rgb(var(--border-base))]"
+              className="flex items-center gap-2 sm:gap-3 text-left bg-[rgb(var(--bg-surface))] rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[rgb(var(--border-base))]"
             >
-              <div className="w-10 h-10 rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
-                <feature.icon className="w-5 h-5 text-[rgb(var(--brand-primary))]" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
+                <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[rgb(var(--brand-primary))]" />
               </div>
-              <span className="text-sm text-[rgb(var(--text-secondary))] font-medium">
+              <span className="text-xs sm:text-sm text-[rgb(var(--text-secondary))] font-medium">
                 {feature.text}
               </span>
             </motion.div>
@@ -145,21 +154,21 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1 }}
-          className="mt-8"
+          className="mt-6 sm:mt-8 px-2"
         >
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCreateGroup}
-            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300"
+            className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Crear mi primer espacio
             <motion.div
               animate={{ x: [0, 4, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.div>
             {/* Shine effect */}
             <motion.div
@@ -178,9 +187,9 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.1 }}
-          className="mt-6 text-xs text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5"
+          className="mt-4 sm:mt-6 text-xs text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5 px-2"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Se creará automáticamente un calendario personal
         </motion.p>
       </div>
