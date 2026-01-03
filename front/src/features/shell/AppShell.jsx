@@ -34,6 +34,24 @@ import {
   PanelLeft,
   Building2,
   Crown,
+  CalendarDays,
+  CalendarClock,
+  CalendarHeart,
+  CalendarRange,
+  Star,
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Home,
+  Plane,
+  Trophy,
+  Music,
+  Dumbbell,
+  Coffee,
+  Utensils,
+  Car,
+  BookOpen,
+  Gamepad2,
 } from "lucide-react";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
@@ -73,17 +91,113 @@ const MODULES = [
 
 // Colores para calendarios
 const CALENDAR_COLORS = {
-  violet: { dot: "bg-violet-500" },
-  blue: { dot: "bg-blue-500" },
-  green: { dot: "bg-green-500" },
-  yellow: { dot: "bg-yellow-500" },
-  orange: { dot: "bg-orange-500" },
-  red: { dot: "bg-red-500" },
-  pink: { dot: "bg-pink-500" },
+  violet: {
+    bg: "bg-violet-500/20",
+    border: "border-violet-500",
+    text: "text-violet-500 dark:text-violet-400",
+    dot: "bg-violet-500",
+    light: "bg-violet-500/10",
+  },
+  blue: {
+    bg: "bg-blue-500/20",
+    border: "border-blue-500",
+    text: "text-blue-500 dark:text-blue-400",
+    dot: "bg-blue-500",
+    light: "bg-blue-500/10",
+  },
+  cyan: {
+    bg: "bg-cyan-500/20",
+    border: "border-cyan-500",
+    text: "text-cyan-500 dark:text-cyan-400",
+    dot: "bg-cyan-500",
+    light: "bg-cyan-500/10",
+  },
+  emerald: {
+    bg: "bg-emerald-500/20",
+    border: "border-emerald-500",
+    text: "text-emerald-500 dark:text-emerald-400",
+    dot: "bg-emerald-500",
+    light: "bg-emerald-500/10",
+  },
+  amber: {
+    bg: "bg-amber-500/20",
+    border: "border-amber-500",
+    text: "text-amber-500 dark:text-amber-400",
+    dot: "bg-amber-500",
+    light: "bg-amber-500/10",
+  },
+  rose: {
+    bg: "bg-rose-500/20",
+    border: "border-rose-500",
+    text: "text-rose-500 dark:text-rose-400",
+    dot: "bg-rose-500",
+    light: "bg-rose-500/10",
+  },
+  pink: {
+    bg: "bg-pink-500/20",
+    border: "border-pink-500",
+    text: "text-pink-500 dark:text-pink-400",
+    dot: "bg-pink-500",
+    light: "bg-pink-500/10",
+  },
+  green: {
+    bg: "bg-green-500/20",
+    border: "border-green-500",
+    text: "text-green-500 dark:text-green-400",
+    dot: "bg-green-500",
+    light: "bg-green-500/10",
+  },
+  yellow: {
+    bg: "bg-yellow-500/20",
+    border: "border-yellow-500",
+    text: "text-yellow-500 dark:text-yellow-400",
+    dot: "bg-yellow-500",
+    light: "bg-yellow-500/10",
+  },
+  orange: {
+    bg: "bg-orange-500/20",
+    border: "border-orange-500",
+    text: "text-orange-500 dark:text-orange-400",
+    dot: "bg-orange-500",
+    light: "bg-orange-500/10",
+  },
+  red: {
+    bg: "bg-red-500/20",
+    border: "border-red-500",
+    text: "text-red-500 dark:text-red-400",
+    dot: "bg-red-500",
+    light: "bg-red-500/10",
+  },
 };
 
 const getCalendarColor = (color) =>
   CALENDAR_COLORS[color] || CALENDAR_COLORS.violet;
+
+// Iconos de calendario
+const CALENDAR_ICONS = {
+  calendar: Calendar,
+  "calendar-days": CalendarDays,
+  "calendar-check": CalendarCheck,
+  "calendar-clock": CalendarClock,
+  "calendar-heart": CalendarHeart,
+  "calendar-range": CalendarRange,
+  star: Star,
+  briefcase: Briefcase,
+  "graduation-cap": GraduationCap,
+  heart: Heart,
+  home: Home,
+  plane: Plane,
+  trophy: Trophy,
+  music: Music,
+  dumbbell: Dumbbell,
+  coffee: Coffee,
+  utensils: Utensils,
+  car: Car,
+  "book-open": BookOpen,
+  gamepad2: Gamepad2,
+};
+
+const getCalendarIcon = (iconId) => CALENDAR_ICONS[iconId] || Calendar;
 
 // Hook para detectar long press
 function useLongPress(callback, { threshold = 500 } = {}) {
@@ -1473,6 +1587,7 @@ export function AppShell() {
                       .filter((cal) => cal.ownerProfileId === profile?.$id)
                       .map((calendar) => {
                         const colorStyle = getCalendarColor(calendar.color);
+                        const CalendarItemIcon = getCalendarIcon(calendar.icon);
                         const isVisible = mobileVisibleCalendars.includes(
                           calendar.$id
                         );
@@ -1498,6 +1613,16 @@ export function AppShell() {
                                 <div className="w-4 h-4 rounded border-2 border-[rgb(var(--border-muted))]" />
                               )}
                             </button>
+
+                            {/* Icono del calendario */}
+                            <div
+                              className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center shrink-0`}
+                            >
+                              <CalendarItemIcon
+                                className={`w-3 h-3 ${colorStyle.text}`}
+                              />
+                            </div>
+
                             <span
                               className={`flex-1 text-sm truncate ${
                                 isVisible
