@@ -53,7 +53,7 @@ function MenuPortal({
   onLeave,
 }) {
   const menuRef = useRef(null);
-  const [position, setPosition] = useState({ top: 0, right: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -62,10 +62,32 @@ function MenuPortal({
     const button = document.querySelector(`[data-group-menu="${group.$id}"]`);
     if (button) {
       const rect = button.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const menuWidth = 208; // w-52 = 13rem = 208px
+      const padding = 12; // Padding from edges
+
+      // Calculate left position - prefer right-aligned with button
+      let left = rect.right - menuWidth;
+
+      // If menu would go off left edge, align to left edge with padding
+      if (left < padding) {
+        left = padding;
+      }
+
+      // If menu would go off right edge, align to right edge with padding
+      if (left + menuWidth > window.innerWidth - padding) {
+        left = window.innerWidth - menuWidth - padding;
+      }
+
+      // Calculate top position
+      let top = rect.bottom + 8;
+
+      // If menu would go off bottom, show above the button
+      const menuHeight = isOwner ? 120 : 60; // Approximate height
+      if (top + menuHeight > window.innerHeight - padding) {
+        top = rect.top - menuHeight - 8;
+      }
+
+      setPosition({ top, left });
     }
 
     // Close on click outside
@@ -93,7 +115,7 @@ function MenuPortal({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, group.$id, onClose]);
+  }, [isOpen, group.$id, onClose, isOwner]);
 
   if (!isOpen) return null;
 
@@ -107,7 +129,7 @@ function MenuPortal({
         style={{
           position: "fixed",
           top: position.top,
-          right: position.right,
+          left: position.left,
           zIndex: 9999,
         }}
         className="w-52 bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-base))] shadow-2xl overflow-hidden"
