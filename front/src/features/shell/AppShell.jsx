@@ -320,7 +320,7 @@ export function AppShell() {
     : null;
 
   return (
-    <div className="flex h-screen bg-[rgb(var(--bg-base))] overflow-hidden">
+    <div className="flex h-dvh bg-[rgb(var(--bg-base))] overflow-hidden">
       {/* Sidebar - Desktop */}
       <motion.aside
         initial={false}
