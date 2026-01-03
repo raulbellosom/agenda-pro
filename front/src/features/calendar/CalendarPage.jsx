@@ -52,6 +52,8 @@ import {
 } from "lucide-react";
 import { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 import { CreateCalendarModal } from "./CreateCalendarModal";
+import { NoGroupsPrompt } from "../groups/NoGroupsPrompt";
+import { CreateGroupModal } from "../groups/CreateGroupModal";
 import { EventModal } from "./EventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
 import { DeleteEventModal } from "./DeleteEventModal";
@@ -750,9 +752,15 @@ function CalendarsList({
   onShareCalendar,
   onDeleteCalendar,
   currentProfileId,
+  needsFirstGroup = false,
 }) {
   if (!calendars || calendars.length === 0) {
-    return <EmptyCalendarsList onCreateCalendar={onCreateCalendar} />;
+    return (
+      <EmptyCalendarsList
+        onCreateCalendar={onCreateCalendar}
+        needsFirstGroup={needsFirstGroup}
+      />
+    );
   }
 
   // Separar calendarios propios y compartidos
@@ -1470,6 +1478,179 @@ function WeekView({
 // MONTH VIEW COMPONENT
 // ================================================
 
+// ================================================
+// INFINITE SCROLL MONTH VIEW (Mobile)
+// ================================================
+
+function InfiniteScrollMonthView({
+  currentDate,
+  selectedDate,
+  onSelectDate,
+  eventsByDay,
+  onEventClick,
+  onEventLongPress,
+  onDayLongPress,
+  onDayContextMenu,
+  onMonthChange,
+}) {
+  const containerRef = useRef(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const lastScrollTop = useRef(0);
+
+  // Generar 3 meses: anterior, actual, siguiente
+  const months = useMemo(() => {
+    return [subMonths(currentDate, 1), currentDate, addMonths(currentDate, 1)];
+  }, [currentDate]);
+
+  // Calcular días para cada mes
+  const getMonthDays = useCallback((date) => {
+    const monthStart = startOfMonth(date);
+    const monthEnd = endOfMonth(date);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+    const days = [];
+    let day = calendarStart;
+    while (day <= calendarEnd) {
+      days.push(day);
+      day = addDays(day, 1);
+    }
+    return days;
+  }, []);
+
+  const monthsData = useMemo(() => {
+    return months.map((month) => ({
+      date: month,
+      days: getMonthDays(month),
+    }));
+  }, [months, getMonthDays]);
+
+  // Centrar en el mes actual al montar o cambiar mes
+  useEffect(() => {
+    if (containerRef.current && !isTransitioning) {
+      const container = containerRef.current;
+      const monthElements = container.querySelectorAll("[data-month]");
+
+      if (monthElements[1]) {
+        // Scroll al mes del medio (índice 1)
+        monthElements[1].scrollIntoView({ block: "start" });
+        lastScrollTop.current = container.scrollTop;
+      }
+    }
+  }, [currentDate, isTransitioning]);
+
+  // Manejar scroll con detección de threshold
+  const handleScroll = useCallback(
+    (e) => {
+      if (isTransitioning) return;
+
+      const container = e.target;
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+
+      // Detectar si hemos scrolleado significativamente hacia arriba o abajo
+      const scrollDelta = scrollTop - lastScrollTop.current;
+      const monthElements = container.querySelectorAll("[data-month]");
+
+      if (monthElements.length === 3) {
+        const firstMonthBottom =
+          monthElements[0].offsetTop + monthElements[0].offsetHeight;
+        const secondMonthTop = monthElements[1].offsetTop;
+        const secondMonthBottom =
+          monthElements[1].offsetTop + monthElements[1].offsetHeight;
+
+        // Si scrolleamos hacia arriba y pasamos el mes anterior
+        if (scrollTop < secondMonthTop - clientHeight / 3) {
+          setIsTransitioning(true);
+          onMonthChange(subMonths(currentDate, 1));
+          setTimeout(() => setIsTransitioning(false), 100);
+        }
+        // Si scrolleamos hacia abajo y pasamos el mes siguiente
+        else if (scrollTop > secondMonthBottom - clientHeight / 2) {
+          setIsTransitioning(true);
+          onMonthChange(addMonths(currentDate, 1));
+          setTimeout(() => setIsTransitioning(false), 100);
+        }
+      }
+
+      lastScrollTop.current = scrollTop;
+    },
+    [currentDate, onMonthChange, isTransitioning]
+  );
+
+  const weekDaysMobile = ["L", "M", "M", "J", "V", "S", "D"];
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Week days header - fijo */}
+      <div className="grid grid-cols-7 shrink-0 border-b border-[rgb(var(--border-base))]">
+        {weekDaysMobile.map((day, idx) => (
+          <div
+            key={`${day}-${idx}`}
+            className="text-center text-[10px] font-medium text-[rgb(var(--text-muted))] py-1.5 bg-[rgb(var(--bg-muted))]/50"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Scroll container con 3 meses */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        style={{
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {monthsData.map((monthData, monthIndex) => (
+          <div
+            key={monthData.date.toISOString()}
+            data-month={monthIndex}
+            className="border-l border-t border-[rgb(var(--border-base))]"
+          >
+            {/* Título del mes - sticky */}
+            <div className="sticky top-0 z-10 bg-[rgb(var(--bg-surface))] border-b border-[rgb(var(--border-base))] px-4 py-2 shadow-sm">
+              <div className="text-sm font-semibold text-[rgb(var(--text-primary))] capitalize">
+                {format(monthData.date, "MMMM yyyy", { locale: es })}
+              </div>
+            </div>
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7">
+              {monthData.days.map((day) => {
+                const dateKey = format(day, "yyyy-MM-dd");
+                const dayEvents = eventsByDay[dateKey] || [];
+
+                return (
+                  <DayCell
+                    key={dateKey}
+                    date={day}
+                    events={dayEvents}
+                    isCurrentMonth={isSameMonth(day, monthData.date)}
+                    isSelected={isSameDay(day, selectedDate)}
+                    isTodayDate={isToday(day)}
+                    onClick={() => onSelectDate(day)}
+                    onLongPress={onDayLongPress}
+                    onContextMenu={onDayContextMenu}
+                    onEventClick={onEventClick}
+                    onEventLongPress={onEventLongPress}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ================================================
+// MONTH VIEW (Desktop & regular)
+// ================================================
+
 function MonthView({
   currentDate,
   selectedDate,
@@ -1885,7 +2066,26 @@ export function CalendarPage() {
   const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const { activeGroup, calendars = [], profile } = useWorkspace();
+  // Group modal state
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+
+  // Detect if mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const {
+    activeGroup,
+    calendars = [],
+    profile,
+    needsFirstGroup,
+  } = useWorkspace();
   const deleteCalendar = useDeleteCalendar();
   const duplicateEvent = useDuplicateEvent();
   const hasCalendars = calendars.length > 0;
@@ -2238,17 +2438,25 @@ export function CalendarPage() {
           {/* New Event/Calendar Button */}
           <button
             onClick={() => {
+              if (needsFirstGroup) {
+                return; // No hacer nada si no hay grupo
+              }
               if (!hasCalendars) {
                 setShowCreateCalendarModal(true);
               } else {
                 handleCreateEvent();
               }
             }}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            disabled={needsFirstGroup}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">
-              {hasCalendars ? "Nuevo" : "Crear Calendario"}
+              {needsFirstGroup
+                ? "Crear Grupo"
+                : hasCalendars
+                ? "Nuevo"
+                : "Crear Calendario"}
             </span>
           </button>
         </div>
@@ -2324,12 +2532,14 @@ export function CalendarPage() {
                     <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
                       Calendarios
                     </span>
-                    <button
-                      onClick={() => setShowCreateCalendarModal(true)}
-                      className="text-xs text-[rgb(var(--brand-primary))] hover:underline"
-                    >
-                      + Nuevo
-                    </button>
+                    {!needsFirstGroup && (
+                      <button
+                        onClick={() => setShowCreateCalendarModal(true)}
+                        className="text-xs text-[rgb(var(--brand-primary))] hover:underline"
+                      >
+                        + Nuevo
+                      </button>
+                    )}
                   </div>
                   <div className="px-2 pb-4">
                     <CalendarsList
@@ -2341,6 +2551,7 @@ export function CalendarPage() {
                       onShareCalendar={(cal) => setSharingCalendar(cal)}
                       onDeleteCalendar={(cal) => setDeletingCalendar(cal)}
                       currentProfileId={profile?.$id}
+                      needsFirstGroup={needsFirstGroup}
                     />
                   </div>
                 </div>
@@ -2351,9 +2562,29 @@ export function CalendarPage() {
 
         {/* Main Calendar Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[rgb(var(--bg-base))] overflow-hidden">
-          {!hasCalendars ? (
+          {needsFirstGroup ? (
+            <NoGroupsPrompt
+              onCreateGroup={() => setShowCreateGroupModal(true)}
+            />
+          ) : !hasCalendars ? (
             <NoCalendarsPrompt
               onCreateCalendar={() => setShowCreateCalendarModal(true)}
+            />
+          ) : isMobile && viewMode === VIEW_MODES.MONTH ? (
+            // Scroll infinito vertical para móvil en vista de mes
+            <InfiniteScrollMonthView
+              currentDate={currentDate}
+              selectedDate={selectedDate}
+              eventsByDay={eventsByDay}
+              onSelectDate={setSelectedDate}
+              onEventClick={handleEventClick}
+              onEventLongPress={handleEventLongPress}
+              onDayLongPress={handleDayLongPress}
+              onDayContextMenu={handleDayContextMenu}
+              onMonthChange={(newDate) => {
+                setCurrentDate(newDate);
+                setNavigationDirection(newDate > currentDate ? 1 : -1);
+              }}
             />
           ) : (
             <AnimatePresence mode="wait" custom={navigationDirection}>
@@ -2365,29 +2596,15 @@ export function CalendarPage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.25, ease: "easeInOut" }}
-                drag={viewMode === VIEW_MODES.MONTH ? "y" : "x"}
+                drag={isMobile ? false : "x"}
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 dragElastic={0.2}
                 onDragEnd={(e, { offset, velocity }) => {
                   const swipeThreshold = 50;
                   const swipeVelocityThreshold = 500;
 
-                  if (viewMode === VIEW_MODES.MONTH) {
-                    // Vertical swipe for mobile month view (continuous calendar)
-                    if (
-                      Math.abs(offset.y) > swipeThreshold ||
-                      Math.abs(velocity.y) > swipeVelocityThreshold
-                    ) {
-                      if (offset.y < 0) {
-                        // Swipe up = next month
-                        navigateNext();
-                      } else {
-                        // Swipe down = previous month
-                        navigatePrevious();
-                      }
-                    }
-                  } else {
-                    // Horizontal swipe for other views
+                  if (!isMobile) {
+                    // Horizontal swipe for desktop
                     if (
                       Math.abs(offset.x) > swipeThreshold ||
                       Math.abs(velocity.x) > swipeVelocityThreshold
@@ -2739,6 +2956,13 @@ export function CalendarPage() {
         position={contextMenu.position}
         items={contextMenu.items}
         onClose={closeContextMenu}
+      />
+
+      {/* Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        onSuccess={() => setShowCreateGroupModal(false)}
       />
     </div>
   );

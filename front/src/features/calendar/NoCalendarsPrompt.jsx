@@ -215,7 +215,10 @@ export function NoCalendarsBanner({ onCreateCalendar, className = "" }) {
 /**
  * EmptyCalendarsList - Versión compacta para la sidebar
  */
-export function EmptyCalendarsList({ onCreateCalendar }) {
+export function EmptyCalendarsList({
+  onCreateCalendar,
+  needsFirstGroup = false,
+}) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -231,17 +234,19 @@ export function EmptyCalendarsList({ onCreateCalendar }) {
         <Calendar className="w-6 h-6 text-[rgb(var(--brand-primary))]" />
       </motion.div>
       <p className="text-sm text-[rgb(var(--text-muted))] mb-3">
-        No hay calendarios
+        {needsFirstGroup ? "Crea un grupo primero" : "No hay calendarios"}
       </p>
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onCreateCalendar}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))] text-xs font-medium hover:bg-[rgb(var(--brand-primary))]/20 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" />
-        Crear calendario
-      </motion.button>
+      {!needsFirstGroup && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onCreateCalendar}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))] text-xs font-medium hover:bg-[rgb(var(--brand-primary))]/20 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Crear calendario
+        </motion.button>
+      )}
     </motion.div>
   );
 }
