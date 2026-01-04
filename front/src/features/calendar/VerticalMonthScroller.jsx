@@ -98,6 +98,8 @@ const getCalendarColor = (color) =>
 function ScrollerEventCard({ event, onClick, onLongPress }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
   const isLongPressTriggeredRef = useRef(false);
+  const isScrollingRef = useRef(false);
+  const startYRef = useRef(0);
 
   // Determinar si es evento de todo el día
   const isAllDay = event.allDay || !event.startAt;
@@ -112,6 +114,21 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
       return "";
     }
   }, [event.startAt, isAllDay]);
+
+  // Detectar inicio de scroll
+  const handleTouchStart = useCallback((e) => {
+    isScrollingRef.current = false;
+    startYRef.current = e.touches[0].clientY;
+  }, []);
+
+  // Detectar movimiento de scroll
+  const handleTouchMove = useCallback((e) => {
+    const deltaY = Math.abs(e.touches[0].clientY - startYRef.current);
+    // Si se movió más de 5px, es scroll, no click
+    if (deltaY > 5) {
+      isScrollingRef.current = true;
+    }
+  }, []);
 
   // Usar useLongPress con onClick como segundo parámetro
   // Esto evita que onClick se dispare si hubo un long press
@@ -132,16 +149,17 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
         window.innerHeight / 2;
       onLongPress?.(event, { x, y });
     },
-    // onClick callback - solo se ejecuta si NO hubo long press
+    // onClick callback - solo se ejecuta si NO hubo long press NI scroll
     (e) => {
-      // Doble verificación: el hook ya previene esto, pero por seguridad
-      if (!isLongPressTriggeredRef.current) {
+      // Prevenir click si fue scroll o long press
+      if (!isLongPressTriggeredRef.current && !isScrollingRef.current) {
         e?.stopPropagation?.();
         onClick?.(e);
       }
       isLongPressTriggeredRef.current = false;
+      isScrollingRef.current = false;
     },
-    { delay: 500, moveTolerance: 8 }
+    { delay: 500, moveTolerance: 5 }
   );
 
   const handleContextMenu = (e) => {
@@ -161,6 +179,8 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
   return (
     <div
       {...longPressHandlers}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onContextMenu={handleContextMenu}
       className={`flex flex-col px-1.5 sm:px-2 py-1 sm:py-1.5 rounded ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all active:scale-95 select-none touch-manipulation overflow-hidden border-l-2 ${colors.border}`}
     >
