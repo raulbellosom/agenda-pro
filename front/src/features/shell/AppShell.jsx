@@ -347,12 +347,14 @@ export function AppShell() {
     [handleQuickThemeToggle, isLongPressRef]
   );
 
-  // Inicializar calendarios visibles cuando cambian
+  // Inicializar calendarios visibles cuando cambian - solo una vez
+  const hasInitializedMobileCalendars = useRef(false);
   useEffect(() => {
-    if (calendars.length > 0 && mobileVisibleCalendars.length === 0) {
+    if (calendars.length > 0 && !hasInitializedMobileCalendars.current) {
       setMobileVisibleCalendars(calendars.map((c) => c.$id));
+      hasInitializedMobileCalendars.current = true;
     }
-  }, [calendars, mobileVisibleCalendars.length]);
+  }, [calendars]);
 
   // Toggle visibilidad de calendario en móvil
   const toggleMobileCalendarVisibility = useCallback((calendarId) => {
@@ -1591,7 +1593,7 @@ export function AppShell() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {calendars
                       .filter((cal) => cal.ownerProfileId === profile?.$id)
                       .map((calendar) => {
@@ -1604,22 +1606,32 @@ export function AppShell() {
                         return (
                           <div
                             key={calendar.$id}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] group"
+                            className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                              isVisible ? "" : "opacity-60"
+                            }`}
                           >
                             <button
                               onClick={() =>
                                 toggleMobileCalendarVisibility(calendar.$id)
                               }
-                              className="shrink-0"
+                              className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                              aria-label={
+                                isVisible
+                                  ? `Ocultar ${calendar.name}`
+                                  : `Mostrar ${calendar.name}`
+                              }
                             >
                               {isVisible ? (
                                 <div
-                                  className={`w-4 h-4 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                  className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
                                 >
-                                  <Check className="w-3 h-3 text-white" />
+                                  <Check
+                                    className="w-3.5 h-3.5 text-white"
+                                    strokeWidth={3}
+                                  />
                                 </div>
                               ) : (
-                                <div className="w-4 h-4 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
                               )}
                             </button>
 
@@ -1726,22 +1738,32 @@ export function AppShell() {
                             return (
                               <div
                                 key={calendar.$id}
-                                className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[rgb(var(--bg-hover))]"
+                                className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                                  isVisible ? "" : "opacity-60"
+                                }`}
                               >
                                 <button
                                   onClick={() =>
                                     toggleMobileCalendarVisibility(calendar.$id)
                                   }
-                                  className="shrink-0"
+                                  className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                                  aria-label={
+                                    isVisible
+                                      ? `Ocultar ${calendar.name}`
+                                      : `Mostrar ${calendar.name}`
+                                  }
                                 >
                                   {isVisible ? (
                                     <div
-                                      className={`w-4 h-4 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                      className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
                                     >
-                                      <Check className="w-3 h-3 text-white" />
+                                      <Check
+                                        className="w-3.5 h-3.5 text-white"
+                                        strokeWidth={3}
+                                      />
                                     </div>
                                   ) : (
-                                    <div className="w-4 h-4 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                    <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
                                   )}
                                 </button>
                                 <span

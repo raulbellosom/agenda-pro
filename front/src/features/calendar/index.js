@@ -7,3 +7,4 @@ export { DeleteEventModal } from "./DeleteEventModal";
 export { MoveEventModal } from "./MoveEventModal";
 export { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 export { SwipeableView } from "./SwipeableView";
+export { VerticalMonthScroller } from "./VerticalMonthScroller";

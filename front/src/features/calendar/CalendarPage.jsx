@@ -57,6 +57,7 @@ import { GroupModal } from "../groups/GroupModal";
 import { EventModal } from "./EventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
 import { DeleteEventModal } from "./DeleteEventModal";
+import { VerticalMonthScroller } from "./VerticalMonthScroller";
 import {
   format,
   startOfMonth,
@@ -668,12 +669,18 @@ function CalendarItem({
   return (
     <div className="relative group">
       <div
-        className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-all ${
+        className={`flex items-center gap-2 px-2 py-1.5 sm:py-2 rounded-lg transition-all ${
           isVisible ? "" : "opacity-50"
-        } hover:bg-[rgb(var(--bg-hover))]`}
+        } sm:hover:bg-[rgb(var(--bg-hover))] active:bg-[rgb(var(--bg-hover))]`}
       >
-        {/* Checkbox para visibilidad */}
-        <button onClick={onToggle} className="shrink-0">
+        {/* Checkbox para visibilidad - área táctil ampliada */}
+        <button
+          onClick={onToggle}
+          className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+          aria-label={
+            isVisible ? `Ocultar ${calendar.name}` : `Mostrar ${calendar.name}`
+          }
+        >
           <CalendarCheckbox checked={isVisible} color={calendar.color} />
         </button>
 
@@ -689,17 +696,17 @@ function CalendarItem({
           {calendar.name}
         </span>
 
-        {/* Menú de opciones - solo visible en hover o si está abierto */}
+        {/* Menú de opciones - visible siempre en móvil, en hover en desktop */}
         <div ref={menuRef} className="relative">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setShowMenu(!showMenu);
             }}
-            className={`p-1 rounded-md transition-all ${
+            className={`p-1.5 -m-0.5 rounded-md transition-all touch-manipulation ${
               showMenu
                 ? "bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-secondary))]"
-                : "opacity-0 group-hover:opacity-100 text-[rgb(var(--text-muted))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-secondary))]"
+                : "sm:opacity-0 sm:group-hover:opacity-100 text-[rgb(var(--text-muted))] active:bg-[rgb(var(--bg-hover))] sm:hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-secondary))]"
             }`}
           >
             <MoreHorizontal className="w-4 h-4" />
@@ -2456,12 +2463,14 @@ export function CalendarPage() {
     }));
   }, [rawEvents, calendars]);
 
-  // Initialize visible calendars
+  // Initialize visible calendars - solo inicializar una vez cuando se cargan los calendarios
+  const hasInitializedCalendars = React.useRef(false);
   React.useEffect(() => {
-    if (calendars.length > 0 && visibleCalendars.length === 0) {
+    if (calendars.length > 0 && !hasInitializedCalendars.current) {
       setVisibleCalendars(calendars.map((c) => c.$id));
+      hasInitializedCalendars.current = true;
     }
-  }, [calendars, visibleCalendars.length]);
+  }, [calendars]);
 
   // Handle view mode change animation direction
   const prevViewModeRef = React.useRef(viewMode);
@@ -2792,19 +2801,33 @@ export function CalendarPage() {
             )}
           </button>
 
-          {/* Navigation */}
+          {/* Navigation - Flechas verticales para vista mes, horizontales para otras vistas */}
           <div className="flex items-center gap-1">
             <button
               onClick={navigatePrevious}
               className="p-1.5 sm:p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] transition-colors"
+              title={
+                viewMode === VIEW_MODES.MONTH ? "Mes anterior" : "Anterior"
+              }
             >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              {viewMode === VIEW_MODES.MONTH ? (
+                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
             <button
               onClick={navigateNext}
               className="p-1.5 sm:p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] transition-colors"
+              title={
+                viewMode === VIEW_MODES.MONTH ? "Mes siguiente" : "Siguiente"
+              }
             >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              {viewMode === VIEW_MODES.MONTH ? (
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+              ) : (
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
             </button>
           </div>
 
@@ -2966,9 +2989,9 @@ export function CalendarPage() {
             <NoCalendarsPrompt
               onCreateCalendar={() => setShowCreateCalendarModal(true)}
             />
-          ) : isMobile && viewMode === VIEW_MODES.MONTH ? (
-            // Vista de mes con swipe vertical para móvil (un mes a la vez)
-            <SingleMonthSwipeView
+          ) : viewMode === VIEW_MODES.MONTH ? (
+            // Vista de mes con scroll vertical infinito (móvil y desktop)
+            <VerticalMonthScroller
               currentDate={currentDate}
               selectedDate={selectedDate}
               eventsByDay={eventsByDay}
@@ -2976,7 +2999,6 @@ export function CalendarPage() {
               onEventClick={handleEventClick}
               onEventLongPress={handleEventLongPress}
               onDayLongPress={handleDayLongPress}
-              onDayContextMenu={handleDayContextMenu}
               onMonthChange={(newDate) => {
                 setCurrentDate(newDate);
                 setNavigationDirection(newDate > currentDate ? 1 : -1);
@@ -3029,20 +3051,6 @@ export function CalendarPage() {
                       onEventClick={handleEventClick}
                       onEventLongPress={handleEventLongPress}
                       onCreateEventAtTime={handleCreateEventAtTime}
-                      weekStartsOn={weekStartsOn}
-                    />
-                  )}
-
-                  {viewMode === VIEW_MODES.MONTH && (
-                    <MonthView
-                      currentDate={currentDate}
-                      selectedDate={selectedDate}
-                      eventsByDay={eventsByDay}
-                      onSelectDate={setSelectedDate}
-                      onEventClick={handleEventClick}
-                      onEventLongPress={handleEventLongPress}
-                      onDayLongPress={handleDayLongPress}
-                      onDayContextMenu={handleDayContextMenu}
                       weekStartsOn={weekStartsOn}
                     />
                   )}
