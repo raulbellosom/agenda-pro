@@ -1673,6 +1673,10 @@ function SingleMonthSwipeView({
   onMonthChange,
   weekStartsOn = 1,
 }) {
+  const containerRef = useRef(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animateDirection, setAnimateDirection] = useState(0); // -1: prev, 0: none, 1: next
+
   // Configurar gestos de swipe vertical
   const {
     bind: swipeBindings,
@@ -1680,10 +1684,13 @@ function SingleMonthSwipeView({
     dragOffset,
   } = useSwipeNavigation({
     onSwipeUp: () => {
-      onMonthChange(addMonths(currentDate, 1));
+      // Primero animar, luego cambiar el mes
+      setAnimateDirection(1);
+      setIsAnimating(true);
     },
     onSwipeDown: () => {
-      onMonthChange(subMonths(currentDate, 1));
+      setAnimateDirection(-1);
+      setIsAnimating(true);
     },
     horizontal: false,
     vertical: true,
@@ -1691,6 +1698,22 @@ function SingleMonthSwipeView({
     velocityThreshold: 0.3,
     preventScroll: false,
   });
+
+  // Cuando la animación termina, cambiar el mes
+  useEffect(() => {
+    if (isAnimating && animateDirection !== 0) {
+      const timer = setTimeout(() => {
+        if (animateDirection === 1) {
+          onMonthChange(addMonths(currentDate, 1));
+        } else {
+          onMonthChange(subMonths(currentDate, 1));
+        }
+        setIsAnimating(false);
+        setAnimateDirection(0);
+      }, 280); // Un poco menos que la duración de la transición
+      return () => clearTimeout(timer);
+    }
+  }, [isAnimating, animateDirection, currentDate, onMonthChange]);
 
   // Calcular días para un mes específico
   const getMonthDays = useCallback(
@@ -1739,6 +1762,19 @@ function SingleMonthSwipeView({
   const showMonthIndicator = isDragging && Math.abs(dragOffset.y) > 20;
   const targetMonth = dragOffset.y > 0 ? prevMonth : nextMonth;
 
+  // Calcular la posición del carrusel
+  const getTranslateY = () => {
+    if (isDragging) {
+      return dragOffset.y;
+    }
+    if (isAnimating) {
+      // Animar hacia el mes destino (100% del contenedor)
+      const containerHeight = containerRef.current?.offsetHeight || 0;
+      return animateDirection === 1 ? -containerHeight : containerHeight;
+    }
+    return 0;
+  };
+
   // Componente para renderizar un grid de mes
   const MonthGrid = ({ monthDate, days, rows }) => (
     <div
@@ -1779,6 +1815,7 @@ function SingleMonthSwipeView({
 
       {/* Contenedor del carrusel de 3 meses */}
       <div
+        ref={containerRef}
         {...swipeBindings()}
         className="flex-1 relative overflow-hidden"
         style={{ touchAction: "none" }}
@@ -1807,10 +1844,11 @@ function SingleMonthSwipeView({
         <div
           className="absolute inset-0"
           style={{
-            transform: isDragging
-              ? `translateY(${dragOffset.y}px)`
-              : "translateY(0)",
-            transition: isDragging ? "none" : "transform 0.3s ease-out",
+            transform: `translateY(${getTranslateY()}px)`,
+            transition: isDragging
+              ? "none"
+              : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            willChange: "transform",
           }}
         >
           {/* Mes anterior (arriba del visible) */}
