@@ -2449,11 +2449,47 @@ export function CalendarPage() {
   const timeFormat = userSettings?.timeFormat ?? "24h";
   const currentTimezone = userSettings?.timezone ?? "America/Mexico_City";
 
-  const { data: rawEvents = [] } = useMonthEvents(
+  // Calcular las fechas de los 3 meses para pre-cargar (anterior, actual, siguiente)
+  const prevMonthDate = useMemo(() => subMonths(currentDate, 1), [currentDate]);
+  const nextMonthDate = useMemo(() => addMonths(currentDate, 1), [currentDate]);
+
+  // Cargar eventos del mes actual
+  const { data: currentMonthEvents = [] } = useMonthEvents(
     groupId,
     currentDate,
     visibleCalendars.length > 0 ? visibleCalendars : undefined
   );
+
+  // Pre-cargar eventos del mes anterior (para scroll infinito)
+  const { data: prevMonthEvents = [] } = useMonthEvents(
+    groupId,
+    prevMonthDate,
+    visibleCalendars.length > 0 ? visibleCalendars : undefined
+  );
+
+  // Pre-cargar eventos del mes siguiente (para scroll infinito)
+  const { data: nextMonthEvents = [] } = useMonthEvents(
+    groupId,
+    nextMonthDate,
+    visibleCalendars.length > 0 ? visibleCalendars : undefined
+  );
+
+  // Combinar todos los eventos de los 3 meses, eliminando duplicados por $id
+  const rawEvents = useMemo(() => {
+    const allEvents = [
+      ...prevMonthEvents,
+      ...currentMonthEvents,
+      ...nextMonthEvents,
+    ];
+    // Eliminar duplicados basados en $id
+    const uniqueMap = new Map();
+    allEvents.forEach((event) => {
+      if (event.$id && !uniqueMap.has(event.$id)) {
+        uniqueMap.set(event.$id, event);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  }, [prevMonthEvents, currentMonthEvents, nextMonthEvents]);
 
   // Enrich events with calendar information
   const events = useMemo(() => {

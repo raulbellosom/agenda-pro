@@ -59,17 +59,37 @@ const getCalendarColor = (color) =>
 
 function ScrollerEventCard({ event, onClick, onLongPress }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
+  const isLongPressTriggeredRef = useRef(false);
 
+  // Usar useLongPress con onClick como segundo parámetro
+  // Esto evita que onClick se dispare si hubo un long press
   const longPressHandlers = useLongPress(
-    (e) => {
+    (e, position) => {
       e?.stopPropagation?.();
-      const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
+      e?.preventDefault?.();
+      isLongPressTriggeredRef.current = true;
+      const x =
+        position?.x ||
+        e?.touches?.[0]?.clientX ||
+        e?.clientX ||
+        window.innerWidth / 2;
       const y =
-        e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
+        position?.y ||
+        e?.touches?.[0]?.clientY ||
+        e?.clientY ||
+        window.innerHeight / 2;
       onLongPress?.(event, { x, y });
     },
-    null,
-    { delay: 500, moveTolerance: 5 }
+    // onClick callback - solo se ejecuta si NO hubo long press
+    (e) => {
+      // Doble verificación: el hook ya previene esto, pero por seguridad
+      if (!isLongPressTriggeredRef.current) {
+        e?.stopPropagation?.();
+        onClick?.(e);
+      }
+      isLongPressTriggeredRef.current = false;
+    },
+    { delay: 500, moveTolerance: 8 }
   );
 
   const handleContextMenu = (e) => {
@@ -80,17 +100,11 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
     onLongPress?.(event, { x, y });
   };
 
-  const handleClick = (e) => {
-    e.stopPropagation();
-    onClick?.(e);
-  };
-
   return (
     <div
       {...longPressHandlers}
-      onClick={handleClick}
       onContextMenu={handleContextMenu}
-      className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all active:scale-95`}
+      className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all active:scale-95 select-none touch-manipulation`}
     >
       {event.title}
     </div>
