@@ -20,6 +20,7 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
+  parseISO,
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { useLongPress } from "../../lib/hooks";
@@ -33,23 +34,58 @@ const CALENDAR_COLORS = {
   violet: {
     bg: "bg-violet-500/20",
     text: "text-violet-500 dark:text-violet-400",
+    border: "border-violet-500",
   },
-  blue: { bg: "bg-blue-500/20", text: "text-blue-500 dark:text-blue-400" },
-  cyan: { bg: "bg-cyan-500/20", text: "text-cyan-500 dark:text-cyan-400" },
+  blue: {
+    bg: "bg-blue-500/20",
+    text: "text-blue-500 dark:text-blue-400",
+    border: "border-blue-500",
+  },
+  cyan: {
+    bg: "bg-cyan-500/20",
+    text: "text-cyan-500 dark:text-cyan-400",
+    border: "border-cyan-500",
+  },
   emerald: {
     bg: "bg-emerald-500/20",
     text: "text-emerald-500 dark:text-emerald-400",
+    border: "border-emerald-500",
   },
-  teal: { bg: "bg-teal-500/20", text: "text-teal-500 dark:text-teal-400" },
-  amber: { bg: "bg-amber-500/20", text: "text-amber-500 dark:text-amber-400" },
+  teal: {
+    bg: "bg-teal-500/20",
+    text: "text-teal-500 dark:text-teal-400",
+    border: "border-teal-500",
+  },
+  amber: {
+    bg: "bg-amber-500/20",
+    text: "text-amber-500 dark:text-amber-400",
+    border: "border-amber-500",
+  },
   orange: {
     bg: "bg-orange-500/20",
     text: "text-orange-500 dark:text-orange-400",
+    border: "border-orange-500",
   },
-  red: { bg: "bg-red-500/20", text: "text-red-500 dark:text-red-400" },
-  rose: { bg: "bg-rose-500/20", text: "text-rose-500 dark:text-rose-400" },
-  pink: { bg: "bg-pink-500/20", text: "text-pink-500 dark:text-pink-400" },
-  slate: { bg: "bg-slate-500/20", text: "text-slate-500 dark:text-slate-400" },
+  red: {
+    bg: "bg-red-500/20",
+    text: "text-red-500 dark:text-red-400",
+    border: "border-red-500",
+  },
+  rose: {
+    bg: "bg-rose-500/20",
+    text: "text-rose-500 dark:text-rose-400",
+    border: "border-rose-500",
+  },
+  pink: {
+    bg: "bg-pink-500/20",
+    text: "text-pink-500 dark:text-pink-400",
+    border: "border-pink-500",
+  },
+  slate: {
+    bg: "bg-slate-500/20",
+    text: "text-slate-500 dark:text-slate-400",
+    border: "border-slate-500",
+  },
 };
 
 const getCalendarColor = (color) =>
@@ -62,6 +98,20 @@ const getCalendarColor = (color) =>
 function ScrollerEventCard({ event, onClick, onLongPress }) {
   const colors = getCalendarColor(event.calendar?.color || "violet");
   const isLongPressTriggeredRef = useRef(false);
+
+  // Determinar si es evento de todo el día
+  const isAllDay = event.allDay || !event.startAt;
+
+  // Formatear hora de inicio
+  const eventTime = useMemo(() => {
+    if (isAllDay) return "Todo el día";
+    try {
+      const startDate = parseISO(event.startAt);
+      return format(startDate, "HH:mm");
+    } catch {
+      return "";
+    }
+  }, [event.startAt, isAllDay]);
 
   // Usar useLongPress con onClick como segundo parámetro
   // Esto evita que onClick se dispare si hubo un long press
@@ -112,9 +162,16 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
     <div
       {...longPressHandlers}
       onContextMenu={handleContextMenu}
-      className={`text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded truncate ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all active:scale-95 select-none touch-manipulation`}
+      className={`flex flex-col px-1.5 sm:px-2 py-1 sm:py-1.5 rounded ${colors.bg} ${colors.text} font-medium cursor-pointer hover:ring-2 hover:ring-inset hover:ring-[rgb(var(--brand-primary))]/50 transition-all active:scale-95 select-none touch-manipulation overflow-hidden border-l-2 ${colors.border}`}
     >
-      {event.title}
+      {eventTime && (
+        <span className="text-[8px] sm:text-[9px] opacity-70 leading-tight">
+          {eventTime}
+        </span>
+      )}
+      <span className="text-[10px] sm:text-xs truncate leading-tight">
+        {event.title}
+      </span>
     </div>
   );
 }
@@ -162,11 +219,40 @@ function ScrollerDayCell({
     { delay: 500, moveTolerance: 5 }
   );
 
+  // Prevenir que el scroll interno interfiera con el scroll infinito
+  const handleEventsScroll = useCallback((e) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleEventsWheel = useCallback((e) => {
+    const container = e.currentTarget;
+    const isAtTop = container.scrollTop === 0;
+    const isAtBottom =
+      container.scrollTop + container.clientHeight >= container.scrollHeight;
+
+    // Solo prevenir propagación si hay scroll interno disponible
+    if ((!isAtTop && e.deltaY < 0) || (!isAtBottom && e.deltaY > 0)) {
+      e.stopPropagation();
+    }
+  }, []);
+
+  const handleEventsTouchMove = useCallback((e) => {
+    const container = e.currentTarget;
+    const isAtTop = container.scrollTop === 0;
+    const isAtBottom =
+      container.scrollTop + container.clientHeight >= container.scrollHeight;
+
+    // Solo prevenir propagación si hay scroll interno disponible
+    if (!isAtTop || !isAtBottom) {
+      e.stopPropagation();
+    }
+  }, []);
+
   return (
     <div
       {...dayLongPress}
       className={`
-        flex flex-col p-1 sm:p-1.5 h-full overflow-hidden border-r border-b border-[rgb(var(--border-base))] transition-all text-left
+        flex flex-col p-1 sm:p-1.5 h-full overflow-hidden border-r border-b border-[rgb(var(--border-base))] transition-all text-left relative
         ${
           isSelected
             ? "bg-[rgb(var(--brand-primary))]/10 ring-2 ring-inset ring-[rgb(var(--brand-primary))]"
@@ -177,6 +263,13 @@ function ScrollerDayCell({
         ${!isCurrentMonth ? "opacity-40 bg-[rgb(var(--bg-muted))]/30" : ""}
       `}
     >
+      {/* Badge de eventos adicionales - mejorado */}
+      {events.length > 3 && (
+        <div className="absolute top-1 right-1 bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-[9px] sm:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 flex items-center justify-center shadow-lg ring-2 ring-white/30 z-10 backdrop-blur-sm">
+          +{events.length - 3}
+        </div>
+      )}
+
       <div className="flex items-center justify-center mb-1 shrink-0">
         <span
           className={`text-xs sm:text-sm font-medium ${
@@ -191,9 +284,18 @@ function ScrollerDayCell({
         </span>
       </div>
 
-      {/* Events */}
-      <div className="flex-1 min-h-0 space-y-0.5 overflow-hidden">
-        {events.slice(0, 3).map((event) => (
+      {/* Events con scroll invisible */}
+      <div
+        className="flex-1 min-h-0 space-y-0.5 overflow-y-auto scrollbar-hide"
+        onScroll={handleEventsScroll}
+        onWheel={handleEventsWheel}
+        onTouchMove={handleEventsTouchMove}
+        style={{
+          scrollbarWidth: "none", // Firefox
+          msOverflowStyle: "none", // IE/Edge
+        }}
+      >
+        {events.map((event) => (
           <ScrollerEventCard
             key={event.$id}
             event={event}
@@ -208,11 +310,6 @@ function ScrollerDayCell({
             }}
           />
         ))}
-        {events.length > 3 && (
-          <div className="text-[9px] text-[rgb(var(--text-muted))] pl-1">
-            +{events.length - 3} más
-          </div>
-        )}
       </div>
     </div>
   );
@@ -258,7 +355,20 @@ function MonthGrid({
     >
       {days.map((day) => {
         const dateKey = format(day, "yyyy-MM-dd");
-        const dayEvents = eventsByDay[dateKey] || [];
+        const dayEvents = (eventsByDay[dateKey] || []).sort((a, b) => {
+          // Eventos de todo el día van primero
+          if (a.allDay && !b.allDay) return -1;
+          if (!a.allDay && b.allDay) return 1;
+
+          // Si ambos tienen hora, ordenar por hora de inicio
+          if (a.startAt && b.startAt) {
+            return (
+              new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+            );
+          }
+
+          return 0;
+        });
 
         return (
           <ScrollerDayCell
@@ -317,6 +427,8 @@ export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
     lastScrollTop: 0,
     indicatorTimeout: null,
     initialized: false,
+    isChangingMonth: false,
+    pendingMonthChange: null,
   });
 
   // Los 3 meses: anterior, actual, siguiente
@@ -339,6 +451,10 @@ export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
   useEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
+
+    // Resetear flags de cambio de mes
+    scrollStateRef.current.isChangingMonth = false;
+    scrollStateRef.current.pendingMonthChange = null;
 
     // Usar requestAnimationFrame para asegurar que el DOM esté listo
     requestAnimationFrame(() => {
@@ -374,6 +490,7 @@ export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
     (targetIndex) => {
       const container = scrollRef.current;
       if (!container || scrollStateRef.current.isSnapping) return;
+      if (scrollStateRef.current.isChangingMonth) return;
 
       scrollStateRef.current.isSnapping = true;
 
@@ -388,23 +505,47 @@ export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
       // Detectar cuando termine el scroll
       let frameCount = 0;
       const maxFrames = 60; // ~1 segundo máximo
+      let lastScrollTop = container.scrollTop;
+      let sameScrollCount = 0;
 
       const checkScrollEnd = () => {
         frameCount++;
         const currentScroll = container.scrollTop;
 
+        // Verificar si el scroll se ha detenido
+        if (Math.abs(currentScroll - lastScrollTop) < 0.5) {
+          sameScrollCount++;
+        } else {
+          sameScrollCount = 0;
+        }
+        lastScrollTop = currentScroll;
+
+        // Terminar si llegamos al target o si el scroll se detuvo o timeout
         if (
           Math.abs(currentScroll - targetScrollTop) < 2 ||
+          sameScrollCount > 3 ||
           frameCount > maxFrames
         ) {
           scrollStateRef.current.isSnapping = false;
           scrollStateRef.current.lastScrollTop = container.scrollTop;
 
-          // Cambiar de mes si es necesario
-          if (targetIndex === 0) {
-            onMonthChange(subMonths(currentDate, 1));
-          } else if (targetIndex === 2) {
-            onMonthChange(addMonths(currentDate, 1));
+          // Cambiar de mes si es necesario y no estamos ya cambiando
+          if (!scrollStateRef.current.isChangingMonth) {
+            if (targetIndex === 0) {
+              scrollStateRef.current.isChangingMonth = true;
+              scrollStateRef.current.pendingMonthChange = subMonths(
+                currentDate,
+                1
+              );
+              onMonthChange(subMonths(currentDate, 1));
+            } else if (targetIndex === 2) {
+              scrollStateRef.current.isChangingMonth = true;
+              scrollStateRef.current.pendingMonthChange = addMonths(
+                currentDate,
+                1
+              );
+              onMonthChange(addMonths(currentDate, 1));
+            }
           }
         } else {
           requestAnimationFrame(checkScrollEnd);
@@ -493,6 +634,7 @@ export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
 
     const container = scrollRef.current;
     if (!container || scrollStateRef.current.isSnapping) return;
+    if (scrollStateRef.current.isChangingMonth) return;
 
     const sectionHeight = getSectionHeight();
     if (sectionHeight === 0) return;
