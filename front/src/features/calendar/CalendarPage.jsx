@@ -553,6 +553,7 @@ function MiniCalendar({
   selectedDate,
   onSelectDate,
   weekStartsOn = 1,
+  eventsByDay = {},
 }) {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -586,13 +587,15 @@ function MiniCalendar({
           const isCurrentMonth = isSameMonth(d, currentDate);
           const isSelected = isSameDay(d, selectedDate);
           const isTodayDate = isToday(d);
+          const dateKey = format(d, "yyyy-MM-dd");
+          const hasEvents = eventsByDay[dateKey]?.length > 0;
 
           return (
             <button
               key={i}
               onClick={() => onSelectDate(d)}
               className={`
-                aspect-square flex items-center justify-center text-xs rounded-md transition-all
+                aspect-square flex flex-col items-center justify-center text-xs rounded-md transition-all relative
                 ${
                   !isCurrentMonth
                     ? "text-[rgb(var(--text-muted))]/40"
@@ -611,7 +614,17 @@ function MiniCalendar({
                 }
               `}
             >
-              {format(d, "d")}
+              <span>{format(d, "d")}</span>
+              {/* Indicador de eventos */}
+              {hasEvents && (
+                <span
+                  className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
+                    isSelected
+                      ? "bg-white/80"
+                      : "bg-[rgb(var(--brand-primary))]"
+                  }`}
+                />
+              )}
             </button>
           );
         })}
@@ -2974,6 +2987,7 @@ export function CalendarPage() {
                               setCurrentDate(d);
                             }}
                             weekStartsOn={weekStartsOn}
+                            eventsByDay={eventsByDay}
                           />
                         </div>
                       </motion.div>
