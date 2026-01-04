@@ -97,9 +97,15 @@ function ScrollerEventCard({ event, onClick, onLongPress }) {
   const handleContextMenu = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    // Marcar que fue un long press para evitar que se dispare onClick después
+    isLongPressTriggeredRef.current = true;
     const x = e.clientX || window.innerWidth / 2;
     const y = e.clientY || window.innerHeight / 2;
     onLongPress?.(event, { x, y });
+    // Resetear después de un frame para permitir futuros clicks
+    requestAnimationFrame(() => {
+      isLongPressTriggeredRef.current = false;
+    });
   };
 
   return (
@@ -130,15 +136,29 @@ function ScrollerDayCell({
   const isCurrentMonth = isSameMonth(day, monthDate);
   const isSelected = isSameDay(day, selectedDate);
   const isTodayDate = isToday(day);
+  const eventInteractionRef = useRef(false);
 
   const dayLongPress = useLongPress(
     (e) => {
+      // No activar long press del día si se está interactuando con un evento
+      if (eventInteractionRef.current) {
+        eventInteractionRef.current = false;
+        return;
+      }
+
       const x = e?.touches?.[0]?.clientX || e?.clientX || window.innerWidth / 2;
       const y =
         e?.touches?.[0]?.clientY || e?.clientY || window.innerHeight / 2;
       onDayLongPress?.(day, { x, y });
     },
-    () => onSelectDate(day),
+    () => {
+      // No activar click del día si se está interactuando con un evento
+      if (eventInteractionRef.current) {
+        eventInteractionRef.current = false;
+        return;
+      }
+      onSelectDate(day);
+    },
     { delay: 500, moveTolerance: 5 }
   );
 
@@ -178,10 +198,12 @@ function ScrollerDayCell({
             key={event.$id}
             event={event}
             onClick={(e) => {
+              eventInteractionRef.current = true;
               e.stopPropagation();
               onEventClick(event);
             }}
             onLongPress={(ev, pos) => {
+              eventInteractionRef.current = true;
               onEventLongPress(ev, pos);
             }}
           />
