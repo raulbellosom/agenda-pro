@@ -1,26 +1,13 @@
 import { useCallback, useRef, useState, useEffect } from "react";
-import { useDrag } from "@use-gesture/react";
 
 /**
  * Hook para manejar gestos de swipe de forma consistente en móvil y desktop.
- * Optimizado para PWAs en iOS y Android.
+ * Implementación nativa para máxima compatibilidad con iOS y Android.
  *
  * Soporta:
- * - Touch swipe en móviles
+ * - Touch swipe en móviles (eventos nativos)
  * - Mouse drag en desktop
  * - Trackpad gestures (2 dedos) en laptop
- *
- * @param {Object} options - Opciones de configuración
- * @param {Function} options.onSwipeLeft - Callback cuando se hace swipe a la izquierda (siguiente)
- * @param {Function} options.onSwipeRight - Callback cuando se hace swipe a la derecha (anterior)
- * @param {Function} options.onSwipeUp - Callback cuando se hace swipe hacia arriba
- * @param {Function} options.onSwipeDown - Callback cuando se hace swipe hacia abajo
- * @param {number} options.threshold - Distancia mínima en px para activar el swipe (default: 50)
- * @param {number} options.velocityThreshold - Velocidad mínima para activar swipe rápido (default: 0.3)
- * @param {boolean} options.horizontal - Habilitar swipes horizontales (default: true)
- * @param {boolean} options.vertical - Habilitar swipes verticales (default: false)
- * @param {boolean} options.preventScroll - Prevenir scroll durante el gesto (default: false)
- * @param {boolean} options.enabled - Si los gestos están habilitados (default: true)
  */
 export function useSwipeNavigation({
   onSwipeLeft,
@@ -31,29 +18,183 @@ export function useSwipeNavigation({
   velocityThreshold = 0.3,
   horizontal = true,
   vertical = false,
-  preventScroll = false,
   enabled = true,
 } = {}) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const directionLockedRef = useRef(null);
-  const swipeTriggeredRef = useRef(false);
+
   const elementRef = useRef(null);
+  const stateRef = useRef({
+    isActive: false,
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+    currentX: 0,
+    currentY: 0,
+    directionLocked: null, // 'horizontal' | 'vertical' | null
+  });
+
   const wheelStateRef = useRef({
     accumulator: 0,
     timeout: null,
     isWheeling: false,
   });
 
-  // Función para manejar wheel (trackpad)
+  // Obtener posición del evento
+  const getEventPosition = useCallback((e) => {
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  }, []);
+
+  // Manejar inicio del gesto
+  const handleStart = useCallback(
+    (e) => {
+      if (!enabled) return;
+
+      // Ignorar multitouch
+      if (e.touches && e.touches.length > 1) return;
+
+      const pos = getEventPosition(e);
+      const state = stateRef.current;
+
+      state.isActive = true;
+      state.startX = pos.x;
+      state.startY = pos.y;
+      state.currentX = pos.x;
+      state.currentY = pos.y;
+      state.startTime = Date.now();
+      state.directionLocked = null;
+
+      setIsDragging(true);
+    },
+    [enabled, getEventPosition]
+  );
+
+  // Manejar movimiento
+  const handleMove = useCallback(
+    (e) => {
+      const state = stateRef.current;
+      if (!state.isActive || !enabled) return;
+
+      const pos = getEventPosition(e);
+      state.currentX = pos.x;
+      state.currentY = pos.y;
+
+      const dx = pos.x - state.startX;
+      const dy = pos.y - state.startY;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+
+      // Bloquear dirección después de 10px de movimiento
+      if (!state.directionLocked && (absX > 10 || absY > 10)) {
+        const isHorizontalGesture = absX > absY;
+
+        if (isHorizontalGesture && horizontal) {
+          state.directionLocked = "horizontal";
+        } else if (!isHorizontalGesture && vertical) {
+          state.directionLocked = "vertical";
+        } else {
+          // No es la dirección que esperamos, cancelar
+          state.isActive = false;
+          setIsDragging(false);
+          setDragOffset({ x: 0, y: 0 });
+          return;
+        }
+      }
+
+      // Si tenemos dirección bloqueada, prevenir scroll y actualizar offset
+      if (state.directionLocked) {
+        e.preventDefault();
+
+        const resistanceFactor = 0.6;
+        setDragOffset({
+          x: state.directionLocked === "horizontal" ? dx * resistanceFactor : 0,
+          y: state.directionLocked === "vertical" ? dy * resistanceFactor : 0,
+        });
+      }
+    },
+    [enabled, horizontal, vertical, getEventPosition]
+  );
+
+  // Manejar fin del gesto
+  const handleEnd = useCallback(
+    (e) => {
+      const state = stateRef.current;
+      if (!state.isActive) return;
+
+      state.isActive = false;
+      setIsDragging(false);
+      setDragOffset({ x: 0, y: 0 });
+
+      if (!state.directionLocked) return;
+
+      const pos = getEventPosition(e);
+      const dx = pos.x - state.startX;
+      const dy = pos.y - state.startY;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+
+      // Calcular velocidad
+      const duration = (Date.now() - state.startTime) / 1000;
+      const velocityX = absX / duration / 1000;
+      const velocityY = absY / duration / 1000;
+
+      // Verificar si cumple threshold
+      if (state.directionLocked === "horizontal") {
+        const shouldTrigger = absX > threshold || velocityX > velocityThreshold;
+        if (shouldTrigger) {
+          if (dx < 0 && onSwipeLeft) {
+            onSwipeLeft();
+          } else if (dx > 0 && onSwipeRight) {
+            onSwipeRight();
+          }
+        }
+      } else if (state.directionLocked === "vertical") {
+        const shouldTrigger = absY > threshold || velocityY > velocityThreshold;
+        if (shouldTrigger) {
+          if (dy < 0 && onSwipeUp) {
+            onSwipeUp();
+          } else if (dy > 0 && onSwipeDown) {
+            onSwipeDown();
+          }
+        }
+      }
+
+      state.directionLocked = null;
+    },
+    [
+      threshold,
+      velocityThreshold,
+      onSwipeLeft,
+      onSwipeRight,
+      onSwipeUp,
+      onSwipeDown,
+      getEventPosition,
+    ]
+  );
+
+  // Cancelar gesto
+  const handleCancel = useCallback(() => {
+    const state = stateRef.current;
+    state.isActive = false;
+    state.directionLocked = null;
+    setIsDragging(false);
+    setDragOffset({ x: 0, y: 0 });
+  }, []);
+
+  // Manejar wheel (trackpad)
   const handleWheel = useCallback(
     (e) => {
       if (!enabled || !horizontal) return;
 
-      // Solo procesar si es un gesto de trackpad horizontal (no zoom)
+      // Solo procesar si es un gesto de trackpad horizontal
       if (e.ctrlKey || e.deltaMode !== 0) return;
 
-      // Detectar si es principalmente horizontal
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 5) {
         e.preventDefault();
 
@@ -65,10 +206,8 @@ export function useSwipeNavigation({
 
         ws.accumulator += e.deltaX;
 
-        // Limpiar timeout anterior
         if (ws.timeout) clearTimeout(ws.timeout);
 
-        // Cuando el usuario deja de hacer scroll, evaluar
         ws.timeout = setTimeout(() => {
           if (Math.abs(ws.accumulator) > threshold) {
             if (ws.accumulator > 0 && onSwipeLeft) {
@@ -85,7 +224,49 @@ export function useSwipeNavigation({
     [enabled, horizontal, threshold, onSwipeLeft, onSwipeRight]
   );
 
-  // Efecto para limpiar el timeout de wheel al desmontar
+  // Configurar event listeners
+  useEffect(() => {
+    const el = elementRef.current;
+    if (!el) return;
+
+    // Touch events
+    el.addEventListener("touchstart", handleStart, { passive: true });
+    el.addEventListener("touchmove", handleMove, { passive: false });
+    el.addEventListener("touchend", handleEnd, { passive: true });
+    el.addEventListener("touchcancel", handleCancel, { passive: true });
+
+    // Mouse events
+    el.addEventListener("mousedown", handleStart);
+    el.addEventListener("mousemove", handleMove);
+    el.addEventListener("mouseup", handleEnd);
+    el.addEventListener("mouseleave", handleCancel);
+
+    // Wheel events (trackpad)
+    if (horizontal) {
+      el.addEventListener("wheel", handleWheel, { passive: false });
+    }
+
+    return () => {
+      el.removeEventListener("touchstart", handleStart);
+      el.removeEventListener("touchmove", handleMove);
+      el.removeEventListener("touchend", handleEnd);
+      el.removeEventListener("touchcancel", handleCancel);
+      el.removeEventListener("mousedown", handleStart);
+      el.removeEventListener("mousemove", handleMove);
+      el.removeEventListener("mouseup", handleEnd);
+      el.removeEventListener("mouseleave", handleCancel);
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [
+    handleStart,
+    handleMove,
+    handleEnd,
+    handleCancel,
+    handleWheel,
+    horizontal,
+  ]);
+
+  // Limpiar wheel timeout al desmontar
   useEffect(() => {
     return () => {
       if (wheelStateRef.current.timeout) {
@@ -94,178 +275,22 @@ export function useSwipeNavigation({
     };
   }, []);
 
-  const bind = useDrag(
-    (state) => {
-      const {
-        active,
-        movement: [mx, my],
-        velocity: [vx, vy],
-        first,
-        last,
-        cancel,
-        memo,
-      } = state;
-
-      if (!enabled) {
-        if (cancel) cancel();
-        return memo;
-      }
-
-      const absX = Math.abs(mx);
-      const absY = Math.abs(my);
-
-      // En el primer movimiento, inicializar
-      if (first) {
-        directionLockedRef.current = null;
-        swipeTriggeredRef.current = false;
-        setIsDragging(true);
-        return { startTime: Date.now() };
-      }
-
-      // Bloquear dirección después de cierto movimiento (8px threshold)
-      if (!directionLockedRef.current && (absX > 8 || absY > 8)) {
-        const isHorizontalGesture = absX > absY;
-
-        if (isHorizontalGesture && horizontal) {
-          directionLockedRef.current = "horizontal";
-        } else if (!isHorizontalGesture && vertical) {
-          directionLockedRef.current = "vertical";
-        } else {
-          // No es la dirección que esperamos, no interferir
-          setIsDragging(false);
-          setDragOffset({ x: 0, y: 0 });
-          return memo;
-        }
-      }
-
-      // Si tenemos una dirección bloqueada, aplicar el offset visual
-      if (directionLockedRef.current && active) {
-        const resistanceFactor = 0.5;
-        setDragOffset({
-          x:
-            directionLockedRef.current === "horizontal"
-              ? mx * resistanceFactor
-              : 0,
-          y:
-            directionLockedRef.current === "vertical"
-              ? my * resistanceFactor
-              : 0,
-        });
-      }
-
-      // Al soltar, determinar si activamos el swipe
-      if (last) {
-        setIsDragging(false);
-        setDragOffset({ x: 0, y: 0 });
-
-        if (!directionLockedRef.current || swipeTriggeredRef.current) {
-          directionLockedRef.current = null;
-          return memo;
-        }
-
-        const absVx = Math.abs(vx);
-        const absVy = Math.abs(vy);
-
-        // Verificar si cumple con el threshold
-        if (directionLockedRef.current === "horizontal") {
-          const shouldTrigger = absX > threshold || absVx > velocityThreshold;
-          if (shouldTrigger) {
-            swipeTriggeredRef.current = true;
-            if (mx < 0 && onSwipeLeft) {
-              onSwipeLeft();
-            } else if (mx > 0 && onSwipeRight) {
-              onSwipeRight();
-            }
-          }
-        } else if (directionLockedRef.current === "vertical") {
-          const shouldTrigger = absY > threshold || absVy > velocityThreshold;
-          if (shouldTrigger) {
-            swipeTriggeredRef.current = true;
-            if (my < 0 && onSwipeUp) {
-              onSwipeUp();
-            } else if (my > 0 && onSwipeDown) {
-              onSwipeDown();
-            }
-          }
-        }
-
-        directionLockedRef.current = null;
-      }
-
-      return memo;
-    },
-    {
-      filterTaps: true,
-      threshold: 5,
-      rubberband: false,
-      pointer: {
-        touch: true,
-        mouse: true,
-      },
-      eventOptions: { passive: false },
-    }
-  );
-
-  // Wrapper para bind que agrega ref y wheel handler
-  const bindWithRef = useCallback(() => {
-    const handlers = bind();
+  // Función bind que devuelve el ref
+  const bind = useCallback(() => {
     return {
-      ...handlers,
-      ref: (el) => {
-        // Limpiar listener anterior si existe
-        if (elementRef.current && elementRef.current !== el) {
-          elementRef.current.removeEventListener("wheel", handleWheel);
-        }
-
-        elementRef.current = el;
-
-        // Agregar listener de wheel para trackpad
-        if (el && horizontal) {
-          el.addEventListener("wheel", handleWheel, { passive: false });
-        }
-
-        // Si el handler original tiene ref, llamarlo también
-        if (handlers.ref) {
-          if (typeof handlers.ref === "function") {
-            handlers.ref(el);
-          } else {
-            handlers.ref.current = el;
-          }
-        }
-      },
+      ref: elementRef,
     };
-  }, [bind, handleWheel, horizontal]);
-
-  // Limpiar listener de wheel al desmontar
-  useEffect(() => {
-    return () => {
-      if (elementRef.current) {
-        elementRef.current.removeEventListener("wheel", handleWheel);
-      }
-    };
-  }, [handleWheel]);
+  }, []);
 
   return {
-    bind: bindWithRef,
+    bind,
     isDragging,
     dragOffset,
-    style: isDragging
-      ? {
-          transform: `translate3d(${dragOffset.x}px, ${dragOffset.y}px, 0)`,
-          transition: "none",
-          willChange: "transform",
-          userSelect: "none",
-        }
-      : {
-          transform: "translate3d(0, 0, 0)",
-          transition: "transform 0.2s ease-out",
-        },
   };
 }
 
 /**
  * Hook simplificado para navegación de calendario
- * Específico para cambiar entre períodos (día, semana, mes)
  */
 export function useCalendarSwipe({ onNext, onPrevious, enabled = true }) {
   return useSwipeNavigation({
@@ -275,38 +300,6 @@ export function useCalendarSwipe({ onNext, onPrevious, enabled = true }) {
     vertical: false,
     threshold: 60,
     velocityThreshold: 0.4,
-    enabled,
-  });
-}
-
-/**
- * Hook para detectar swipe desde los bordes de la pantalla
- * Útil para navegación cuando hay scroll horizontal interno
- */
-export function useEdgeSwipe({
-  onSwipeLeft,
-  onSwipeRight,
-  edgeWidth = 40,
-  enabled = true,
-}) {
-  const startXRef = useRef(0);
-  const isFromEdgeRef = useRef(false);
-
-  return useSwipeNavigation({
-    onSwipeLeft: () => {
-      if (isFromEdgeRef.current) {
-        onSwipeLeft?.();
-      }
-    },
-    onSwipeRight: () => {
-      if (isFromEdgeRef.current) {
-        onSwipeRight?.();
-      }
-    },
-    horizontal: true,
-    vertical: false,
-    threshold: 50,
-    velocityThreshold: 0.3,
     enabled,
   });
 }

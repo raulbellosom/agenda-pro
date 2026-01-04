@@ -1696,8 +1696,22 @@ function SingleMonthSwipeView({
     vertical: true,
     threshold: 50,
     velocityThreshold: 0.3,
-    preventScroll: false,
   });
+
+  // Obtener los handlers del swipe (incluye el ref)
+  const swipeHandlers = swipeBindings();
+
+  // Combinar refs - el swipeHandlers.ref es un useRef object
+  const setRefs = useCallback(
+    (el) => {
+      containerRef.current = el;
+      // Asignar al ref del swipe hook
+      if (swipeHandlers.ref) {
+        swipeHandlers.ref.current = el;
+      }
+    },
+    [swipeHandlers.ref]
+  );
 
   // Cuando la animación termina, cambiar el mes
   useEffect(() => {
@@ -1814,12 +1828,7 @@ function SingleMonthSwipeView({
       </div>
 
       {/* Contenedor del carrusel de 3 meses */}
-      <div
-        ref={containerRef}
-        {...swipeBindings()}
-        className="flex-1 relative overflow-hidden"
-        style={{ touchAction: "none" }}
-      >
+      <div ref={setRefs} className="flex-1 relative overflow-hidden touch-none">
         {/* Indicador del mes destino - aparece solo durante swipe */}
         <AnimatePresence>
           {showMonthIndicator && (
@@ -1936,6 +1945,7 @@ function MobileDayCell({
         }
         ${!isCurrentMonth ? "opacity-40" : ""}
       `}
+      style={{ touchAction: "manipulation" }}
     >
       <div className="flex items-center justify-center mb-1 shrink-0">
         <span
