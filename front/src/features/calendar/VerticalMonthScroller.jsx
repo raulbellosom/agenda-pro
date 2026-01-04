@@ -4,6 +4,8 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  forwardRef,
+  useImperativeHandle,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -259,17 +261,20 @@ function MonthGrid({
 // Con gestos táctiles nativos y scroll snap
 // ================================================
 
-export function VerticalMonthScroller({
-  currentDate,
-  selectedDate,
-  eventsByDay,
-  onSelectDate,
-  onEventClick,
-  onEventLongPress,
-  onDayLongPress,
-  onMonthChange,
-  weekStartsOn = 1,
-}) {
+export const VerticalMonthScroller = forwardRef(function VerticalMonthScroller(
+  {
+    currentDate,
+    selectedDate,
+    eventsByDay,
+    onSelectDate,
+    onEventClick,
+    onEventLongPress,
+    onDayLongPress,
+    onMonthChange,
+    weekStartsOn = 1,
+  },
+  ref
+) {
   const containerRef = useRef(null);
   const scrollRef = useRef(null);
   const [showMonthIndicator, setShowMonthIndicator] = useState(false);
@@ -387,6 +392,22 @@ export function VerticalMonthScroller({
       requestAnimationFrame(checkScrollEnd);
     },
     [currentDate, getSectionHeight, onMonthChange]
+  );
+
+  // Exponer métodos públicos para navegación programática desde el padre
+  useImperativeHandle(
+    ref,
+    () => ({
+      goToPreviousMonth: () => {
+        if (!scrollStateRef.current.initialized) return;
+        snapToMonth(0); // Scroll al mes anterior
+      },
+      goToNextMonth: () => {
+        if (!scrollStateRef.current.initialized) return;
+        snapToMonth(2); // Scroll al mes siguiente
+      },
+    }),
+    [snapToMonth]
   );
 
   // Handle scroll events - solo para mostrar indicador
@@ -668,6 +689,6 @@ export function VerticalMonthScroller({
       `}</style>
     </div>
   );
-}
+});
 
 export default VerticalMonthScroller;

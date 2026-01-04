@@ -2408,6 +2408,9 @@ export function CalendarPage() {
   const [deletingCalendar, setDeletingCalendar] = useState(null);
   const [sharingCalendar, setSharingCalendar] = useState(null);
 
+  // Ref para el VerticalMonthScroller para navegación programática
+  const monthScrollerRef = useRef(null);
+
   // Event modal states
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -2591,6 +2594,13 @@ export function CalendarPage() {
         setSelectedDate((d) => subWeeks(d, 1));
         break;
       case VIEW_MODES.MONTH:
+        // Usar scroll animado si el scroller está disponible
+        if (monthScrollerRef.current?.goToPreviousMonth) {
+          monthScrollerRef.current.goToPreviousMonth();
+        } else {
+          setCurrentDate((d) => subMonths(d, 1));
+        }
+        break;
       case VIEW_MODES.AGENDA:
         setCurrentDate((d) => subMonths(d, 1));
         break;
@@ -2611,6 +2621,13 @@ export function CalendarPage() {
         setSelectedDate((d) => addWeeks(d, 1));
         break;
       case VIEW_MODES.MONTH:
+        // Usar scroll animado si el scroller está disponible
+        if (monthScrollerRef.current?.goToNextMonth) {
+          monthScrollerRef.current.goToNextMonth();
+        } else {
+          setCurrentDate((d) => addMonths(d, 1));
+        }
+        break;
       case VIEW_MODES.AGENDA:
         setCurrentDate((d) => addMonths(d, 1));
         break;
@@ -2621,9 +2638,43 @@ export function CalendarPage() {
 
   const goToToday = useCallback(() => {
     setNavigationDirection(0);
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
-  }, []);
+    const today = new Date();
+
+    // Si estamos en vista de mes y el scroller está disponible
+    if (viewMode === VIEW_MODES.MONTH && monthScrollerRef.current) {
+      const todayMonth = format(today, "yyyy-MM");
+      const currentMonth = format(currentDate, "yyyy-MM");
+
+      // Si ya estamos en el mes de hoy, solo actualizar selectedDate
+      if (todayMonth === currentMonth) {
+        setSelectedDate(today);
+        return;
+      }
+
+      // Calcular diferencia de meses entre hoy y el mes actual
+      const todayDate = startOfMonth(today);
+      const currentMonthDate = startOfMonth(currentDate);
+      const monthsDiff = Math.round(
+        (todayDate.getTime() - currentMonthDate.getTime()) /
+          (1000 * 60 * 60 * 24 * 30)
+      );
+
+      // Si hoy está en el mes anterior (-1) o siguiente (+1), hacer scroll animado
+      if (monthsDiff === -1) {
+        monthScrollerRef.current.goToPreviousMonth();
+        setSelectedDate(today);
+        return;
+      } else if (monthsDiff === 1) {
+        monthScrollerRef.current.goToNextMonth();
+        setSelectedDate(today);
+        return;
+      }
+    }
+
+    // Si no se puede hacer scroll (meses lejanos u otra vista), cambiar currentDate
+    setCurrentDate(today);
+    setSelectedDate(today);
+  }, [viewMode, currentDate]);
 
   // Hook de swipe para navegación táctil en móviles
   // Solo activo cuando no estamos en scroll infinito del mes móvil
@@ -2984,6 +3035,45 @@ export function CalendarPage() {
                             selectedDate={selectedDate}
                             onSelectDate={(d) => {
                               setSelectedDate(d);
+
+                              // Si estamos en vista de mes, intentar usar scroll animado
+                              if (
+                                viewMode === VIEW_MODES.MONTH &&
+                                monthScrollerRef.current
+                              ) {
+                                const selectedMonth = format(d, "yyyy-MM");
+                                const currentMonth = format(
+                                  currentDate,
+                                  "yyyy-MM"
+                                );
+                                const prevMonth = format(
+                                  subMonths(currentDate, 1),
+                                  "yyyy-MM"
+                                );
+                                const nextMonth = format(
+                                  addMonths(currentDate, 1),
+                                  "yyyy-MM"
+                                );
+
+                                // Si el mes seleccionado es el anterior
+                                if (selectedMonth === prevMonth) {
+                                  monthScrollerRef.current.goToPreviousMonth();
+                                  return;
+                                }
+
+                                // Si el mes seleccionado es el siguiente
+                                if (selectedMonth === nextMonth) {
+                                  monthScrollerRef.current.goToNextMonth();
+                                  return;
+                                }
+
+                                // Si es el mes actual, no hacer nada (solo cambió selectedDate)
+                                if (selectedMonth === currentMonth) {
+                                  return;
+                                }
+                              }
+
+                              // Si no se pudo hacer scroll, cambiar currentDate directamente
                               setCurrentDate(d);
                             }}
                             weekStartsOn={weekStartsOn}
@@ -3042,6 +3132,7 @@ export function CalendarPage() {
           ) : viewMode === VIEW_MODES.MONTH ? (
             // Vista de mes con scroll vertical infinito (móvil y desktop)
             <VerticalMonthScroller
+              ref={monthScrollerRef}
               currentDate={currentDate}
               selectedDate={selectedDate}
               eventsByDay={eventsByDay}
