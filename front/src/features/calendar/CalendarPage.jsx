@@ -1673,31 +1673,26 @@ function SingleMonthSwipeView({
   onMonthChange,
   weekStartsOn = 1,
 }) {
-  const [swipeDirection, setSwipeDirection] = useState(0);
-
   // Configurar gestos de swipe vertical
   const {
     bind: swipeBindings,
     isDragging,
     dragOffset,
-    style: swipeStyle,
   } = useSwipeNavigation({
     onSwipeUp: () => {
-      setSwipeDirection(1);
       onMonthChange(addMonths(currentDate, 1));
     },
     onSwipeDown: () => {
-      setSwipeDirection(-1);
       onMonthChange(subMonths(currentDate, 1));
     },
     horizontal: false,
     vertical: true,
     threshold: 50,
     velocityThreshold: 0.3,
-    preventScroll: false, // No prevenir scroll para permitir scroll dentro del mes si es necesario
+    preventScroll: false,
   });
 
-  // Calcular días para el mes actual
+  // Calcular días para un mes específico
   const getMonthDays = useCallback(
     (date) => {
       const monthStart = startOfMonth(date);
@@ -1716,25 +1711,62 @@ function SingleMonthSwipeView({
     [weekStartsOn]
   );
 
-  const calendarDays = useMemo(
+  // Memoizar los días de los 3 meses
+  const prevMonth = subMonths(currentDate, 1);
+  const nextMonth = addMonths(currentDate, 1);
+
+  const prevMonthDays = useMemo(
+    () => getMonthDays(prevMonth),
+    [prevMonth, getMonthDays]
+  );
+  const currentMonthDays = useMemo(
     () => getMonthDays(currentDate),
     [currentDate, getMonthDays]
   );
+  const nextMonthDays = useMemo(
+    () => getMonthDays(nextMonth),
+    [nextMonth, getMonthDays]
+  );
+
   const weekDaysMobile = getWeekDayNames(weekStartsOn, "short");
+
+  // Calcular filas de cada mes
+  const prevMonthRows = Math.ceil(prevMonthDays.length / 7);
+  const currentMonthRows = Math.ceil(currentMonthDays.length / 7);
+  const nextMonthRows = Math.ceil(nextMonthDays.length / 7);
+
+  // Calcular mes destino para el indicador
+  const showMonthIndicator = isDragging && Math.abs(dragOffset.y) > 20;
+  const targetMonth = dragOffset.y > 0 ? prevMonth : nextMonth;
+
+  // Componente para renderizar un grid de mes
+  const MonthGrid = ({ monthDate, days, rows }) => (
+    <div
+      className="absolute inset-0 grid grid-cols-7 border-l border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-base))]"
+      style={{
+        gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+      }}
+    >
+      {days.map((day) => (
+        <MobileDayCell
+          key={day.toISOString()}
+          day={day}
+          currentDate={monthDate}
+          selectedDate={selectedDate}
+          eventsByDay={eventsByDay}
+          onSelectDate={onSelectDate}
+          onEventClick={onEventClick}
+          onEventLongPress={onEventLongPress}
+          onDayLongPress={onDayLongPress}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Month header - solo visible durante swipe */}
-      {isDragging && (
-        <div className="shrink-0 py-2 px-4 border-b border-[rgb(var(--border-base))] bg-[rgb(var(--bg-surface))]">
-          <h2 className="text-base font-semibold text-[rgb(var(--text-primary))] capitalize text-center">
-            {format(currentDate, "MMMM yyyy", { locale: es })}
-          </h2>
-        </div>
-      )}
-
-      {/* Week days header - fijo */}
-      <div className="grid grid-cols-7 shrink-0 border-b border-[rgb(var(--border-base))]">
+      {/* Week days header - siempre fijo */}
+      <div className="grid grid-cols-7 shrink-0 border-b border-[rgb(var(--border-base))] z-20 bg-[rgb(var(--bg-surface))]">
         {weekDaysMobile.map((day, idx) => (
           <div
             key={`${day}-${idx}`}
@@ -1745,57 +1777,78 @@ function SingleMonthSwipeView({
         ))}
       </div>
 
-      {/* Calendar grid con gestos swipe */}
+      {/* Contenedor del carrusel de 3 meses */}
       <div
         {...swipeBindings()}
-        className="flex-1 overflow-hidden"
-        style={{
-          touchAction: "none", // Controlar completamente los gestos
-          ...swipeStyle,
-        }}
+        className="flex-1 relative overflow-hidden"
+        style={{ touchAction: "none" }}
       >
-        <AnimatePresence mode="wait" custom={swipeDirection}>
-          <motion.div
-            key={format(currentDate, "yyyy-MM")}
-            custom={swipeDirection}
-            variants={{
-              enter: (direction) => ({
-                y: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
-                opacity: 0,
-              }),
-              center: {
-                y: 0,
-                opacity: 1,
-              },
-              exit: (direction) => ({
-                y: direction < 0 ? "100%" : direction > 0 ? "-100%" : 0,
-                opacity: 0,
-              }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              duration: isDragging ? 0 : 0.25,
-              ease: "easeInOut",
-            }}
-            className="h-full grid grid-cols-7 auto-rows-fr border-l border-t border-[rgb(var(--border-base))]"
-          >
-            {calendarDays.map((day) => (
-              <MobileDayCell
-                key={day.toISOString()}
-                day={day}
-                currentDate={currentDate}
-                selectedDate={selectedDate}
-                eventsByDay={eventsByDay}
-                onSelectDate={onSelectDate}
-                onEventClick={onEventClick}
-                onEventLongPress={onEventLongPress}
-                onDayLongPress={onDayLongPress}
-              />
-            ))}
-          </motion.div>
+        {/* Indicador del mes destino - aparece solo durante swipe */}
+        <AnimatePresence>
+          {showMonthIndicator && (
+            <motion.div
+              initial={{ opacity: 0, y: dragOffset.y > 0 ? -20 : 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className={`absolute left-0 right-0 z-30 flex justify-center pointer-events-none ${
+                dragOffset.y > 0 ? "top-2" : "bottom-2"
+              }`}
+            >
+              <div className="bg-[rgb(var(--bg-elevated))] shadow-lg rounded-full px-4 py-1.5 border border-[rgb(var(--border-base))]">
+                <span className="text-sm font-semibold text-[rgb(var(--text-primary))] capitalize">
+                  {format(targetMonth, "MMMM yyyy", { locale: es })}
+                </span>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
+
+        {/* Carrusel de 3 meses apilados verticalmente */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: isDragging
+              ? `translateY(${dragOffset.y}px)`
+              : "translateY(0)",
+            transition: isDragging ? "none" : "transform 0.3s ease-out",
+          }}
+        >
+          {/* Mes anterior (arriba del visible) */}
+          <div
+            className="absolute left-0 right-0"
+            style={{ height: "100%", top: "-100%" }}
+          >
+            <MonthGrid
+              monthDate={prevMonth}
+              days={prevMonthDays}
+              rows={prevMonthRows}
+            />
+          </div>
+
+          {/* Mes actual (visible) */}
+          <div
+            className="absolute left-0 right-0"
+            style={{ height: "100%", top: "0" }}
+          >
+            <MonthGrid
+              monthDate={currentDate}
+              days={currentMonthDays}
+              rows={currentMonthRows}
+            />
+          </div>
+
+          {/* Mes siguiente (debajo del visible) */}
+          <div
+            className="absolute left-0 right-0"
+            style={{ height: "100%", top: "100%" }}
+          >
+            <MonthGrid
+              monthDate={nextMonth}
+              days={nextMonthDays}
+              rows={nextMonthRows}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1835,7 +1888,7 @@ function MobileDayCell({
       onClick={handleDayClick}
       {...dayLongPress}
       className={`
-        flex flex-col p-1 sm:p-1.5 min-h-[70px] sm:min-h-[90px] lg:min-h-[100px] h-full border-r border-b border-[rgb(var(--border-base))] transition-all text-left
+        flex flex-col p-1 sm:p-1.5 h-full overflow-hidden border-r border-b border-[rgb(var(--border-base))] transition-all text-left
         ${
           isSelected
             ? "bg-[rgb(var(--brand-primary))]/10 ring-2 ring-inset ring-[rgb(var(--brand-primary))]"
@@ -1846,7 +1899,7 @@ function MobileDayCell({
         ${!isCurrentMonth ? "opacity-40" : ""}
       `}
     >
-      <div className="flex items-center justify-center mb-1">
+      <div className="flex items-center justify-center mb-1 shrink-0">
         <span
           className={`text-xs sm:text-sm font-medium ${
             isTodayDate
@@ -1861,7 +1914,7 @@ function MobileDayCell({
       </div>
 
       {/* Events */}
-      <div className="flex-1 space-y-0.5 overflow-hidden">
+      <div className="flex-1 min-h-0 space-y-0.5 overflow-hidden">
         {dayEvents.slice(0, 3).map((event) => (
           <MonthEventCard
             key={event.$id}
