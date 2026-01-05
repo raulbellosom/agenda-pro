@@ -203,7 +203,11 @@ function StepIndicator({ currentStep, totalSteps }) {
   );
 }
 
-const CalendarSelector = React.memo(function CalendarSelector({ calendars, selectedId, onChange }) {
+const CalendarSelector = React.memo(function CalendarSelector({
+  calendars,
+  selectedId,
+  onChange,
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -374,7 +378,12 @@ const CalendarSelector = React.memo(function CalendarSelector({ calendars, selec
   );
 });
 
-const TimeInput = React.memo(const TimeInput = React.memo(function TimeInput({ label, value, onChange, error }) {
+const TimeInput = React.memo(function TimeInput({
+  label,
+  value,
+  onChange,
+  error,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = React.useRef(null);
   const hoursRef = React.useRef(null);
@@ -417,17 +426,25 @@ const TimeInput = React.memo(const TimeInput = React.memo(function TimeInput({ l
     return () => cancelAnimationFrame(rafId);
   }, [isOpen, hours, minutes]);
 
-  const handleHourChange = useCallback((h) => {
-    onChange(
-      `${h.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
-    );
-  }, [onChange, minutes]);
+  const handleHourChange = useCallback(
+    (h) => {
+      onChange(
+        `${h.toString().padStart(2, "0")}:${minutes
+          .toString()
+          .padStart(2, "0")}`
+      );
+    },
+    [onChange, minutes]
+  );
 
-  const handleMinuteChange = useCallback((m) => {
-    onChange(
-      `${hours.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
-    );
-  }, [onChange, hours]);
+  const handleMinuteChange = useCallback(
+    (m) => {
+      onChange(
+        `${hours.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+      );
+    },
+    [onChange, hours]
+  );
 
   return (
     <div className="space-y-1.5 relative z-10" ref={containerRef}>
@@ -863,7 +880,13 @@ function StepOptionalDetails({
 }
 
 // Step 3: Calendar Selection
-function StepCalendar({ calendarId, calendars, onCalendarChange, errors, isMobile = false }) {
+function StepCalendar({
+  calendarId,
+  calendars,
+  onCalendarChange,
+  errors,
+  isMobile = false,
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, x: isMobile ? 0 : 20 }}
@@ -1024,9 +1047,11 @@ export function EventModal({
 
   // Detectar si estamos en un dispositivo móvil para reducir animaciones
   const isMobile = useMemo(() => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    ) || window.innerWidth < 768;
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      ) || window.innerWidth < 768
+    );
   }, []);
 
   const updateField = useCallback((field, value) => {
@@ -1185,24 +1210,27 @@ export function EventModal({
   useEffect(() => {
     if (isOpen) {
       const originalStyle = window.getComputedStyle(document.body).overflow;
-      document.body.style.overflow = 'hidden';
-      
+      document.body.style.overflow = "hidden";
+
       // En móviles, prevenir zoom accidental en inputs
       if (isMobile) {
-        const viewport = document.querySelector('meta[name=viewport]');
-        const originalContent = viewport?.getAttribute('content');
+        const viewport = document.querySelector("meta[name=viewport]");
+        const originalContent = viewport?.getAttribute("content");
         if (viewport) {
-          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+          viewport.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          );
         }
-        
+
         return () => {
           document.body.style.overflow = originalStyle;
           if (viewport && originalContent) {
-            viewport.setAttribute('content', originalContent);
+            viewport.setAttribute("content", originalContent);
           }
         };
       }
-      
+
       return () => {
         document.body.style.overflow = originalStyle;
       };
@@ -1254,14 +1282,22 @@ export function EventModal({
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 20 }}
+            initial={{
+              opacity: 0,
+              scale: isMobile ? 1 : 0.95,
+              y: isMobile ? 20 : 20,
+            }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 20 }}
-            transition={{ 
-              type: isMobile ? "tween" : "spring", 
-              damping: 25, 
+            exit={{
+              opacity: 0,
+              scale: isMobile ? 1 : 0.95,
+              y: isMobile ? 20 : 20,
+            }}
+            transition={{
+              type: isMobile ? "tween" : "spring",
+              damping: 25,
               stiffness: 300,
-              duration: isMobile ? 0.2 : undefined 
+              duration: isMobile ? 0.2 : undefined,
             }}
             className="fixed inset-4 z-50 flex items-center justify-center sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:p-4"
             style={{ maxHeight: "calc(100dvh - 2rem)" }}
