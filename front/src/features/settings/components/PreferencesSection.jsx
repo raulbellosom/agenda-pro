@@ -11,6 +11,9 @@ import {
   Check,
   Bell,
   Save,
+  Download,
+  Smartphone,
+  CheckCircle2,
 } from "lucide-react";
 import { useWorkspace } from "../../../app/providers/WorkspaceProvider";
 import {
@@ -22,6 +25,7 @@ import { Button } from "../../../components/ui/Button";
 import { SettingsCard, SettingsCardHeader } from "./SettingsCard";
 import { SettingsSelect } from "./SettingsControls";
 import { SettingsAlert, SettingsSkeleton } from "./SettingsWidgets";
+import { useIsPWA, usePWAInstall } from "../../../components/PWAInstallPrompt";
 
 export function PreferencesSection() {
   const { activeGroup, profile } = useWorkspace();
@@ -30,6 +34,9 @@ export function PreferencesSection() {
     profile?.$id
   );
   const updateSettings = useUpdateUserSettings();
+  const isPWA = useIsPWA();
+  const { isInstallable, install } = usePWAInstall();
+  const [installing, setInstalling] = useState(false);
 
   const [localSettings, setLocalSettings] = useState({
     timezone: "America/Mexico_City",
@@ -43,6 +50,15 @@ export function PreferencesSection() {
 
   const [hasChanges, setHasChanges] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const handleInstallPWA = async () => {
+    setInstalling(true);
+    try {
+      await install();
+    } finally {
+      setInstalling(false);
+    }
+  };
 
   // Sincronizar con settings
   useEffect(() => {
@@ -93,6 +109,89 @@ export function PreferencesSection() {
 
   return (
     <div className="space-y-6">
+      {/* PWA Installation Card */}
+      {!isPWA && (
+        <SettingsCard>
+          <div className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                <Smartphone className="w-6 h-6 text-[rgb(var(--brand-primary))]" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+                  Instalar aplicación
+                </h3>
+                <p className="mt-1 text-sm text-[rgb(var(--text-secondary))]">
+                  Instala Agenda Pro en tu dispositivo para acceso rápido y una
+                  experiencia de app nativa. No ocupa espacio adicional.
+                </p>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  {isInstallable ? (
+                    <Button
+                      onClick={handleInstallPWA}
+                      disabled={installing}
+                      loading={installing}
+                      leftIcon={<Download className="w-4 h-4" />}
+                    >
+                      Instalar ahora
+                    </Button>
+                  ) : (
+                    <div className="text-sm text-[rgb(var(--text-muted))]">
+                      {/iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+                        <>
+                          <strong className="text-[rgb(var(--text-primary))]">
+                            iOS:
+                          </strong>{" "}
+                          Toca el botón de compartir{" "}
+                          <span className="inline-flex items-center">
+                            <svg
+                              className="w-4 h-4 inline mx-1"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M16 5l-1.42 1.42-1.59-1.59V16h-1.98V4.83L9.42 6.42 8 5l4-4 4 4zm4 5v11c0 1.1-.9 2-2 2H6c-1.11 0-2-.9-2-2V10c0-1.11.89-2 2-2h3v2H6v11h12V10h-3V8h3c1.1 0 2 .89 2 2z" />
+                            </svg>
+                          </span>{" "}
+                          y selecciona "Agregar a pantalla de inicio"
+                        </>
+                      ) : (
+                        <>
+                          En el menú de tu navegador, busca la opción "Instalar
+                          aplicación" o "Agregar a pantalla de inicio"
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </SettingsCard>
+      )}
+
+      {isPWA && (
+        <SettingsCard>
+          <div className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+                  App instalada
+                </h3>
+                <p className="mt-1 text-sm text-[rgb(var(--text-secondary))]">
+                  ¡Genial! Estás usando Agenda Pro como aplicación instalada.
+                </p>
+              </div>
+            </div>
+          </div>
+        </SettingsCard>
+      )}
+
       {/* Regional Settings */}
       <SettingsCard>
         <SettingsCardHeader

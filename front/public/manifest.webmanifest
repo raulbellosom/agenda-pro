@@ -3,6 +3,7 @@
   "short_name": "Agenda Pro",
   "description": "Organiza tu tiempo, eventos y actividades de manera eficiente con Agenda Pro",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#8b5cf6",
@@ -54,5 +55,13 @@
         }
       ]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text"
+    }
+  }
 }

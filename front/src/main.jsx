@@ -11,6 +11,7 @@ import { AuthProvider } from "./app/providers/AuthProvider";
 import { WorkspaceProvider } from "./app/providers/WorkspaceProvider";
 import { ThemeProvider } from "./shared/theme/ThemeProvider";
 import { RenderErrorBoundary } from "./components/ErrorBoundary";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +37,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <AuthProvider>
             <WorkspaceProvider>
               <RouterProvider router={router} />
+              <PWAInstallPrompt />
             </WorkspaceProvider>
           </AuthProvider>
         </ThemeProvider>

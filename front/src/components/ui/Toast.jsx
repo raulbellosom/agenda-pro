@@ -14,7 +14,7 @@ export function ToastViewport({ toasts, onDismiss }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -30, scale: 0.9 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="pointer-events-auto glass-elevated rounded-2xl p-5 shadow-2xl border-2 border-[rgb(var(--border-base))]"
+              className="pointer-events-auto bg-[rgb(var(--bg-elevated))] rounded-2xl p-5 shadow-2xl border-2 border-[rgb(var(--border-base))]"
             >
               <div className="flex items-start gap-4">
                 <div
