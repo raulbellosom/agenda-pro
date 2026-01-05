@@ -203,16 +203,25 @@ function StepIndicator({ currentStep, totalSteps }) {
   );
 }
 
-function CalendarSelector({ calendars, selectedId, onChange }) {
+const CalendarSelector = React.memo(function CalendarSelector({ calendars, selectedId, onChange }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [showAll, setShowAll] = useState(false);
+
+  // Debounce search query para evitar filtrados excesivos en móviles
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Filter calendars based on search
   const filteredCalendars = useMemo(() => {
-    if (!searchQuery.trim()) return calendars;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedQuery.trim()) return calendars;
+    const query = debouncedQuery.toLowerCase();
     return calendars.filter((cal) => cal.name.toLowerCase().includes(query));
-  }, [calendars, searchQuery]);
+  }, [calendars, debouncedQuery]);
 
   // Get visible calendars (show selected first, then limit to 3 unless showAll)
   const visibleCalendars = useMemo(() => {
@@ -363,9 +372,9 @@ function CalendarSelector({ calendars, selectedId, onChange }) {
       </div>
     </div>
   );
-}
+});
 
-function TimeInput({ label, value, onChange, error }) {
+const TimeInput = React.memo(const TimeInput = React.memo(function TimeInput({ label, value, onChange, error }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = React.useRef(null);
   const hoursRef = React.useRef(null);
@@ -376,44 +385,49 @@ function TimeInput({ label, value, onChange, error }) {
 
   // Close on click outside
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
+    // Usar capture para evitar que otros elementos intercepten el evento
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside, true);
   }, [isOpen]);
 
   // Scroll to selected values when picker opens
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        hoursRef.current
-          ?.querySelector(`[data-value="${hours}"]`)
-          ?.scrollIntoView({ block: "center", behavior: "auto" });
-        minutesRef.current
-          ?.querySelector(`[data-value="${minutes}"]`)
-          ?.scrollIntoView({ block: "center", behavior: "auto" });
-      }, 50);
-    }
+    if (!isOpen) return;
+
+    // Usar requestAnimationFrame para mejor rendimiento en móviles
+    const scrollToTime = () => {
+      hoursRef.current
+        ?.querySelector(`[data-value="${hours}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "auto" });
+      minutesRef.current
+        ?.querySelector(`[data-value="${minutes}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "auto" });
+    };
+
+    const rafId = requestAnimationFrame(scrollToTime);
+    return () => cancelAnimationFrame(rafId);
   }, [isOpen, hours, minutes]);
 
-  const handleHourChange = (h) => {
+  const handleHourChange = useCallback((h) => {
     onChange(
       `${h.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
     );
-  };
+  }, [onChange, minutes]);
 
-  const handleMinuteChange = (m) => {
+  const handleMinuteChange = useCallback((m) => {
     onChange(
       `${hours.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
     );
-  };
+  }, [onChange, hours]);
 
   return (
     <div className="space-y-1.5 relative z-10" ref={containerRef}>
@@ -566,7 +580,7 @@ function TimeInput({ label, value, onChange, error }) {
       </AnimatePresence>
     </div>
   );
-}
+});
 
 // ================================================
 // STEP COMPONENTS
@@ -586,13 +600,14 @@ function StepBasicInfo({
   onAllDayChange,
   errors,
   timezone,
+  isMobile = false,
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: isMobile ? 0 : 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
+      exit={{ opacity: 0, x: isMobile ? 0 : -20 }}
+      transition={{ duration: isMobile ? 0.15 : 0.3 }}
       className="space-y-6"
     >
       {/* Header */}
@@ -771,13 +786,14 @@ function StepOptionalDetails({
   description,
   onLocationChange,
   onDescriptionChange,
+  isMobile = false,
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: isMobile ? 0 : 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
+      exit={{ opacity: 0, x: isMobile ? 0 : -20 }}
+      transition={{ duration: isMobile ? 0.15 : 0.3 }}
       className="space-y-6"
     >
       {/* Header */}
@@ -847,13 +863,13 @@ function StepOptionalDetails({
 }
 
 // Step 3: Calendar Selection
-function StepCalendar({ calendarId, calendars, onCalendarChange, errors }) {
+function StepCalendar({ calendarId, calendars, onCalendarChange, errors, isMobile = false }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: isMobile ? 0 : 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
+      exit={{ opacity: 0, x: isMobile ? 0 : -20 }}
+      transition={{ duration: isMobile ? 0.15 : 0.3 }}
       className="space-y-6"
     >
       {/* Header */}
@@ -966,6 +982,9 @@ export function EventModal({
 
   // Initialize form with event data when editing
   useEffect(() => {
+    // Solo ejecutar cuando el modal se abre
+    if (!isOpen) return;
+
     if (isEditing && event) {
       // Parsear las fechas ISO (que están en UTC)
       const startDateUTC = parseISO(event.startAt);
@@ -1000,15 +1019,15 @@ export function EventModal({
       setStep(1);
       setErrors({});
     }
-  }, [
-    isEditing,
-    event,
-    isOpen,
-    calendars,
-    defaultCalendarId,
-    defaultDate,
-    userTimezone,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, event?.$id, isEditing]);
+
+  // Detectar si estamos en un dispositivo móvil para reducir animaciones
+  const isMobile = useMemo(() => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ) || window.innerWidth < 768;
+  }, []);
 
   const updateField = useCallback((field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -1162,6 +1181,34 @@ export function EventModal({
     }
   };
 
+  // Prevenir scroll del body cuando el modal está abierto (mejora en móviles)
+  useEffect(() => {
+    if (isOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      
+      // En móviles, prevenir zoom accidental en inputs
+      if (isMobile) {
+        const viewport = document.querySelector('meta[name=viewport]');
+        const originalContent = viewport?.getAttribute('content');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        }
+        
+        return () => {
+          document.body.style.overflow = originalStyle;
+          if (viewport && originalContent) {
+            viewport.setAttribute('content', originalContent);
+          }
+        };
+      }
+      
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen, isMobile]);
+
   const isPending = createEvent.isPending || updateEvent.isPending;
   const isStepValid = useMemo(() => {
     if (step === 1) {
@@ -1207,10 +1254,15 @@ export function EventModal({
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            exit={{ opacity: 0, scale: isMobile ? 1 : 0.95, y: isMobile ? 20 : 20 }}
+            transition={{ 
+              type: isMobile ? "tween" : "spring", 
+              damping: 25, 
+              stiffness: 300,
+              duration: isMobile ? 0.2 : undefined 
+            }}
             className="fixed inset-4 z-50 flex items-center justify-center sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:p-4"
             style={{ maxHeight: "calc(100dvh - 2rem)" }}
           >
@@ -1271,6 +1323,7 @@ export function EventModal({
                       onAllDayChange={(v) => updateField("allDay", v)}
                       errors={errors}
                       timezone={userTimezone}
+                      isMobile={isMobile}
                     />
                   )}
 
@@ -1281,6 +1334,7 @@ export function EventModal({
                       description={formData.description}
                       onLocationChange={(v) => updateField("location", v)}
                       onDescriptionChange={(v) => updateField("description", v)}
+                      isMobile={isMobile}
                     />
                   )}
 
@@ -1291,6 +1345,7 @@ export function EventModal({
                       calendars={calendars}
                       onCalendarChange={(v) => updateField("calendarId", v)}
                       errors={errors}
+                      isMobile={isMobile}
                     />
                   )}
                 </AnimatePresence>
