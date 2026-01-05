@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo, useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User, Mail, Lock, ArrowRight, LogIn, Shield } from "lucide-react";
 import { Input } from "../../components/ui/Input";
@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { ToastViewport } from "../../components/ui/Toast";
+import { EmailVerificationModal } from "../../components/EmailVerificationModal";
 
 const formItemVariants = {
   hidden: { opacity: 0, x: -20 },
@@ -22,8 +23,12 @@ const formItemVariants = {
 };
 
 export function RegisterPage() {
-  const { register } = useAuth();
+  const { register, state } = useAuth();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Token de invitación si viene desde /invite/:token
+  const inviteToken = searchParams.get("invite");
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -31,16 +36,33 @@ export function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
 
   const [toasts, setToasts] = useState([]);
-  const pushToast = (title, message) => {
+  const pushToast = (title, message, type = "info") => {
     const id = crypto.randomUUID();
-    setToasts((t) => [...t, { id, title, message }]);
+    setToasts((t) => [...t, { id, title, message, type }]);
     window.setTimeout(
       () => setToasts((t) => t.filter((x) => x.id !== id)),
       3500
     );
   };
+
+  // Detectar si el estado indica registro exitoso y email no verificado
+  useEffect(() => {
+    if (state.registrationSuccess && state.emailNotVerified && state.email) {
+      if (!showVerificationModal) {
+        setShowVerificationModal(true);
+        setVerificationEmail(state.email);
+        pushToast(
+          "¡Cuenta creada!",
+          "Revisa tu email para verificar tu cuenta",
+          "success"
+        );
+      }
+    }
+  }, [state, showVerificationModal]);
 
   // Validation
   const passwordsMatch = password === confirmPassword;
@@ -94,11 +116,13 @@ export function RegisterPage() {
         firstName.trim(),
         lastName.trim()
       );
-      nav("/", { replace: true });
+      // No redirigir aquí - el usuario debe verificar su email primero
+      // El modal se mostrará automáticamente por el useEffect
     } catch (err) {
       pushToast(
         "No se pudo crear la cuenta",
-        err?.message ?? "Intenta con otro correo."
+        err?.message ?? "Intenta con otro correo.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -111,6 +135,17 @@ export function RegisterPage() {
         toasts={toasts}
         onDismiss={(id) => setToasts((t) => t.filter((x) => x.id !== id))}
       />
+
+      {showVerificationModal && (
+        <EmailVerificationModal
+          email={verificationEmail}
+          onClose={() => {
+            setShowVerificationModal(false);
+            nav("/login");
+          }}
+        />
+      )}
+
       <AuthLayout
         title={
           <>

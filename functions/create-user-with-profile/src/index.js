@@ -102,6 +102,7 @@ export default async ({ req, res, log, error }) => {
       isPlatformAdmin: payload.isPlatformAdmin === true,
       status: String(payload.status || "ACTIVE"),
       enabled: payload.enabled ?? true,
+      emailVerified: false, // Must verify email before login
     };
 
     // Remove undefined fields

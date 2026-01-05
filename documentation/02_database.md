@@ -35,7 +35,7 @@
 
 ---
 
-## 1) Colecciones (lista) — SIN CAMBIOS
+## 1) Colecciones (lista)
 
 ### Identidad / Tenancy
 
@@ -43,6 +43,7 @@
 - `groups`
 - `group_members`
 - `group_invitations`
+- `email_verifications` (verificación de email)
 
 ### RBAC
 
@@ -101,6 +102,7 @@
 | --------------- | ----------- | -------: | ------- | ------------------------ |
 | userAuthId      | String(64)  |       ✅ |         | `$id` de Appwrite Auth   |
 | email           | String(254) |       ✅ |         | copia para búsquedas     |
+| emailVerified   | Boolean     |       ❌ | false   | verificado con token     |
 | username        | String(36)  |       ❌ |         | opcional                 |
 | firstName       | String(80)  |       ✅ |         |                          |
 | lastName        | String(80)  |       ✅ |         |                          |
@@ -204,6 +206,32 @@
 - `idx_group_invi_group_invitedProfile` → (`groupId`, `invitedProfileId`)
 
 ## D.3 Relationships
+
+- **NONE**
+
+---
+
+# D.5) email_verifications
+
+## D.5.1 Attributes
+
+| Field      | Type       | Required | Default | Notes                           |
+| ---------- | ---------- | -------: | ------- | ------------------------------- |
+| userAuthId | String(64) |       ✅ |         | `users_profile.userAuthId`      |
+| email      | Email      |       ✅ |         | email del usuario (normalizado) |
+| token      | String(64) |       ✅ |         | UUID único de verificación      |
+| expiresAt  | Datetime   |       ✅ |         | fecha de expiración (2 horas)   |
+| verified   | Boolean    |       ❌ | false   | si el token ya fue usado        |
+| createdAt  | Datetime   |       ❌ |         | fecha de creación del token     |
+
+## D.5.2 Indexes
+
+- `uq_email_verifications_token` (unique) → `token`
+- `idx_email_verifications_userAuthId` → `userAuthId`
+- `idx_email_verifications_verified` → `verified`
+- `idx_email_verifications_expiresAt` → `expiresAt`
+
+## D.5.3 Relationships
 
 - **NONE**
 
@@ -572,21 +600,22 @@
 ## 3) Orden recomendado de creación (Console)
 
 1. `users_profile`
-2. `groups`
-3. `group_members`
-4. `group_invitations`
-5. `permissions`
-6. `roles`
-7. `role_permissions`
-8. `user_roles`
-9. `calendars`
-10. `events`
-11. `event_attendees`
-12. `event_reminders`
-13. `notifications`
-14. `user_settings`
-15. `push_subscriptions`
-16. `audit_logs`
+2. `email_verifications` (nueva - verificación de email)
+3. `groups`
+4. `group_members`
+5. `group_invitations`
+6. `permissions`
+7. `roles`
+8. `role_permissions`
+9. `user_roles`
+10. `calendars`
+11. `events`
+12. `event_attendees`
+13. `event_reminders`
+14. `notifications`
+15. `user_settings`
+16. `push_subscriptions`
+17. `audit_logs`
 
 ---
 

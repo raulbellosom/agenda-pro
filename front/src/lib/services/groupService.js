@@ -50,7 +50,7 @@ export async function getGroupsForProfile(profileId) {
     );
     return {
       ...group,
-      membershipRole: membership?.role,
+      membershipRole: membership?.membershipRole,
       membershipId: membership?.$id,
       joinedAt: membership?.joinedAt,
     };
@@ -122,7 +122,7 @@ export async function createGroup(data, ownerProfileId) {
     {
       groupId: group.$id,
       profileId: ownerProfileId,
-      role: ENUMS.GROUP_MEMBER_ROLE.OWNER,
+      membershipRole: ENUMS.GROUP_MEMBER_ROLE.OWNER,
       enabled: true,
       joinedAt: new Date().toISOString(),
     }
@@ -232,7 +232,7 @@ export async function isGroupOwner(groupId, profileId) {
     [
       Query.equal("groupId", groupId),
       Query.equal("profileId", profileId),
-      Query.equal("role", ENUMS.GROUP_MEMBER_ROLE.OWNER),
+      Query.equal("membershipRole", ENUMS.GROUP_MEMBER_ROLE.OWNER),
       Query.equal("enabled", true),
       Query.limit(1),
     ]
@@ -263,7 +263,7 @@ export async function leaveGroup(groupId, profileId) {
   const memberDoc = membership.documents[0];
 
   // No permitir que el owner abandone el grupo
-  if (memberDoc.role === ENUMS.GROUP_MEMBER_ROLE.OWNER) {
+  if (memberDoc.membershipRole === ENUMS.GROUP_MEMBER_ROLE.OWNER) {
     throw new Error(
       "El propietario no puede abandonar el grupo. Debes eliminarlo o transferir la propiedad."
     );

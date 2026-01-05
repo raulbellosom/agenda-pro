@@ -8,12 +8,16 @@ import {
   Palette,
   Settings as SettingsIcon,
   ChevronRight,
+  Users,
+  Building2,
 } from "lucide-react";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 import { ProfileSection } from "./components/ProfileSection";
 import { SecuritySection } from "./components/SecuritySection";
 import { PreferencesSection } from "./components/PreferencesSection";
 import { NotificationsSection } from "./components/NotificationsSection";
+import { GroupSection } from "./components/GroupSection";
+import { MembersSection } from "./components/MembersSection";
 
 const SECTIONS = [
   {
@@ -43,6 +47,20 @@ const SECTIONS = [
     description: "Alertas y recordatorios",
     icon: Bell,
     color: "from-pink-500 to-rose-600",
+  },
+  {
+    id: "group",
+    label: "Espacio",
+    description: "Configuración del grupo",
+    icon: Building2,
+    color: "from-blue-500 to-indigo-600",
+  },
+  {
+    id: "members",
+    label: "Miembros",
+    description: "Equipo e invitaciones",
+    icon: Users,
+    color: "from-cyan-500 to-teal-600",
   },
 ];
 
@@ -192,6 +210,10 @@ export function SettingsPage() {
         return <PreferencesSection />;
       case "notifications":
         return <NotificationsSection />;
+      case "group":
+        return <GroupSection />;
+      case "members":
+        return <MembersSection />;
       default:
         return <ProfileSection />;
     }

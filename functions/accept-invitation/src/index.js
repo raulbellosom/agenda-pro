@@ -249,45 +249,114 @@ export default async ({ req, res, log, error }) => {
         {
           groupId,
           profileId,
-          role: invitation.role || "MEMBER",
+          membershipRole: "MEMBER",
           enabled: true,
           joinedAt: now,
         }
       );
       log?.(`Member created: ${member.$id}`);
-      result.member = { $id: member.$id, role: member.role };
+      result.member = {
+        $id: member.$id,
+        membershipRole: member.membershipRole,
+      };
 
       // =====================================================================
-      // 5c) Assign default role (Editor or Viewer based on invitation role)
+      // 5c) Assign role from invitation (using invitedRoleId)
       // =====================================================================
-      // Find the appropriate role
-      const roleName = invitation.role === "OWNER" ? "Admin" : "Editor";
-      const roles = await databases.listDocuments(
-        databaseId,
-        rolesCollectionId,
-        [
-          Query.equal("groupId", groupId),
-          Query.equal("name", roleName),
-          Query.equal("enabled", true),
-          Query.limit(1),
-        ]
-      );
+      // Use the role specified in the invitation
+      if (invitation.invitedRoleId) {
+        // Verify the role exists and is enabled
+        try {
+          const invitedRole = await databases.getDocument(
+            databaseId,
+            rolesCollectionId,
+            invitation.invitedRoleId
+          );
 
-      if (roles.total > 0) {
-        const userRole = await databases.createDocument(
-          databaseId,
-          userRolesCollectionId,
-          ID.unique(),
-          {
-            groupId,
-            profileId,
-            roleId: roles.documents[0].$id,
-            enabled: true,
-            assignedAt: now,
+          if (
+            invitedRole &&
+            invitedRole.enabled &&
+            invitedRole.groupId === groupId
+          ) {
+            const userRole = await databases.createDocument(
+              databaseId,
+              userRolesCollectionId,
+              ID.unique(),
+              {
+                groupId,
+                profileId,
+                roleId: invitation.invitedRoleId,
+                enabled: true,
+                assignedAt: now,
+              }
+            );
+            log?.(`User role assigned: ${userRole.$id} (${invitedRole.name})`);
+            result.userRole = { $id: userRole.$id, roleName: invitedRole.name };
+          } else {
+            log?.(
+              `Warning: Invited role ${invitation.invitedRoleId} not valid, falling back to Editor`
+            );
+            // Fallback to Editor role
+            const editorRoles = await databases.listDocuments(
+              databaseId,
+              rolesCollectionId,
+              [
+                Query.equal("groupId", groupId),
+                Query.equal("name", "Editor"),
+                Query.equal("enabled", true),
+                Query.limit(1),
+              ]
+            );
+
+            if (editorRoles.total > 0) {
+              const userRole = await databases.createDocument(
+                databaseId,
+                userRolesCollectionId,
+                ID.unique(),
+                {
+                  groupId,
+                  profileId,
+                  roleId: editorRoles.documents[0].$id,
+                  enabled: true,
+                  assignedAt: now,
+                }
+              );
+              log?.(`User role assigned (fallback): ${userRole.$id}`);
+              result.userRole = { $id: userRole.$id, roleName: "Editor" };
+            }
           }
+        } catch (roleError) {
+          log?.(`Warning: Could not assign invited role: ${roleError.message}`);
+        }
+      } else {
+        // Legacy: if no invitedRoleId, assign Editor role by default
+        const roles = await databases.listDocuments(
+          databaseId,
+          rolesCollectionId,
+          [
+            Query.equal("groupId", groupId),
+            Query.equal("name", "Editor"),
+            Query.equal("enabled", true),
+            Query.limit(1),
+          ]
         );
-        log?.(`User role assigned: ${userRole.$id}`);
-        result.userRole = { $id: userRole.$id, roleName };
+
+        if (roles.total > 0) {
+          const userRole = await databases.createDocument(
+            databaseId,
+            userRolesCollectionId,
+            ID.unique(),
+            {
+              groupId,
+              profileId,
+              roleId: roles.documents[0].$id,
+              enabled: true,
+              assignedAt: now,
+            }
+          );
+          log?.(`User role assigned (default): ${userRole.$id}`);
+          result.userRole = { $id: userRole.$id, roleName: "Editor" };
+        }
       }
 
       // =====================================================================
@@ -401,7 +470,7 @@ export default async ({ req, res, log, error }) => {
           details: JSON.stringify({
             action,
             invitationId: invitation.$id,
-            role: invitation.role,
+            invitedRoleId: invitation.invitedRoleId,
           }),
           createdAt: now,
           enabled: true,

@@ -5,6 +5,7 @@ import {
   generateToken,
   hasPermission,
   isOwnerOrAdmin,
+  sendInvitationEmail,
   Client,
   Databases,
   ID,
@@ -16,13 +17,15 @@ import {
  *
  * Invites a user to join a group by email.
  * Creates an invitation with a unique token and expiration date.
+ * Uses RBAC - invitedRoleId instead of enum role.
+ * Sends email notification via SMTP for new users.
  *
  * Expected payload:
  * {
  *   "groupId": "group_abc123",             // Required: group to invite to
  *   "invitedByProfileId": "profile_xyz",   // Required: who is inviting
  *   "invitedEmail": "user@example.com",    // Required: email to invite
- *   "role": "MEMBER",                      // Optional: OWNER/MEMBER (default: MEMBER)
+ *   "invitedRoleId": "role_abc123",        // Required: role ID to assign on accept
  *   "message": "Join our team!",           // Optional: custom message
  *   "expiryDays": 7                        // Optional: days until expiration
  * }
@@ -44,6 +47,7 @@ export default async ({ req, res, log, error }) => {
     const usersProfileCollectionId = must("COLLECTION_USERS_PROFILE_ID");
     const notificationsCollectionId = must("COLLECTION_NOTIFICATIONS_ID");
     const auditLogsCollectionId = must("COLLECTION_AUDIT_LOGS_ID");
+    const rolesCollectionId = must("COLLECTION_ROLES_ID");
 
     // RBAC collections
     const userRolesCollectionId = must("COLLECTION_USER_ROLES_ID");
@@ -63,6 +67,9 @@ export default async ({ req, res, log, error }) => {
       10
     );
 
+    // App URL for invitation links
+    const appUrl = process.env.APP_URL || "http://localhost:5173";
+
     const payload = safeBodyJson(req);
 
     // Validate required fields
@@ -71,6 +78,7 @@ export default async ({ req, res, log, error }) => {
     const invitedEmail = String(payload.invitedEmail || "")
       .trim()
       .toLowerCase();
+    const invitedRoleId = String(payload.invitedRoleId || "").trim();
 
     if (!groupId) {
       return json(res, 400, { ok: false, error: "groupId is required" });
@@ -84,6 +92,9 @@ export default async ({ req, res, log, error }) => {
     if (!invitedEmail) {
       return json(res, 400, { ok: false, error: "invitedEmail is required" });
     }
+    if (!invitedRoleId) {
+      return json(res, 400, { ok: false, error: "invitedRoleId is required" });
+    }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,17 +103,8 @@ export default async ({ req, res, log, error }) => {
     }
 
     // Optional fields
-    const role = String(payload.role || "MEMBER").toUpperCase();
     const message = String(payload.message || "").trim() || undefined;
     const expiryDays = parseInt(payload.expiryDays || defaultExpiryDays, 10);
-
-    // Validate role
-    if (!["OWNER", "MEMBER"].includes(role)) {
-      return json(res, 400, {
-        ok: false,
-        error: "role must be OWNER or MEMBER",
-      });
-    }
 
     log?.(
       `Invite request: ${invitedEmail} to group ${groupId} by ${invitedByProfileId}`
@@ -127,7 +129,32 @@ export default async ({ req, res, log, error }) => {
     }
 
     // =========================================================================
-    // 2) Verify inviter has permission to invite
+    // 2) Verify the invited role exists and belongs to this group
+    // =========================================================================
+    let invitedRole;
+    try {
+      invitedRole = await databases.getDocument(
+        databaseId,
+        rolesCollectionId,
+        invitedRoleId
+      );
+    } catch {
+      return json(res, 404, { ok: false, error: "Role not found" });
+    }
+
+    if (invitedRole.groupId !== groupId) {
+      return json(res, 400, {
+        ok: false,
+        error: "Role does not belong to this group",
+      });
+    }
+
+    if (!invitedRole.enabled) {
+      return json(res, 400, { ok: false, error: "Role is disabled" });
+    }
+
+    // =========================================================================
+    // 3) Verify inviter has permission to invite
     // =========================================================================
     const inviterIsOwner = await isOwnerOrAdmin(
       databases,
@@ -156,7 +183,21 @@ export default async ({ req, res, log, error }) => {
     }
 
     // =========================================================================
-    // 3) Check if user is already a member
+    // 4) Get inviter profile for email
+    // =========================================================================
+    let inviterProfile;
+    try {
+      inviterProfile = await databases.getDocument(
+        databaseId,
+        usersProfileCollectionId,
+        invitedByProfileId
+      );
+    } catch {
+      return json(res, 404, { ok: false, error: "Inviter profile not found" });
+    }
+
+    // =========================================================================
+    // 5) Check if user is already a member
     // =========================================================================
     const existingMember = await databases.listDocuments(
       databaseId,
@@ -175,8 +216,12 @@ export default async ({ req, res, log, error }) => {
       [Query.equal("email", invitedEmail), Query.limit(1)]
     );
 
-    if (profileByEmail.total > 0) {
-      const invitedProfileId = profileByEmail.documents[0].$id;
+    const inviteeExists = profileByEmail.total > 0;
+    const invitedProfileId = inviteeExists
+      ? profileByEmail.documents[0].$id
+      : undefined;
+
+    if (inviteeExists) {
       const alreadyMember = existingMember.documents.some(
         (m) => m.profileId === invitedProfileId
       );
@@ -189,7 +234,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     // =========================================================================
-    // 4) Check for existing pending invitation
+    // 6) Check for existing pending invitation
     // =========================================================================
     const existingInvitation = await databases.listDocuments(
       databaseId,
@@ -212,7 +257,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     // =========================================================================
-    // 5) Create the invitation
+    // 7) Create the invitation
     // =========================================================================
     const token = generateToken(32);
     const expiresAt = new Date();
@@ -221,10 +266,9 @@ export default async ({ req, res, log, error }) => {
     const invitationData = {
       groupId,
       invitedEmail,
-      invitedProfileId:
-        profileByEmail.total > 0 ? profileByEmail.documents[0].$id : undefined,
+      invitedProfileId,
       invitedByProfileId,
-      role,
+      invitedRoleId,
       status: "PENDING",
       token,
       message,
@@ -246,10 +290,13 @@ export default async ({ req, res, log, error }) => {
     log?.(`Invitation created: ${invitation.$id}`);
 
     // =========================================================================
-    // 6) Create notification for invitee (if they have a profile)
+    // 8) Create notification or send email based on user existence
     // =========================================================================
-    if (profileByEmail.total > 0) {
-      const inviteeProfileId = profileByEmail.documents[0].$id;
+    const inviteLink = `${appUrl}/invite/${token}`;
+    let emailSent = false;
+
+    if (inviteeExists) {
+      // User exists - create in-app notification
       try {
         await databases.createDocument(
           databaseId,
@@ -257,26 +304,52 @@ export default async ({ req, res, log, error }) => {
           ID.unique(),
           {
             groupId,
-            profileId: inviteeProfileId,
+            profileId: invitedProfileId,
             kind: "INVITE",
             title: `Invitación a ${group.name}`,
             body:
               message || `Has sido invitado a unirte al grupo "${group.name}"`,
             entityType: "group_invitations",
             entityId: invitation.$id,
+            metadata: JSON.stringify({
+              token,
+              inviteLink,
+              inviterName: `${inviterProfile.firstName} ${inviterProfile.lastName}`,
+              roleName: invitedRole.name,
+            }),
             createdAt: new Date().toISOString(),
             enabled: true,
           }
         );
-        log?.(`Notification created for invitee`);
+        log?.(`In-app notification created for existing user`);
       } catch (notifError) {
-        // Non-critical error, continue
         log?.(`Warning: Failed to create notification: ${notifError.message}`);
       }
     }
 
+    // Always try to send email (both for new and existing users)
+    try {
+      emailSent = await sendInvitationEmail({
+        to: invitedEmail,
+        inviterName: `${inviterProfile.firstName} ${inviterProfile.lastName}`,
+        inviterEmail: inviterProfile.email,
+        groupName: group.name,
+        roleName: invitedRole.name,
+        message,
+        inviteLink,
+        expiresAt: expiresAt.toISOString(),
+        isNewUser: !inviteeExists,
+      });
+      if (emailSent) {
+        log?.(`Invitation email sent to ${invitedEmail}`);
+      }
+    } catch (emailError) {
+      log?.(`Warning: Failed to send email: ${emailError.message}`);
+      // Non-critical - continue even if email fails
+    }
+
     // =========================================================================
-    // 7) Create audit log
+    // 9) Create audit log
     // =========================================================================
     try {
       await databases.createDocument(
@@ -292,15 +365,17 @@ export default async ({ req, res, log, error }) => {
           entityName: invitedEmail,
           details: JSON.stringify({
             invitedEmail,
-            role,
+            invitedRoleId,
+            roleName: invitedRole.name,
             expiresAt: expiresAt.toISOString(),
+            emailSent,
+            inviteeExists,
           }),
           createdAt: new Date().toISOString(),
           enabled: true,
         }
       );
     } catch (auditError) {
-      // Non-critical error, continue
       log?.(`Warning: Failed to create audit log: ${auditError.message}`);
     }
 
@@ -313,16 +388,19 @@ export default async ({ req, res, log, error }) => {
         $id: invitation.$id,
         groupId,
         invitedEmail,
-        role,
+        invitedRoleId,
+        roleName: invitedRole.name,
         status: "PENDING",
-        token, // Include token for the inviter to share
+        token,
         expiresAt: expiresAt.toISOString(),
       },
       group: {
         $id: group.$id,
         name: group.name,
       },
-      inviteeExists: profileByEmail.total > 0,
+      inviteeExists,
+      emailSent,
+      inviteLink,
     });
   } catch (e) {
     try {

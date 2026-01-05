@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { account, databases, functions } from "../../lib/appwrite";
 import { env } from "../../shared/appwrite/env";
+import { Query } from "appwrite";
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,29 @@ export function AuthProvider({ children }) {
     setState({ status: "loading" });
     try {
       const user = await account.get();
+
+      // Verificar si el email está verificado en el perfil
+      const profileDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USERS_PROFILE_COLLECTION,
+        [Query.equal("userAuthId", user.$id), Query.limit(1)]
+      );
+
+      if (profileDocs.documents.length > 0) {
+        const profile = profileDocs.documents[0];
+
+        // Si el email no está verificado, cerrar sesión
+        if (!profile.emailVerified) {
+          await account.deleteSession("current");
+          setState({
+            status: "guest",
+            emailNotVerified: true,
+            email: profile.email,
+          });
+          return;
+        }
+      }
+
       setState({ status: "authed", user });
     } catch {
       setState({ status: "guest" });
@@ -32,8 +56,41 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(email, password) {
-    await account.createEmailPasswordSession(email, password);
-    await refresh();
+    try {
+      // Primero verificar si el email está verificado ANTES de crear sesión
+      // Necesitamos crear una sesión temporal para verificar
+      await account.createEmailPasswordSession(email, password);
+
+      // Ahora verificar el perfil
+      const user = await account.get();
+      const profileDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USERS_PROFILE_COLLECTION,
+        [Query.equal("userAuthId", user.$id), Query.limit(1)]
+      );
+
+      if (profileDocs.documents.length > 0) {
+        const profile = profileDocs.documents[0];
+
+        // Si el email NO está verificado, cerrar sesión y rechazar login
+        if (!profile.emailVerified) {
+          await account.deleteSession("current");
+          setState({
+            status: "guest",
+            emailNotVerified: true,
+            email: profile.email,
+          });
+          throw new Error(
+            "Debes verificar tu email antes de iniciar sesión. Revisa tu correo."
+          );
+        }
+      }
+
+      // Email verificado - actualizar estado
+      await refresh();
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -81,12 +138,37 @@ export function AuthProvider({ children }) {
       throw new Error(result.error || "Registration failed");
     }
 
-    // Function created the user, now create a session
-    await account.createEmailPasswordSession(
-      email.toLowerCase().trim(),
-      password
-    );
-    await refresh();
+    // Enviar email de verificación usando la función unificada
+    const fnEmailVerification = env.fnEmailVerificationId;
+    if (fnEmailVerification && result.user) {
+      try {
+        await functions.createExecution(
+          fnEmailVerification,
+          JSON.stringify({
+            action: "send",
+            userAuthId: result.user.$id,
+            email: email.toLowerCase().trim(),
+          }),
+          false,
+          "/",
+          "POST"
+        );
+      } catch (error) {
+        // No fallar el registro si el email falla
+      }
+    }
+
+    // NO crear sesión automáticamente - el usuario debe verificar su email primero
+    // await account.createEmailPasswordSession(email.toLowerCase().trim(), password);
+    // await refresh();
+
+    // Actualizar estado para mostrar que debe verificar email
+    setState({
+      status: "guest",
+      emailNotVerified: true,
+      email: email.toLowerCase().trim(),
+      registrationSuccess: true,
+    });
   }
 
   async function logout() {
@@ -97,8 +179,47 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function resendVerificationEmail(email) {
+    const fnId = env.fnEmailVerificationId;
+
+    if (!fnId) {
+      throw new Error("Email verification function not configured");
+    }
+
+    const execution = await functions.createExecution(
+      fnId,
+      JSON.stringify({
+        action: "resend",
+        email,
+      }),
+      false,
+      "/",
+      "POST"
+    );
+
+    let result;
+    try {
+      result = JSON.parse(execution.responseBody);
+    } catch {
+      throw new Error("Invalid response from resend function");
+    }
+
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to resend verification email");
+    }
+
+    return result;
+  }
+
   const value = useMemo(
-    () => ({ state, login, register, logout, refresh }),
+    () => ({
+      state,
+      login,
+      register,
+      logout,
+      refresh,
+      resendVerificationEmail,
+    }),
     [state]
   );
 

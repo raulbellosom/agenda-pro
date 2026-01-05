@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo, useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
 import { Input } from "../../components/ui/Input";
@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { ToastViewport } from "../../components/ui/Toast";
+import { EmailVerificationModal } from "../../components/EmailVerificationModal";
 
 const formItemVariants = {
   hidden: { opacity: 0, x: -20 },
@@ -22,11 +23,17 @@ const formItemVariants = {
 };
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, state } = useAuth();
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
+
+  // Token de invitación si viene desde /invite/:token
+  const inviteToken = searchParams.get("invite");
 
   const [toasts, setToasts] = useState([]);
   const pushToast = (title, message) => {
@@ -37,6 +44,14 @@ export function LoginPage() {
       3500
     );
   };
+
+  // Detectar si el estado indica email no verificado
+  useEffect(() => {
+    if (state.emailNotVerified && state.email && !showVerificationModal) {
+      setShowVerificationModal(true);
+      setVerificationEmail(state.email);
+    }
+  }, [state, showVerificationModal]);
 
   const canSubmit = useMemo(
     () => email.trim().length > 3 && password.length >= 6,
@@ -50,7 +65,9 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      nav("/", { replace: true });
+      // Redirigir a invitación si existe token, sino a home
+      const redirectTo = inviteToken ? `/invite/${inviteToken}` : "/";
+      nav(redirectTo, { replace: true });
     } catch (err) {
       pushToast(
         "No se pudo iniciar sesión",
@@ -67,6 +84,14 @@ export function LoginPage() {
         toasts={toasts}
         onDismiss={(id) => setToasts((t) => t.filter((x) => x.id !== id))}
       />
+
+      {showVerificationModal && (
+        <EmailVerificationModal
+          email={verificationEmail}
+          onClose={() => setShowVerificationModal(false)}
+        />
+      )}
+
       <AuthLayout
         title={
           <>

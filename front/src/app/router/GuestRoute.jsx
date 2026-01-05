@@ -15,7 +15,7 @@ export function GuestRoute({ children }) {
   }
 
   // If user is authenticated, redirect to home
-  if (state.status === "authenticated") {
+  if (state.status === "authed") {
     return <Navigate to="/" replace />;
   }
 

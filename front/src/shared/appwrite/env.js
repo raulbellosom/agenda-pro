@@ -24,8 +24,14 @@ export const env = {
     import.meta.env.VITE_APPWRITE_FN_CRON_GENERATE_REMINDERS_ID || "",
   fnSendPushId: import.meta.env.VITE_APPWRITE_FN_SEND_PUSH_ID || "",
 
+  // Función unificada de verificación de email
+  fnEmailVerificationId:
+    import.meta.env.VITE_APPWRITE_FN_EMAIL_VERIFICATION_ID || "",
+
   collectionUsersProfileId: import.meta.env
     .VITE_APPWRITE_COLLECTION_USERS_PROFILE_ID,
+  collectionEmailVerificationsId: import.meta.env
+    .VITE_APPWRITE_COLLECTION_EMAIL_VERIFICATIONS_ID,
   collectionGroupsId: import.meta.env.VITE_APPWRITE_COLLECTION_GROUPS_ID,
   collectionGroupMembersId: import.meta.env
     .VITE_APPWRITE_COLLECTION_GROUP_MEMBERS_ID,

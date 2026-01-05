@@ -245,6 +245,7 @@ export function AppShell() {
     calendars = [],
     switchGroup,
     createFirstGroup,
+    needsFirstGroup,
   } = useWorkspace();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const deleteCalendar = useDeleteCalendar();
@@ -1566,10 +1567,17 @@ export function AppShell() {
                   </h3>
                   <button
                     onClick={() => {
-                      setShowCreateCalendar(true);
+                      if (!needsFirstGroup) {
+                        setShowCreateCalendar(true);
+                      }
                     }}
-                    className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))]"
-                    title="Crear calendario"
+                    disabled={needsFirstGroup}
+                    className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={
+                      needsFirstGroup
+                        ? "Crea un grupo primero"
+                        : "Crear calendario"
+                    }
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -1581,16 +1589,20 @@ export function AppShell() {
                       <Calendar className="w-6 h-6 text-[rgb(var(--text-muted))]" />
                     </div>
                     <p className="text-sm text-[rgb(var(--text-muted))]">
-                      No tienes calendarios aún
+                      {needsFirstGroup
+                        ? "Crea un grupo primero"
+                        : "No tienes calendarios aún"}
                     </p>
-                    <button
-                      onClick={() => {
-                        setShowCreateCalendar(true);
-                      }}
-                      className="mt-3 text-sm text-[rgb(var(--brand-primary))] hover:underline"
-                    >
-                      Crear tu primer calendario
-                    </button>
+                    {!needsFirstGroup && (
+                      <button
+                        onClick={() => {
+                          setShowCreateCalendar(true);
+                        }}
+                        className="mt-3 text-sm text-[rgb(var(--brand-primary))] hover:underline"
+                      >
+                        Crear tu primer calendario
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-0.5">

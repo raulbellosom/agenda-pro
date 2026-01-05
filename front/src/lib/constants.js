@@ -141,9 +141,17 @@ export const QUERY_KEYS = {
   GROUPS: "groups",
   GROUP_MEMBERS: "groupMembers",
   GROUP_INVITATIONS: "groupInvitations",
+  USER_INVITATIONS: "userInvitations",
+  INVITATION: "invitation",
   CALENDARS: "calendars",
   EVENTS: "events",
   EVENT_ATTENDEES: "eventAttendees",
   NOTIFICATIONS: "notifications",
   USER_SETTINGS: "userSettings",
+  // RBAC
+  PERMISSIONS: "permissions",
+  ROLES: "roles",
+  ROLE_PERMISSIONS: "rolePermissions",
+  USER_ROLES: "userRoles",
+  USER_PERMISSIONS: "userPermissions",
 };

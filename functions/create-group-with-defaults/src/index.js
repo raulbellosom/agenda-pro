@@ -123,7 +123,7 @@ export default async ({ req, res, log, error }) => {
     const memberData = {
       groupId,
       profileId: ownerProfileId,
-      role: "OWNER",
+      membershipRole: "OWNER",
       enabled: true,
       joinedAt: new Date().toISOString(),
     };
