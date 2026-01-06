@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModeAnimation } from "react-theme-switch-animation";
@@ -268,7 +274,7 @@ export function AppShell() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Estados para calendarios en móvil
-  const [mobileVisibleCalendars, setMobileVisibleCalendars] = useState([]);
+  const [visibleCalendars, setVisibleCalendars] = useState([]);
   const [mobileCalendarMenuId, setMobileCalendarMenuId] = useState(null);
   const [sharingCalendar, setSharingCalendar] = useState(null);
   const [deletingCalendar, setDeletingCalendar] = useState(null);
@@ -352,19 +358,28 @@ export function AppShell() {
   const hasInitializedMobileCalendars = useRef(false);
   useEffect(() => {
     if (calendars.length > 0 && !hasInitializedMobileCalendars.current) {
-      setMobileVisibleCalendars(calendars.map((c) => c.$id));
+      setVisibleCalendars(calendars.map((c) => c.$id));
       hasInitializedMobileCalendars.current = true;
     }
   }, [calendars]);
 
   // Toggle visibilidad de calendario en móvil
-  const toggleMobileCalendarVisibility = useCallback((calendarId) => {
-    setMobileVisibleCalendars((prev) =>
+  const toggleCalendarVisibility = useCallback((calendarId) => {
+    setVisibleCalendars((prev) =>
       prev.includes(calendarId)
         ? prev.filter((id) => id !== calendarId)
         : [...prev, calendarId]
     );
   }, []);
+
+  const calendarVisibility = useMemo(
+    () => ({
+      visibleCalendars,
+      setVisibleCalendars,
+      toggleCalendarVisibility,
+    }),
+    [visibleCalendars, setVisibleCalendars, toggleCalendarVisibility]
+  );
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1199,7 +1214,7 @@ export function AppShell() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-          <Outlet />
+          <Outlet context={{ calendarVisibility }} />
         </main>
 
         {/* Bottom Navigation - Mobile - Fijo en la parte inferior */}
@@ -1611,7 +1626,7 @@ export function AppShell() {
                       .map((calendar) => {
                         const colorStyle = getCalendarColor(calendar.color);
                         const CalendarItemIcon = getCalendarIcon(calendar.icon);
-                        const isVisible = mobileVisibleCalendars.includes(
+                        const isVisible = visibleCalendars.includes(
                           calendar.$id
                         );
 
@@ -1624,7 +1639,7 @@ export function AppShell() {
                           >
                             <button
                               onClick={() =>
-                                toggleMobileCalendarVisibility(calendar.$id)
+                                toggleCalendarVisibility(calendar.$id)
                               }
                               className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
                               aria-label={
@@ -1743,7 +1758,7 @@ export function AppShell() {
                           .filter((cal) => cal.ownerProfileId !== profile?.$id)
                           .map((calendar) => {
                             const colorStyle = getCalendarColor(calendar.color);
-                            const isVisible = mobileVisibleCalendars.includes(
+                            const isVisible = visibleCalendars.includes(
                               calendar.$id
                             );
 
@@ -1756,7 +1771,7 @@ export function AppShell() {
                               >
                                 <button
                                   onClick={() =>
-                                    toggleMobileCalendarVisibility(calendar.$id)
+                                    toggleCalendarVisibility(calendar.$id)
                                   }
                                   className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
                                   aria-label={
@@ -1813,7 +1828,7 @@ export function AppShell() {
         onSuccess={(newCalendar) => {
           // Auto-select the new calendar when created (not editing)
           if (!calendarToEdit && newCalendar?.$id) {
-            setMobileVisibleCalendars((prev) => [...prev, newCalendar.$id]);
+            setVisibleCalendars((prev) => [...prev, newCalendar.$id]);
           }
         }}
       />
@@ -1890,7 +1905,7 @@ export function AppShell() {
                       deleteCalendar.mutate(deletingCalendar.$id, {
                         onSuccess: () => {
                           // Remover de calendarios visibles
-                          setMobileVisibleCalendars((prev) =>
+                          setVisibleCalendars((prev) =>
                             prev.filter((id) => id !== deletingCalendar.$id)
                           );
                           setDeletingCalendar(null);

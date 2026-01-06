@@ -5,6 +5,7 @@ import React, {
   useRef,
   useEffect,
 } from "react";
+import { useOutletContext } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
@@ -1106,14 +1107,24 @@ function DayCell({
         {format(date, "d")}
       </span>
       <div className="flex-1 space-y-0.5 sm:space-y-1 overflow-y-auto overflow-x-visible">
-        {visibleEvents.map((event, i) => (
-          <DayCellEvent
-            key={event.$id || i}
-            event={event}
-            onEventClick={onEventClick}
-            onEventLongPress={onEventLongPress}
-          />
-        ))}
+        <AnimatePresence initial={false}>
+          {visibleEvents.map((event, i) => (
+            <motion.div
+              key={event.$id || i}
+              layout
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+            >
+              <DayCellEvent
+                event={event}
+                onEventClick={onEventClick}
+                onEventLongPress={onEventLongPress}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
         {remaining > 0 && (
           <div className="text-[10px] sm:text-xs text-[rgb(var(--text-muted))] px-1 font-medium">
             +{remaining}
@@ -1178,6 +1189,9 @@ function TimeGridEvent({ event, dayStart, onClick, onLongPress }) {
       onContextMenu={handleContextMenu}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      layout
+      transition={{ duration: 0.15 }}
       className={`absolute left-1 right-1 ${colors.bg} ${colors.border} border-l-2 rounded-md px-2 py-1 overflow-hidden cursor-pointer hover:ring-2 hover:ring-[rgb(var(--brand-primary))]/30 transition-all z-10`}
       style={{
         top: `${top}px`,
@@ -1346,15 +1360,17 @@ function DayView({
 
           {/* Events */}
           <div className="absolute top-0 left-16 sm:left-20 right-0 bottom-0">
-            {dayEvents.map((event) => (
-              <TimeGridEvent
-                key={event.$id}
-                event={event}
-                dayStart={dayStart}
-                onClick={onEventClick}
-                onLongPress={onEventLongPress}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {dayEvents.map((event) => (
+                <TimeGridEvent
+                  key={event.$id}
+                  event={event}
+                  dayStart={dayStart}
+                  onClick={onEventClick}
+                  onLongPress={onEventLongPress}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -1549,15 +1565,17 @@ function WeekView({
                   })}
 
                   {/* Events */}
-                  {dayEvents.map((event) => (
-                    <TimeGridEventCompact
-                      key={event.$id}
-                      event={event}
-                      dayStart={dayStart}
-                      onClick={onEventClick}
-                      onLongPress={onEventLongPress}
-                    />
-                  ))}
+                  <AnimatePresence initial={false}>
+                    {dayEvents.map((event) => (
+                      <TimeGridEventCompact
+                        key={event.$id}
+                        event={event}
+                        dayStart={dayStart}
+                        onClick={onEventClick}
+                        onLongPress={onEventLongPress}
+                      />
+                    ))}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -1603,8 +1621,13 @@ function TimeGridEventCompact({ event, dayStart, onClick, onLongPress }) {
   const timeStr = format(startTime, "HH:mm");
 
   return (
-    <div
+    <motion.div
       {...longPressHandlers}
+      layout
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
       className={`absolute left-0.5 right-0.5 sm:left-1 sm:right-1 rounded ${colors.bg} ${colors.border} border-l-2 overflow-hidden cursor-pointer hover:ring-1 hover:ring-[rgb(var(--brand-primary))]/50 transition-all z-10`}
       style={{
         top: `${top}px`,
@@ -1624,7 +1647,7 @@ function TimeGridEventCompact({ event, dayStart, onClick, onLongPress }) {
           {event.title}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -1983,20 +2006,30 @@ function MobileDayCell({
 
       {/* Events */}
       <div className="flex-1 min-h-0 space-y-0.5 overflow-hidden">
-        {dayEvents.slice(0, 3).map((event) => (
-          <MonthEventCard
-            key={event.$id}
-            event={event}
-            onClick={(e) => {
-              e.stopPropagation();
-              onEventClick(event);
-            }}
-            onLongPress={(e, pos) => {
-              e?.stopPropagation?.();
-              onEventLongPress(event, pos);
-            }}
-          />
-        ))}
+        <AnimatePresence initial={false}>
+          {dayEvents.slice(0, 3).map((event) => (
+            <motion.div
+              key={event.$id}
+              layout
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.96 }}
+              transition={{ duration: 0.15 }}
+            >
+              <MonthEventCard
+                event={event}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEventClick(event);
+                }}
+                onLongPress={(e, pos) => {
+                  e?.stopPropagation?.();
+                  onEventLongPress(event, pos);
+                }}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
         {dayEvents.length > 3 && (
           <div className="text-[9px] text-[rgb(var(--text-muted))] pl-1">
             +{dayEvents.length - 3} más
@@ -2199,14 +2232,24 @@ function AgendaView({
 
                   {/* Events for this day */}
                   <div className="space-y-3 pl-0 sm:pl-15">
-                    {dayEvents.map((event) => (
-                      <EventCard
-                        key={event.$id}
-                        event={event}
-                        onClick={onEventClick}
-                        onLongPress={onEventLongPress}
-                      />
-                    ))}
+                    <AnimatePresence initial={false}>
+                      {dayEvents.map((event) => (
+                        <motion.div
+                          key={event.$id}
+                          layout
+                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          <EventCard
+                            event={event}
+                            onClick={onEventClick}
+                            onLongPress={onEventLongPress}
+                          />
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               );
@@ -2398,7 +2441,7 @@ export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState(VIEW_MODES.MONTH);
-  const [visibleCalendars, setVisibleCalendars] = useState([]);
+  const [localVisibleCalendars, setLocalVisibleCalendars] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [miniCalendarCollapsed, setMiniCalendarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
@@ -2450,6 +2493,12 @@ export function CalendarPage() {
     profile,
     needsFirstGroup,
   } = useWorkspace();
+  const outletContext = useOutletContext();
+  const calendarVisibility = outletContext?.calendarVisibility;
+  const visibleCalendars =
+    calendarVisibility?.visibleCalendars ?? localVisibleCalendars;
+  const setVisibleCalendars =
+    calendarVisibility?.setVisibleCalendars ?? setLocalVisibleCalendars;
   const deleteCalendar = useDeleteCalendar();
   const duplicateEvent = useDuplicateEvent();
   const hasCalendars = calendars.length > 0;
@@ -2519,10 +2568,12 @@ export function CalendarPage() {
   const hasInitializedCalendars = React.useRef(false);
   React.useEffect(() => {
     if (calendars.length > 0 && !hasInitializedCalendars.current) {
-      setVisibleCalendars(calendars.map((c) => c.$id));
+      if (!visibleCalendars || visibleCalendars.length === 0) {
+        setVisibleCalendars(calendars.map((c) => c.$id));
+      }
       hasInitializedCalendars.current = true;
     }
-  }, [calendars]);
+  }, [calendars, setVisibleCalendars, visibleCalendars]);
 
   // Handle view mode change animation direction
   const prevViewModeRef = React.useRef(viewMode);
@@ -2692,13 +2743,16 @@ export function CalendarPage() {
     enabled: shouldEnableSwipe,
   });
 
-  const toggleCalendarVisibility = (calId) => {
-    setVisibleCalendars((prev) =>
-      prev.includes(calId)
-        ? prev.filter((id) => id !== calId)
-        : [...prev, calId]
-    );
-  };
+  const toggleCalendarVisibility = useCallback(
+    (calId) => {
+      setVisibleCalendars((prev) =>
+        prev.includes(calId)
+          ? prev.filter((id) => id !== calId)
+          : [...prev, calId]
+      );
+    },
+    [setVisibleCalendars]
+  );
 
   // Event handlers
   const handleCreateEvent = useCallback((date = null) => {
