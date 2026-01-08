@@ -57,7 +57,7 @@ export function SettingsAvatar({
       {src ? (
         <img src={src} alt="Avatar" className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center">
+        <div className="w-full h-full bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center">
           <span className="font-bold text-white">{initials.toUpperCase()}</span>
         </div>
       )}

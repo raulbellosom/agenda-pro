@@ -7,11 +7,14 @@ import * as calendarService from "../services/calendarService";
 
 /**
  * Hook para obtener los calendarios de un grupo
+ * Solo devuelve calendarios visibles para el usuario actual:
+ * - GROUP: visibles para todos
+ * - PRIVATE: solo para el dueño
  */
-export function useCalendars(groupId) {
+export function useCalendars(groupId, currentProfileId = null) {
   return useQuery({
-    queryKey: [QUERY_KEYS.CALENDARS, groupId],
-    queryFn: () => calendarService.getCalendars(groupId),
+    queryKey: [QUERY_KEYS.CALENDARS, groupId, currentProfileId],
+    queryFn: () => calendarService.getCalendars(groupId, currentProfileId),
     enabled: !!groupId,
     staleTime: 2 * 60 * 1000,
   });

@@ -8,16 +8,12 @@ import {
   Palette,
   Settings as SettingsIcon,
   ChevronRight,
-  Users,
-  Building2,
 } from "lucide-react";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 import { ProfileSection } from "./components/ProfileSection";
 import { SecuritySection } from "./components/SecuritySection";
 import { PreferencesSection } from "./components/PreferencesSection";
 import { NotificationsSection } from "./components/NotificationsSection";
-import { GroupSection } from "./components/GroupSection";
-import { MembersSection } from "./components/MembersSection";
 
 const SECTIONS = [
   {
@@ -47,20 +43,6 @@ const SECTIONS = [
     description: "Alertas y recordatorios",
     icon: Bell,
     color: "from-pink-500 to-rose-600",
-  },
-  {
-    id: "group",
-    label: "Espacio",
-    description: "Configuración del grupo",
-    icon: Building2,
-    color: "from-blue-500 to-indigo-600",
-  },
-  {
-    id: "members",
-    label: "Miembros",
-    description: "Equipo e invitaciones",
-    icon: Users,
-    color: "from-cyan-500 to-teal-600",
   },
 ];
 
@@ -110,7 +92,7 @@ function NavItem({ section, isActive, onClick, variant = "desktop" }) {
         "group relative w-full flex items-center gap-3 px-3 py-3 rounded-xl",
         "transition-all duration-300",
         isActive
-          ? "bg-gradient-to-r from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-primary))]/5"
+          ? "bg-linear-to-r from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-primary))]/5"
           : "hover:bg-[rgb(var(--bg-hover))]"
       )}
     >
@@ -210,10 +192,6 @@ export function SettingsPage() {
         return <PreferencesSection />;
       case "notifications":
         return <NotificationsSection />;
-      case "group":
-        return <GroupSection />;
-      case "members":
-        return <MembersSection />;
       default:
         return <ProfileSection />;
     }
@@ -289,7 +267,7 @@ export function SettingsPage() {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center text-white font-medium">
+                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center text-white font-medium">
                       {profile.firstName?.[0]?.toUpperCase() || "?"}
                     </div>
                     <div className="flex-1 min-w-0">

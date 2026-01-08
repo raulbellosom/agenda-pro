@@ -111,14 +111,14 @@ export function NotFoundPage() {
         >
           <Button asChild size="lg">
             <Link to="/dashboard">
-              <Home size={18} className="mr-2" />
+              <Home size={18} />
               Ir al Inicio
             </Link>
           </Button>
 
           <Button asChild variant="outline" size="lg">
             <Link to="/vehicles">
-              <Search size={18} className="mr-2" />
+              <Search size={18} />
               Ver Vehículos
             </Link>
           </Button>
@@ -128,7 +128,7 @@ export function NotFoundPage() {
             size="lg"
             onClick={() => window.history.back()}
           >
-            <ArrowLeft size={18} className="mr-2" />
+            <ArrowLeft size={18} />
             Regresar
           </Button>
         </motion.div>

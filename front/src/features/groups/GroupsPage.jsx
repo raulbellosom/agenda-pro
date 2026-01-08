@@ -16,15 +16,22 @@ import {
   Globe,
   Calendar,
   Sparkles,
+  Mail,
 } from "lucide-react";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 import {
   useDeleteGroup,
   useLeaveGroup,
   getGroupLogoUrl,
+  useGroupMembers,
 } from "../../lib/hooks/useGroups";
+import { useUserInvitations } from "../../lib/hooks/useInvitations";
 import { GroupModal } from "./GroupModal";
 import { ConfirmModal } from "../../shared/ui/ConfirmModal";
+import { SpaceDetailsModal } from "./components/SpaceDetailsModal";
+import { PendingInvitationsPanel } from "./components/PendingInvitationsPanel";
+import { Avatar } from "../../components/ui/Avatar";
+import { getAvatarUrl } from "../../lib/hooks/useProfile";
 
 // Animation variants
 const containerVariants = {
@@ -48,7 +55,7 @@ function MenuPortal({
   onClose,
   isOwner,
   group,
-  onEdit,
+  onDetails,
   onDelete,
   onLeave,
 }) {
@@ -82,7 +89,7 @@ function MenuPortal({
       let top = rect.bottom + 8;
 
       // If menu would go off bottom, show above the button
-      const menuHeight = isOwner ? 120 : 60; // Approximate height
+      const menuHeight = isOwner ? 140 : 80; // Approximate height
       if (top + menuHeight > window.innerHeight - padding) {
         top = rect.top - menuHeight - 8;
       }
@@ -135,18 +142,18 @@ function MenuPortal({
         className="w-52 bg-[rgb(var(--bg-elevated))] rounded-xl border border-[rgb(var(--border-base))] shadow-2xl overflow-hidden"
       >
         <div className="p-1">
+          <button
+            onClick={() => {
+              onClose();
+              onDetails(group);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            Administrar espacio
+          </button>
           {isOwner ? (
             <>
-              <button
-                onClick={() => {
-                  onClose();
-                  onEdit(group);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
-              >
-                <Pencil className="w-4 h-4" />
-                Editar espacio
-              </button>
               <div className="my-1 border-t border-[rgb(var(--border-base))]" />
               <button
                 onClick={() => {
@@ -160,16 +167,19 @@ function MenuPortal({
               </button>
             </>
           ) : (
-            <button
-              onClick={() => {
-                onClose();
-                onLeave(group);
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Salir del espacio
-            </button>
+            <>
+              <div className="my-1 border-t border-[rgb(var(--border-base))]" />
+              <button
+                onClick={() => {
+                  onClose();
+                  onLeave(group);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Salir del espacio
+              </button>
+            </>
           )}
         </div>
       </motion.div>
@@ -183,17 +193,40 @@ function GroupCard({
   group,
   isActive,
   onSwitch,
-  onEdit,
+  onDetails,
   onDelete,
   onLeave,
   profile,
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const [showMemberTooltip, setShowMemberTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const avatarContainerRef = useRef(null);
   const isOwner =
     group.ownerProfileId === profile?.$id || group.membershipRole === "OWNER";
   const logoUrl = group.logoFileId
     ? getGroupLogoUrl(group.logoFileId, 120, 120)
     : null;
+
+  // Obtener miembros del grupo
+  const { data: members = [] } = useGroupMembers(group.$id);
+
+  // Primeros 5 miembros para mostrar avatares
+  const displayMembers = members.slice(0, 5);
+  const remainingMembers = members.length > 5 ? members.length - 5 : 0;
+  const totalMembers = members.length;
+
+  // Calcular posición del tooltip
+  const handleMouseEnter = () => {
+    if (avatarContainerRef.current) {
+      const rect = avatarContainerRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+      });
+      setShowMemberTooltip(true);
+    }
+  };
 
   return (
     <motion.div
@@ -210,7 +243,7 @@ function GroupCard({
     >
       {/* Active indicator bar */}
       {isActive && (
-        <div className="absolute top-0 left-6 right-6 h-1 bg-gradient-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-secondary))] rounded-b-full" />
+        <div className="absolute top-0 left-6 right-6 h-1 bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-secondary))] rounded-b-full" />
       )}
 
       <div className="p-4 sm:p-5">
@@ -218,11 +251,11 @@ function GroupCard({
           {/* Logo or Icon */}
           <div
             className={clsx(
-              "w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden",
+              "w-14 h-14 sm:w-16 sm:h-16 rounded-2xl shrink-0 flex items-center justify-center overflow-hidden",
               "transition-transform duration-300 group-hover:scale-105",
               logoUrl
                 ? "ring-2 ring-[rgb(var(--border-base))]"
-                : "bg-gradient-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10"
+                : "bg-linear-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10"
             )}
           >
             {logoUrl ? (
@@ -243,7 +276,7 @@ function GroupCard({
                 {group.name}
               </h3>
               {isOwner ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-linear-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
                   <Crown className="w-3 h-3" />
                   Propietario
                 </span>
@@ -260,6 +293,83 @@ function GroupCard({
                 {group.description}
               </p>
             )}
+
+            {/* Member Avatars */}
+            {totalMembers > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <div
+                  ref={avatarContainerRef}
+                  className="flex items-center -space-x-2 relative"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={() => setShowMemberTooltip(false)}
+                >
+                  {displayMembers.map((member, index) => (
+                    <div
+                      key={member.$id}
+                      className="relative ring-2 ring-[rgb(var(--bg-surface))] rounded-full hover:z-10 transition-transform hover:scale-110"
+                      style={{ zIndex: displayMembers.length - index }}
+                      title={`${member.profile?.firstName || ""} ${
+                        member.profile?.lastName || ""
+                      }`}
+                    >
+                      <Avatar
+                        src={getAvatarUrl(member.profile?.avatarFileId, 32)}
+                        name={`${member.profile?.firstName || ""} ${
+                          member.profile?.lastName || ""
+                        }`}
+                        size={32}
+                      />
+                    </div>
+                  ))}
+                  {remainingMembers > 0 && (
+                    <div className="w-8 h-8 rounded-full bg-[rgb(var(--bg-muted))] border-2 border-[rgb(var(--bg-surface))] flex items-center justify-center text-[10px] font-semibold text-[rgb(var(--text-muted))] hover:bg-[rgb(var(--bg-hover))] transition-colors">
+                      +{remainingMembers}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs text-[rgb(var(--text-muted))] font-medium">
+                  {totalMembers} {totalMembers === 1 ? "miembro" : "miembros"}
+                </span>
+              </div>
+            )}
+
+            {/* Tooltip Portal */}
+            {showMemberTooltip &&
+              totalMembers > 0 &&
+              createPortal(
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  style={{
+                    position: "fixed",
+                    top: tooltipPosition.top,
+                    left: tooltipPosition.left,
+                    zIndex: 9999,
+                  }}
+                  className="p-3 bg-[rgb(var(--bg-elevated))] rounded-lg shadow-xl border border-[rgb(var(--border-base))] min-w-[200px]"
+                >
+                  <p className="text-xs font-semibold text-[rgb(var(--text-primary))] mb-2">
+                    Miembros ({totalMembers})
+                  </p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {displayMembers.map((member) => (
+                      <p
+                        key={member.$id}
+                        className="text-xs text-[rgb(var(--text-secondary))] truncate"
+                      >
+                        {member.profile?.firstName} {member.profile?.lastName}
+                      </p>
+                    ))}
+                    {remainingMembers > 0 && (
+                      <p className="text-xs text-[rgb(var(--text-muted))] italic">
+                        y {remainingMembers} más...
+                      </p>
+                    )}
+                  </div>
+                </motion.div>,
+                document.body
+              )}
 
             <div className="flex flex-wrap items-center gap-2 text-xs text-[rgb(var(--text-muted))]">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[rgb(var(--bg-muted))] truncate max-w-[180px] sm:max-w-none">
@@ -293,7 +403,7 @@ function GroupCard({
                 Activar
               </motion.button>
             ) : (
-              <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 text-[rgb(var(--brand-primary))] text-sm font-semibold flex items-center gap-1.5">
+              <span className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-linear-to-r from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 text-[rgb(var(--brand-primary))] text-sm font-semibold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[rgb(var(--brand-primary))] animate-pulse" />
                 Activo
               </span>
@@ -322,7 +432,7 @@ function GroupCard({
                 onClose={() => setShowMenu(false)}
                 isOwner={isOwner}
                 group={group}
-                onEdit={onEdit}
+                onDetails={onDetails}
                 onDelete={onDelete}
                 onLeave={onLeave}
               />
@@ -340,14 +450,14 @@ function EmptyState({ onCreateGroup }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[rgb(var(--bg-surface))] to-[rgb(var(--bg-muted))]/30 border-2 border-dashed border-[rgb(var(--border-base))] text-center overflow-hidden"
+      className="relative p-8 sm:p-12 rounded-3xl bg-linear-to-br from-[rgb(var(--bg-surface))] to-[rgb(var(--bg-muted))]/30 border-2 border-dashed border-[rgb(var(--border-base))] text-center overflow-hidden"
     >
       {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[rgb(var(--brand-primary))]/10 to-transparent rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-[rgb(var(--brand-secondary))]/10 to-transparent rounded-full blur-2xl" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-[rgb(var(--brand-primary))]/10 to-transparent rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-linear-to-tr from-[rgb(var(--brand-secondary))]/10 to-transparent rounded-full blur-2xl" />
 
       <div className="relative">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-linear-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 flex items-center justify-center">
           <Building2 className="w-10 h-10 text-[rgb(var(--brand-primary))]" />
         </div>
         <h3 className="text-xl font-bold text-[rgb(var(--text-primary))] mb-2">
@@ -383,7 +493,7 @@ function SectionHeader({ icon: Icon, title, count, color = "amber" }) {
     <div className="flex items-center gap-3 mb-4">
       <div
         className={clsx(
-          "w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center",
+          "w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center",
           colorClasses[color]
         )}
       >
@@ -407,7 +517,7 @@ function InfoBanner() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-xl bg-gradient-to-r from-[rgb(var(--info))]/5 to-[rgb(var(--info))]/10 border border-[rgb(var(--info))]/20"
+      className="p-4 rounded-xl bg-linear-to-r from-[rgb(var(--info))]/5 to-[rgb(var(--info))]/10 border border-[rgb(var(--info))]/20"
     >
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 rounded-lg bg-[rgb(var(--info))]/10 flex items-center justify-center shrink-0">
@@ -431,11 +541,17 @@ export function GroupsPage() {
   const { profile, groups, activeGroup, switchGroup, refetchGroups } =
     useWorkspace();
 
+  // Obtener invitaciones pendientes del usuario
+  const { data: pendingInvitations } = useUserInvitations(profile?.email);
+  const pendingCount =
+    pendingInvitations?.filter((inv) => inv.status === "PENDING")?.length || 0;
+
   // Modal states
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLeave, setConfirmLeave] = useState(null);
+  const [detailsGroup, setDetailsGroup] = useState(null);
 
   // Mutations
   const deleteGroup = useDeleteGroup();
@@ -465,9 +581,8 @@ export function GroupsPage() {
     setShowGroupModal(true);
   };
 
-  const handleEditGroup = (group) => {
-    setEditingGroup(group);
-    setShowGroupModal(true);
+  const handleDetailsGroup = (group) => {
+    setDetailsGroup(group);
   };
 
   const handleDeleteGroup = async () => {
@@ -512,6 +627,10 @@ export function GroupsPage() {
     setEditingGroup(null);
   };
 
+  const isOwner =
+    detailsGroup?.ownerProfileId === profile?.$id ||
+    detailsGroup?.membershipRole === "OWNER";
+
   return (
     <div className="min-h-full p-4 lg:p-6 xl:p-8 overflow-x-hidden">
       <div className="max-w-4xl mx-auto w-full">
@@ -523,7 +642,7 @@ export function GroupsPage() {
         >
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 flex items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-[rgb(var(--brand-primary))]/10 to-[rgb(var(--brand-secondary))]/10 flex items-center justify-center">
                 <Building2 className="w-7 h-7 text-[rgb(var(--brand-primary))]" />
               </div>
               <div>
@@ -549,6 +668,23 @@ export function GroupsPage() {
         </motion.div>
 
         <div className="space-y-8">
+          {/* Pending Invitations Section */}
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <SectionHeader
+              icon={Mail}
+              title="Invitaciones pendientes"
+              count={pendingCount}
+              color="brand"
+            />
+            <div className="bg-[rgb(var(--bg-muted))]/30 rounded-xl border border-[rgb(var(--border-base))] p-4">
+              <PendingInvitationsPanel />
+            </div>
+          </motion.section>
+
           {/* My Spaces Section */}
           <motion.section
             initial={{ opacity: 0, y: 20 }}
@@ -577,7 +713,7 @@ export function GroupsPage() {
                     group={group}
                     isActive={activeGroup?.$id === group.$id}
                     onSwitch={switchGroup}
-                    onEdit={handleEditGroup}
+                    onDetails={handleDetailsGroup}
                     onDelete={setConfirmDelete}
                     onLeave={setConfirmLeave}
                     profile={profile}
@@ -616,7 +752,7 @@ export function GroupsPage() {
                       group={group}
                       isActive={activeGroup?.$id === group.$id}
                       onSwitch={switchGroup}
-                      onEdit={handleEditGroup}
+                      onDetails={handleDetailsGroup}
                       onDelete={setConfirmDelete}
                       onLeave={setConfirmLeave}
                       profile={profile}
@@ -638,6 +774,15 @@ export function GroupsPage() {
         }}
         onSuccess={handleGroupSuccess}
         editGroup={editingGroup}
+      />
+
+      {/* Space Details Modal */}
+      <SpaceDetailsModal
+        isOpen={!!detailsGroup}
+        onClose={() => setDetailsGroup(null)}
+        group={detailsGroup}
+        isOwner={isOwner}
+        profile={profile}
       />
 
       {/* Confirm Delete Modal */}

@@ -73,13 +73,15 @@ export function ErrorBoundary() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button variant="ghost" onClick={handleRefresh}>
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <Button
+              variant="ghost"
+              onClick={handleRefresh}
+              leftIcon={<RefreshCw className="w-4 h-4" />}
+            >
               Reintentar
             </Button>
             <Link to="/">
-              <Button>
-                <Home className="w-4 h-4 mr-2" />
+              <Button leftIcon={<Home className="w-4 h-4" />}>
                 Ir al inicio
               </Button>
             </Link>

@@ -78,6 +78,11 @@ export function useSendInvitation() {
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GROUP_INVITATIONS, variables.groupId],
       });
+      // Refetch inmediato
+      queryClient.refetchQueries({
+        queryKey: [QUERY_KEYS.GROUP_INVITATIONS],
+        exact: false,
+      });
     },
   });
 }
@@ -137,12 +142,20 @@ export function useCancelInvitation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (invitationId) =>
-      invitationService.cancelInvitation(invitationId),
+    mutationFn: (invitationId) => {
+      console.log("useCancelInvitation - invitationId:", invitationId);
+      console.log("useCancelInvitation - length:", invitationId?.length);
+      return invitationService.cancelInvitation(invitationId);
+    },
     onSuccess: (_, invitationId) => {
-      // Invalidar invitaciones del grupo
+      // Invalidar todas las invitaciones de grupo (pending y todas)
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GROUP_INVITATIONS],
+      });
+      // Refetch inmediato con exact: false para todas las variantes
+      queryClient.refetchQueries({
+        queryKey: [QUERY_KEYS.GROUP_INVITATIONS],
+        exact: false,
       });
     },
   });
@@ -161,6 +174,11 @@ export function useResendInvitation() {
       // Invalidar invitaciones
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.GROUP_INVITATIONS],
+      });
+      // Refetch inmediato
+      queryClient.refetchQueries({
+        queryKey: [QUERY_KEYS.GROUP_INVITATIONS],
+        exact: false,
       });
     },
   });

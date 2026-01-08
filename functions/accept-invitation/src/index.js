@@ -181,6 +181,13 @@ export default async ({ req, res, log, error }) => {
 
       // Notify the inviter
       try {
+        // Obtener el perfil del invitador para el accountId
+        const inviterProfile = await databases.getDocument(
+          databaseId,
+          usersProfileCollectionId,
+          invitation.invitedByProfileId
+        );
+
         await databases.createDocument(
           databaseId,
           notificationsCollectionId,
@@ -188,6 +195,7 @@ export default async ({ req, res, log, error }) => {
           {
             groupId,
             profileId: invitation.invitedByProfileId,
+            accountId: inviterProfile.accountId, // Agregar accountId para permisos
             kind: "SYSTEM",
             title: "Invitación rechazada",
             body: `${userProfile.firstName} ${userProfile.lastName} ha rechazado la invitación al grupo "${group.name}"`,
@@ -197,7 +205,9 @@ export default async ({ req, res, log, error }) => {
             enabled: true,
           }
         );
-      } catch {}
+      } catch (notifError) {
+        log?.(`Warning: Failed to create notification: ${notifError.message}`);
+      }
 
       result.message = "Invitation rejected";
     } else if (action === "cancel") {
@@ -360,23 +370,54 @@ export default async ({ req, res, log, error }) => {
       }
 
       // =====================================================================
-      // 5d) Create personal calendar for new member
+      // 5d) Create or reactivate personal calendar for new member
       // =====================================================================
-      const calendar = await databases.createDocument(
+      // Primero buscar si existe un calendario Personal desactivado
+      const existingCalendars = await databases.listDocuments(
         databaseId,
         calendarsCollectionId,
-        ID.unique(),
-        {
-          groupId,
-          ownerProfileId: profileId,
-          name: "Personal",
-          color: defaultCalendarColor,
-          visibility: "PRIVATE",
-          isDefault: true,
-          enabled: true,
-        }
+        [
+          Query.equal("groupId", groupId),
+          Query.equal("ownerProfileId", profileId),
+          Query.equal("name", "Personal"),
+          Query.equal("isDefault", true),
+          Query.limit(1),
+        ]
       );
-      log?.(`Personal calendar created: ${calendar.$id}`);
+
+      let calendar;
+      if (existingCalendars.total > 0) {
+        // Reactivar el calendario existente
+        calendar = await databases.updateDocument(
+          databaseId,
+          calendarsCollectionId,
+          existingCalendars.documents[0].$id,
+          {
+            enabled: true,
+            visibility: "PRIVATE", // Asegurar que sea PRIVATE
+          }
+        );
+        log?.(
+          `Personal calendar reactivated: ${calendar.$id} (was previously disabled)`
+        );
+      } else {
+        // Crear nuevo calendario Personal
+        calendar = await databases.createDocument(
+          databaseId,
+          calendarsCollectionId,
+          ID.unique(),
+          {
+            groupId,
+            ownerProfileId: profileId,
+            name: "Personal",
+            color: defaultCalendarColor,
+            visibility: "PRIVATE",
+            isDefault: true,
+            enabled: true,
+          }
+        );
+        log?.(`Personal calendar created: ${calendar.$id}`);
+      }
       result.calendar = { $id: calendar.$id, name: calendar.name };
 
       // =====================================================================
@@ -430,6 +471,13 @@ export default async ({ req, res, log, error }) => {
       // 5g) Notify the inviter
       // =====================================================================
       try {
+        // Obtener el perfil del invitador para el accountId
+        const inviterProfile = await databases.getDocument(
+          databaseId,
+          usersProfileCollectionId,
+          invitation.invitedByProfileId
+        );
+
         await databases.createDocument(
           databaseId,
           notificationsCollectionId,
@@ -437,6 +485,7 @@ export default async ({ req, res, log, error }) => {
           {
             groupId,
             profileId: invitation.invitedByProfileId,
+            accountId: inviterProfile.accountId, // Agregar accountId para permisos
             kind: "SYSTEM",
             title: "Invitación aceptada",
             body: `${userProfile.firstName} ${userProfile.lastName} ha aceptado la invitación al grupo "${group.name}"`,
@@ -446,7 +495,9 @@ export default async ({ req, res, log, error }) => {
             enabled: true,
           }
         );
-      } catch {}
+      } catch (notifError) {
+        log?.(`Warning: Failed to create notification: ${notifError.message}`);
+      }
 
       result.message = "Invitation accepted successfully";
     }

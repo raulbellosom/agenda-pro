@@ -14,7 +14,15 @@ import { SettingsPage } from "../../features/settings/SettingsPage";
 import { GroupsPage } from "../../features/groups/GroupsPage";
 import { NotFoundPage } from "../../features/shell/NotFoundPage";
 import { InvitePage } from "../../features/invite/InvitePage";
-import { PermissionsAdminPage } from "../../features/admin/PermissionsAdminPage";
+import { NotificationsPage } from "../../features/notifications/NotificationsPage";
+import {
+  AdminLayout,
+  AdminDashboardPage,
+  PermissionsAdminPage,
+  UsersAdminPage,
+  GroupsAdminPage,
+  AuditAdminPage,
+} from "../../features/admin";
 
 export const router = createBrowserRouter([
   {
@@ -79,7 +87,23 @@ export const router = createBrowserRouter([
       { index: true, element: <CalendarPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "groups", element: <GroupsPage /> },
-      { path: "admin/permissions", element: <PermissionsAdminPage /> },
+      { path: "notifications", element: <NotificationsPage /> },
+    ],
+  },
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+    children: [
+      { index: true, element: <AdminDashboardPage /> },
+      { path: "users", element: <UsersAdminPage /> },
+      { path: "permissions", element: <PermissionsAdminPage /> },
+      { path: "groups", element: <GroupsAdminPage /> },
+      { path: "audit", element: <AuditAdminPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

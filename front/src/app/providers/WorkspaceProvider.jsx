@@ -51,7 +51,7 @@ export function WorkspaceProvider({ children }) {
     data: calendars,
     isLoading: calendarsLoading,
     refetch: refetchCalendars,
-  } = useCalendars(activeGroupId);
+  } = useCalendars(activeGroupId, profile?.$id);
 
   // Mutation para crear grupo
   const createGroupMutation = useCreateGroup();

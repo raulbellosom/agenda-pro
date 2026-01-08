@@ -9,6 +9,7 @@ import "./styles/app.css";
 import { router } from "./app/router/router";
 import { AuthProvider } from "./app/providers/AuthProvider";
 import { WorkspaceProvider } from "./app/providers/WorkspaceProvider";
+import { ToastProvider } from "./app/providers/ToastProvider";
 import { ThemeProvider } from "./shared/theme/ThemeProvider";
 import { RenderErrorBoundary } from "./components/ErrorBoundary";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
@@ -36,8 +37,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <ThemeProvider defaultTheme="system" storageKey="agenda-pro-theme">
           <AuthProvider>
             <WorkspaceProvider>
-              <RouterProvider router={router} />
-              <PWAInstallPrompt />
+              <ToastProvider>
+                <RouterProvider router={router} />
+                <PWAInstallPrompt />
+              </ToastProvider>
             </WorkspaceProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -494,12 +494,12 @@ export function StatusPage({
               >
                 {action.to ? (
                   <Link to={action.to}>
-                    {action.icon && <action.icon size={18} className="mr-2" />}
+                    {action.icon && <action.icon size={18} />}
                     {action.label}
                   </Link>
                 ) : (
                   <>
-                    {action.icon && <action.icon size={18} className="mr-2" />}
+                    {action.icon && <action.icon size={18} />}
                     {action.label}
                   </>
                 )}
@@ -511,7 +511,7 @@ export function StatusPage({
               {showHomeButton && (
                 <Button asChild size="lg" className="w-full sm:w-auto">
                   <Link to={homeRoute}>
-                    <Calendar size={18} className="mr-2" />
+                    <Calendar size={18} />
                     {homeLabel}
                   </Link>
                 </Button>
@@ -523,7 +523,7 @@ export function StatusPage({
                   onClick={onRetry}
                   className="w-full sm:w-auto"
                 >
-                  <RefreshCw size={18} className="mr-2" />
+                  <RefreshCw size={18} />
                   Reintentar
                 </Button>
               )}
@@ -534,7 +534,7 @@ export function StatusPage({
                   onClick={handleGoBack}
                   className="w-full sm:w-auto"
                 >
-                  <ArrowLeft size={18} className="mr-2" />
+                  <ArrowLeft size={18} />
                   Regresar
                 </Button>
               )}

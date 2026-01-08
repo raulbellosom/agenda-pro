@@ -285,7 +285,7 @@ function ScrollerDayCell({
     >
       {/* Badge de eventos adicionales - mejorado */}
       {events.length > 3 && (
-        <div className="absolute top-1 right-1 bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-[9px] sm:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 flex items-center justify-center shadow-lg ring-2 ring-white/30 z-10 backdrop-blur-sm">
+        <div className="absolute top-1 right-1 bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-[9px] sm:text-[10px] font-bold rounded-full min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 flex items-center justify-center shadow-lg ring-2 ring-white/30 z-10 backdrop-blur-sm">
           +{events.length - 3}
         </div>
       )}

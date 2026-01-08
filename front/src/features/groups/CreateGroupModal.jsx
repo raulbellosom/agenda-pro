@@ -92,7 +92,7 @@ export function CreateGroupModal({ isOpen, onClose, onSuccess }) {
                 {/* Info card */}
                 <div className="p-4 rounded-2xl bg-[rgb(var(--brand-primary))]/5 border border-[rgb(var(--brand-primary))]/20">
                   <div className="flex items-start gap-3">
-                    <Sparkles className="w-5 h-5 text-[rgb(var(--brand-primary))] flex-shrink-0 mt-0.5" />
+                    <Sparkles className="w-5 h-5 text-[rgb(var(--brand-primary))] shrink-0 mt-0.5" />
                     <div className="text-sm text-[rgb(var(--text-secondary))]">
                       <p className="font-medium text-[rgb(var(--brand-primary))]">
                         Un espacio para organizarte

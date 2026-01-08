@@ -100,7 +100,7 @@ function StepInfo({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-lg shadow-[rgb(var(--brand-primary))]/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-lg shadow-[rgb(var(--brand-primary))]/20"
         >
           <Users className="w-8 h-8 text-white" />
         </motion.div>
@@ -146,7 +146,7 @@ function StepInfo({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onNameChange(suggestion)}
-                className="px-3 py-1.5 rounded-lg bg-[rgb(var(--bg-muted))] text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[rgb(var(--bg-muted))] text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
               >
                 {suggestion}
               </motion.button>
@@ -209,7 +209,7 @@ function StepLogo({ logoPreview, onLogoChange, onLogoRemove, isUploading }) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20"
         >
           <ImageIcon className="w-8 h-8 text-white" />
         </motion.div>
@@ -291,7 +291,7 @@ function StepLogo({ logoPreview, onLogoChange, onLogoRemove, isUploading }) {
       {/* Info card */}
       <div className="p-4 rounded-2xl bg-[rgb(var(--brand-primary))]/5 border border-[rgb(var(--brand-primary))]/20">
         <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-[rgb(var(--brand-primary))] flex-shrink-0 mt-0.5" />
+          <Sparkles className="w-5 h-5 text-[rgb(var(--brand-primary))] shrink-0 mt-0.5" />
           <div className="text-sm text-[rgb(var(--text-secondary))]">
             <p className="font-medium text-[rgb(var(--brand-primary))]">
               Consejo
@@ -330,7 +330,7 @@ function StepTimezone({ value, onChange }) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
         >
           <Globe className="w-8 h-8 text-white" />
         </motion.div>

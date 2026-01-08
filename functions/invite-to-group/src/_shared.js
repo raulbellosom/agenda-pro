@@ -153,17 +153,29 @@ async function isOwnerOrAdmin(
  * Create email transporter using SMTP configuration
  */
 function createEmailTransporter() {
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = parseInt(process.env.SMTP_PORT || "587", 10);
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpSecure = process.env.SMTP_SECURE === "true";
+  // Obtener y limpiar variables
+  const SMTP_HOST_RAW = process.env.SMTP_HOST || "";
+  const SMTP_PORT_RAW = process.env.SMTP_PORT || "587";
+  const SMTP_SECURE_RAW = process.env.SMTP_SECURE || "false";
+  const SMTP_USER_RAW = process.env.SMTP_USER || "";
+  const SMTP_PASS_RAW = process.env.SMTP_PASS || "";
+
+  // Limpiar el host - remover cualquier protocolo, espacios, etc
+  let smtpHost = SMTP_HOST_RAW.trim();
+  smtpHost = smtpHost.replace(/^https?:\/\//i, ""); // Remover http:// o https://
+  smtpHost = smtpHost.replace(/\/.*$/, ""); // Remover cualquier path
+
+  const smtpPort = parseInt(SMTP_PORT_RAW.trim());
+  const smtpSecure = SMTP_SECURE_RAW.trim().toLowerCase() === "true";
+  const smtpUser = SMTP_USER_RAW.trim();
+  const smtpPass = SMTP_PASS_RAW;
 
   if (!smtpHost || !smtpUser || !smtpPass) {
     return null;
   }
 
-  return nodemailer.createTransport({
+  // Configuración SMTP
+  const config = {
     host: smtpHost,
     port: smtpPort,
     secure: smtpSecure,
@@ -171,7 +183,18 @@ function createEmailTransporter() {
       user: smtpUser,
       pass: smtpPass,
     },
-  });
+  };
+
+  // Agregar configuración TLS para STARTTLS (puerto 587)
+  if (!smtpSecure) {
+    config.requireTLS = true;
+    config.tls = {
+      rejectUnauthorized: false,
+      minVersion: "TLSv1.2",
+    };
+  }
+
+  return nodemailer.createTransport(config);
 }
 
 /**

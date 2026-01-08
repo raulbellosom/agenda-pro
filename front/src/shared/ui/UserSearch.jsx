@@ -100,7 +100,7 @@ export function UserSearch({
       <div
         className={`flex items-center gap-3 rounded-xl border border-(--brand) bg-(--brand)/5 p-3 ${className}`}
       >
-        <div className="h-10 w-10 rounded-full bg-(--muted) flex items-center justify-center flex-shrink-0">
+        <div className="h-10 w-10 rounded-full bg-(--muted) flex items-center justify-center shrink-0">
           {selectedUser.avatarFileId ? (
             <img
               src={getAvatarUrl(selectedUser.avatarFileId, 80)}
@@ -186,7 +186,7 @@ export function UserSearch({
                     onClick={() => handleSelect(user)}
                     className="flex w-full items-center gap-3 p-3 hover:bg-(--muted) transition-colors text-left"
                   >
-                    <div className="h-10 w-10 rounded-full bg-(--muted) flex items-center justify-center flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-(--muted) flex items-center justify-center shrink-0">
                       {user.avatarFileId ? (
                         <img
                           src={getAvatarUrl(user.avatarFileId, 80)}
@@ -205,10 +205,7 @@ export function UserSearch({
                         {user.email}
                       </p>
                     </div>
-                    <UserPlus
-                      size={16}
-                      className="text-(--brand) flex-shrink-0"
-                    />
+                    <UserPlus size={16} className="text-(--brand) shrink-0" />
                   </motion.button>
                 ))}
               </div>

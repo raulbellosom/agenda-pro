@@ -68,7 +68,7 @@ export function LoadingScreen({
           <div
             className={cn(
               "relative flex items-center justify-center rounded-2xl",
-              "bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]",
+              "bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]",
               "shadow-lg shadow-[rgb(var(--brand-primary))]/25",
               variant === "fullscreen" ? "h-16 w-16" : "h-12 w-12"
             )}

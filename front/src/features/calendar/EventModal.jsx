@@ -633,7 +633,7 @@ function StepBasicInfo({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-lg shadow-[rgb(var(--brand-primary))]/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-lg shadow-[rgb(var(--brand-primary))]/20"
         >
           <CalendarPlus className="w-8 h-8 text-white" />
         </motion.div>
@@ -819,7 +819,7 @@ function StepOptionalDetails({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20"
         >
           <AlignLeft className="w-8 h-8 text-white" />
         </motion.div>
@@ -901,7 +901,7 @@ function StepCalendar({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", delay: 0.1 }}
-          className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
         >
           <Calendar className="w-8 h-8 text-white" />
         </motion.div>

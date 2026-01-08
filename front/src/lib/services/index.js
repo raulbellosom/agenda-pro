@@ -6,3 +6,5 @@ export * from "./eventService";
 export * from "./userSettingsService";
 export * from "./rbacService";
 export * from "./invitationService";
+export * from "./notificationService";
+export * from "./adminService";

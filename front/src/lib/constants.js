@@ -154,4 +154,6 @@ export const QUERY_KEYS = {
   ROLE_PERMISSIONS: "rolePermissions",
   USER_ROLES: "userRoles",
   USER_PERMISSIONS: "userPermissions",
+  // Admin
+  ADMIN: "admin",
 };

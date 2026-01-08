@@ -30,6 +30,13 @@ export function RegisterPage() {
   // Token de invitación si viene desde /invite/:token
   const inviteToken = searchParams.get("invite");
 
+  // Persistir token en localStorage para no perderlo durante el flujo
+  useEffect(() => {
+    if (inviteToken) {
+      localStorage.setItem("pendingInviteToken", inviteToken);
+    }
+  }, [inviteToken]);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -141,7 +148,13 @@ export function RegisterPage() {
           email={verificationEmail}
           onClose={() => {
             setShowVerificationModal(false);
-            nav("/login");
+            // Redirigir a login con el token de invitación si existe
+            const pendingInvite = localStorage.getItem("pendingInviteToken");
+            if (pendingInvite) {
+              nav(`/login?invite=${pendingInvite}`);
+            } else {
+              nav("/login");
+            }
           }}
         />
       )}

@@ -9,3 +9,4 @@ export * from "./useSwipeNavigation";
 export * from "./useRbac";
 export * from "./useInvitations";
 export * from "./usePermissionsAdmin";
+export * from "./useNotifications";

@@ -97,7 +97,7 @@ export function SettingsCardDivider({ className }) {
   return (
     <div
       className={clsx(
-        "h-px bg-gradient-to-r from-transparent via-[rgb(var(--border-base))] to-transparent my-6",
+        "h-px bg-linear-to-r from-transparent via-[rgb(var(--border-base))] to-transparent my-6",
         className
       )}
     />

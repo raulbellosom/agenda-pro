@@ -81,15 +81,16 @@ export function Button({
       disabled={isDisabled}
       {...rest}
     >
-      {loading ? (
+      {loading && (
         <>
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Cargando...</span>
         </>
-      ) : (
+      )}
+      {!loading && (
         <>
           {leftIcon && <span className="shrink-0">{leftIcon}</span>}
-          <span>{children}</span>
+          {children && <span>{children}</span>}
           {rightIcon && <span className="shrink-0">{rightIcon}</span>}
         </>
       )}

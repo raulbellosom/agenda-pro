@@ -269,13 +269,106 @@ export async function leaveGroup(groupId, profileId) {
     );
   }
 
+  // Obtener información del grupo y del usuario que sale
+  const [group, leavingProfile] = await Promise.all([
+    databases.getDocument(databaseId, COLLECTIONS.GROUPS, groupId),
+    databases.getDocument(databaseId, COLLECTIONS.USERS_PROFILE, profileId),
+  ]);
+
+  // Buscar al propietario del grupo
+  const ownerMembership = await databases.listDocuments(
+    databaseId,
+    COLLECTIONS.GROUP_MEMBERS,
+    [
+      Query.equal("groupId", groupId),
+      Query.equal("membershipRole", ENUMS.GROUP_MEMBER_ROLE.OWNER),
+      Query.equal("enabled", true),
+      Query.limit(1),
+    ]
+  );
+
   // Soft delete de la membresía
-  return databases.updateDocument(
+  const result = await databases.updateDocument(
     databaseId,
     COLLECTIONS.GROUP_MEMBERS,
     memberDoc.$id,
     { enabled: false }
   );
+
+  // Desactivar calendarios personales del usuario en este grupo
+  try {
+    const userCalendars = await databases.listDocuments(
+      databaseId,
+      COLLECTIONS.CALENDARS,
+      [
+        Query.equal("groupId", groupId),
+        Query.equal("ownerProfileId", profileId),
+        Query.equal("enabled", true),
+        Query.limit(100),
+      ]
+    );
+
+    // Desactivar todos los calendarios del usuario
+    const deactivatePromises = userCalendars.documents.map((calendar) =>
+      databases.updateDocument(
+        databaseId,
+        COLLECTIONS.CALENDARS,
+        calendar.$id,
+        { enabled: false }
+      )
+    );
+
+    await Promise.all(deactivatePromises);
+  } catch (calendarError) {
+    console.error("Error deactivating user calendars:", calendarError);
+    // No lanzamos el error para no interrumpir el proceso de salida
+  }
+
+  // Crear notificación para el propietario
+  if (ownerMembership.documents.length > 0) {
+    const ownerProfileId = ownerMembership.documents[0].profileId;
+    const memberName = `${leavingProfile.firstName || ""} ${
+      leavingProfile.lastName || ""
+    }`.trim();
+
+    try {
+      // Obtener el perfil del owner para el accountId
+      const ownerProfile = await databases.getDocument(
+        databaseId,
+        COLLECTIONS.USERS_PROFILE,
+        ownerProfileId
+      );
+
+      await databases.createDocument(
+        databaseId,
+        COLLECTIONS.NOTIFICATIONS,
+        ID.unique(),
+        {
+          groupId,
+          profileId: ownerProfileId,
+          accountId: ownerProfile.accountId, // Agregar accountId para permisos
+          kind: "SYSTEM",
+          title: `Miembro abandonó ${group.name}`,
+          body: `${memberName} ha salido del espacio "${group.name}"`,
+          entityType: "groups",
+          entityId: groupId,
+          metadata: JSON.stringify({
+            action: "member_left",
+            memberProfileId: profileId,
+            memberName,
+            groupName: group.name,
+          }),
+          createdAt: new Date().toISOString(),
+          enabled: true,
+        }
+      );
+    } catch (notifError) {
+      console.error("Error creating leave notification:", notifError);
+      // No lanzamos el error para no interrumpir el proceso de salida
+    }
+  }
+
+  return result;
 }
 
 /**

@@ -10,16 +10,32 @@ const { databaseId } = APPWRITE;
 const collectionId = COLLECTIONS.CALENDARS;
 
 /**
- * Obtiene todos los calendarios de un grupo
+ * Obtiene todos los calendarios de un grupo visibles para el usuario actual
+ * - Calendarios GROUP: visibles para todos
+ * - Calendarios PRIVATE: solo visibles para el dueño
  */
-export async function getCalendars(groupId) {
+export async function getCalendars(groupId, currentProfileId = null) {
   const response = await databases.listDocuments(databaseId, collectionId, [
     Query.equal("groupId", groupId),
     Query.equal("enabled", true),
     Query.orderAsc("name"),
     Query.limit(100),
   ]);
-  return response.documents;
+
+  // Si no hay profileId, devolver todos (para compatibilidad)
+  if (!currentProfileId) {
+    return response.documents;
+  }
+
+  // Filtrar calendarios según visibility
+  return response.documents.filter((calendar) => {
+    // Si es PRIVATE, solo mostrarlo al dueño
+    if (calendar.visibility === ENUMS.CALENDAR_VISIBILITY.PRIVATE) {
+      return calendar.ownerProfileId === currentProfileId;
+    }
+    // Si es GROUP, mostrarlo a todos
+    return true;
+  });
 }
 
 /**

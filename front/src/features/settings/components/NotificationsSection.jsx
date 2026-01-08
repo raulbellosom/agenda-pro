@@ -12,9 +12,11 @@ import {
   Info,
   BellOff,
   Save,
+  AlertCircle,
 } from "lucide-react";
 import { useWorkspace } from "../../../app/providers/WorkspaceProvider";
 import { useUserSettings, useUpdateUserSettings } from "../../../lib/hooks";
+import { useRequestNotificationPermission } from "../../../lib/hooks/useNotifications";
 import { Button } from "../../../components/ui/Button";
 import { SettingsCard, SettingsCardHeader } from "./SettingsCard";
 import { SettingsToggle } from "./SettingsControls";
@@ -27,6 +29,14 @@ export function NotificationsSection() {
     profile?.$id
   );
   const updateSettings = useUpdateUserSettings();
+  const {
+    permission,
+    hasPermission,
+    isDenied,
+    isRequesting,
+    requestPermission,
+    fcmToken,
+  } = useRequestNotificationPermission();
 
   const [localSettings, setLocalSettings] = useState({
     notificationsEnabled: true,
@@ -153,6 +163,65 @@ export function NotificationsSection() {
             onToggle={() => handleToggle("pushNotificationsEnabled")}
             disabled={updateSettings.isPending || allDisabled}
           />
+
+          {/* Push Notification Permission Status */}
+          {localSettings.pushNotificationsEnabled && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 pl-11"
+            >
+              {hasPermission && fcmToken ? (
+                <SettingsAlert
+                  type="success"
+                  icon={Check}
+                  title="Push habilitado"
+                  description="Tu navegador está configurado para recibir notificaciones."
+                />
+              ) : isDenied ? (
+                <SettingsAlert
+                  type="error"
+                  icon={AlertCircle}
+                  title="Permisos bloqueados"
+                  description="Para habilitar notificaciones push, debes cambiar la configuración en tu navegador. Haz clic en el ícono 🔒 en la barra de direcciones y permite las notificaciones."
+                />
+              ) : (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        Se requiere permiso del navegador
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        Para recibir notificaciones push, necesitas autorizar el
+                        acceso en tu navegador.
+                      </p>
+                      <Button
+                        onClick={requestPermission}
+                        disabled={isRequesting}
+                        size="sm"
+                        className="mt-2"
+                      >
+                        {isRequesting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Solicitando...
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="w-4 h-4 mr-2" />
+                            Habilitar notificaciones
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
       </SettingsCard>
 

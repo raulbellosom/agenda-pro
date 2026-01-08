@@ -31,6 +31,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
+  const isAuthenticated = state.status === "authed";
 
   // Token de invitación si viene desde /invite/:token
   const inviteToken = searchParams.get("invite");
@@ -52,6 +53,17 @@ export function LoginPage() {
       setVerificationEmail(state.email);
     }
   }, [state, showVerificationModal]);
+
+  // Redirigir a invitación pendiente después de login exitoso
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Verificar si hay un token de invitación pendiente guardado
+      const pendingInvite = localStorage.getItem("pendingInviteToken");
+      if (pendingInvite) {
+        nav(`/invite/${pendingInvite}`, { replace: true });
+      }
+    }
+  }, [isAuthenticated, nav]);
 
   const canSubmit = useMemo(
     () => email.trim().length > 3 && password.length >= 6,

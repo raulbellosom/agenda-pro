@@ -42,12 +42,24 @@ export function InvitePage() {
   const isExpired = invitation && isInvitationExpired(invitation);
   const isPending = invitation?.status === "PENDING";
 
+  // Persistir token en localStorage para no perderlo durante el flujo de registro/verificación
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem("pendingInviteToken", token);
+    }
+  }, [token]);
+
   // Si no está autenticado, redirigir a login con token como parámetro
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate(`/login?invite=${token}`, { replace: true });
     }
   }, [isLoading, isAuthenticated, token, navigate]);
+
+  // Limpiar token almacenado después de aceptar o rechazar
+  const clearStoredToken = () => {
+    localStorage.removeItem("pendingInviteToken");
+  };
 
   // Si el email no coincide
   const emailMismatch =
@@ -66,6 +78,7 @@ export function InvitePage() {
       });
       // Refrescar grupos y redirigir
       await refetchGroups?.();
+      clearStoredToken();
       navigate("/", { replace: true });
     } catch (err) {
       setActionError(err.message || "Error al aceptar la invitación");
@@ -81,6 +94,7 @@ export function InvitePage() {
         token: invitation.token,
         profileId: profile.$id,
       });
+      clearStoredToken();
       navigate("/", { replace: true });
     } catch (err) {
       setActionError(err.message || "Error al rechazar la invitación");
@@ -251,7 +265,7 @@ export function InvitePage() {
         )}
       >
         {/* Header */}
-        <div className="relative p-6 pb-8 bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]">
+        <div className="relative p-6 pb-8 bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]">
           <div className="absolute top-4 right-4">
             <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-medium">
               Invitación
@@ -270,16 +284,18 @@ export function InvitePage() {
         <div className="p-6 space-y-6">
           {/* Group info */}
           <div className="flex items-center gap-4 p-4 rounded-xl bg-[rgb(var(--bg-muted))]">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))] flex items-center justify-center">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[rgb(var(--text-primary))] truncate">
-                Espacio de trabajo
+                {invitation.groupName || "Espacio de trabajo"}
               </p>
-              <p className="text-sm text-[rgb(var(--text-muted))]">
-                ID: {invitation.groupId?.slice(0, 8)}...
-              </p>
+              {invitation.inviterName && (
+                <p className="text-sm text-[rgb(var(--text-muted))]">
+                  Invitado por {invitation.inviterName}
+                </p>
+              )}
             </div>
           </div>
 
@@ -326,15 +342,15 @@ export function InvitePage() {
               disabled={
                 acceptInvitation.isPending || rejectInvitation.isPending
               }
+              leftIcon={
+                rejectInvitation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <X className="w-4 h-4" />
+                )
+              }
             >
-              {rejectInvitation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <X className="w-4 h-4 mr-2" />
-                  Rechazar
-                </>
-              )}
+              {rejectInvitation.isPending ? "Rechazando..." : "Rechazar"}
             </Button>
             <Button
               className="flex-1"
@@ -342,15 +358,15 @@ export function InvitePage() {
               disabled={
                 acceptInvitation.isPending || rejectInvitation.isPending
               }
+              leftIcon={
+                acceptInvitation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )
+              }
             >
-              {acceptInvitation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Aceptar
-                </>
-              )}
+              {acceptInvitation.isPending ? "Aceptando..." : "Aceptar"}
             </Button>
           </div>
         </div>

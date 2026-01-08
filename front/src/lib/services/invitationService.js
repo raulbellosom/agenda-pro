@@ -38,6 +38,7 @@ export async function getGroupInvitations(groupId, status = null) {
 
 /**
  * Obtiene las invitaciones pendientes para un usuario (por email o profileId)
+ * Enriquece con datos del grupo y rol asignado
  */
 export async function getInvitationsForUser(email, profileId = null) {
   const queries = [
@@ -60,11 +61,56 @@ export async function getInvitationsForUser(email, profileId = null) {
     queries
   );
 
-  return response.documents;
+  const invitations = response.documents;
+
+  // Si no hay invitaciones, retornar vacío
+  if (invitations.length === 0) {
+    return [];
+  }
+
+  // Obtener IDs únicos de grupos y roles
+  const groupIds = [...new Set(invitations.map((inv) => inv.groupId))];
+  const roleIds = [
+    ...new Set(invitations.map((inv) => inv.invitedRoleId).filter(Boolean)),
+  ];
+
+  // Cargar grupos
+  let groupsMap = {};
+  if (groupIds.length > 0) {
+    const groupsResponse = await databases.listDocuments(
+      databaseId,
+      COLLECTIONS.GROUPS,
+      [Query.equal("$id", groupIds), Query.limit(50)]
+    );
+    groupsMap = Object.fromEntries(
+      groupsResponse.documents.map((g) => [g.$id, g])
+    );
+  }
+
+  // Cargar roles
+  let rolesMap = {};
+  if (roleIds.length > 0) {
+    const rolesResponse = await databases.listDocuments(
+      databaseId,
+      COLLECTIONS.ROLES,
+      [Query.equal("$id", roleIds), Query.limit(50)]
+    );
+    rolesMap = Object.fromEntries(
+      rolesResponse.documents.map((r) => [r.$id, r])
+    );
+  }
+
+  // Enriquecer invitaciones con datos del grupo y rol
+  return invitations.map((inv) => ({
+    ...inv,
+    group: groupsMap[inv.groupId] || null,
+    role: rolesMap[inv.invitedRoleId] || null,
+  }));
 }
 
 /**
  * Obtiene una invitación por su token
+ * Enriquece con datos del grupo, rol e invitador
  */
 export async function getInvitationByToken(token) {
   const response = await databases.listDocuments(
@@ -73,7 +119,61 @@ export async function getInvitationByToken(token) {
     [Query.equal("token", token), Query.limit(1)]
   );
 
-  return response.documents[0] || null;
+  const invitation = response.documents[0];
+
+  if (!invitation) {
+    return null;
+  }
+
+  // Cargar datos del grupo
+  let group = null;
+  try {
+    group = await databases.getDocument(
+      databaseId,
+      COLLECTIONS.GROUPS,
+      invitation.groupId
+    );
+  } catch (err) {
+    console.error("Error loading group:", err);
+  }
+
+  // Cargar datos del rol
+  let role = null;
+  if (invitation.invitedRoleId) {
+    try {
+      role = await databases.getDocument(
+        databaseId,
+        COLLECTIONS.ROLES,
+        invitation.invitedRoleId
+      );
+    } catch (err) {
+      console.error("Error loading role:", err);
+    }
+  }
+
+  // Cargar datos del invitador
+  let inviter = null;
+  if (invitation.invitedByProfileId) {
+    try {
+      inviter = await databases.getDocument(
+        databaseId,
+        COLLECTIONS.USERS_PROFILE,
+        invitation.invitedByProfileId
+      );
+    } catch (err) {
+      console.error("Error loading inviter:", err);
+    }
+  }
+
+  // Enriquecer invitación
+  return {
+    ...invitation,
+    groupName: group?.name || null,
+    roleName: role?.name || null,
+    inviterName: inviter
+      ? `${inviter.firstName} ${inviter.lastName}`.trim()
+      : null,
+  };
 }
 
 /**

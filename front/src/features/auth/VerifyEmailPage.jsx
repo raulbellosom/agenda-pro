@@ -76,6 +76,17 @@ export function VerifyEmailPage() {
       if (result.ok) {
         setStatus("success");
         setMessage("¡Email verificado exitosamente! Ya puedes iniciar sesión.");
+
+        // Redirigir automáticamente a login después de 3 segundos
+        // con el token de invitación si existe
+        setTimeout(() => {
+          const pendingInvite = localStorage.getItem("pendingInviteToken");
+          if (pendingInvite) {
+            navigate(`/login?invite=${pendingInvite}`);
+          } else {
+            navigate("/login");
+          }
+        }, 3000);
       } else if (result.expired) {
         setStatus("expired");
         setMessage("El link de verificación ha expirado. Solicita uno nuevo.");

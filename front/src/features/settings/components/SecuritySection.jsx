@@ -226,7 +226,7 @@ export function SecuritySection() {
               autoFocus
             />
 
-            <div className="h-px bg-gradient-to-r from-transparent via-[rgb(var(--border-base))] to-transparent" />
+            <div className="h-px bg-linear-to-r from-transparent via-[rgb(var(--border-base))] to-transparent" />
 
             <div className="space-y-4">
               <PasswordInput

@@ -26,6 +26,12 @@ Aquí se encuentran todas las Appwrite Functions (Node.js) del proyecto:
 - **cron-expire-invitations** - Expira invitaciones vencidas
 - **cron-generate-reminders** - Genera recordatorios de eventos
 
+## Funciones de Notificaciones
+
+- **send-push-notification** - Envía notificaciones push vía Firebase cuando se crea una notificación (trigger automático)
+
+📖 Ver [send-push-notification/README.md](./send-push-notification/README.md) para configuración de Firebase
+
 ## Migración
 
 - **migration-email-verified.js** - Script para migrar usuarios existentes

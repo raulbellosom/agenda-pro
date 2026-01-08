@@ -463,6 +463,7 @@
 | readAt     | Datetime     |       ❌ |         |                                  |
 | createdAt  | Datetime     |       ✅ |         | set API/Function                 |
 | enabled    | Boolean      |       ❌ | true    |                                  |
+| accountId  | String(36)   |       ✅ |         | account del destinatario         |
 
 ## M.2 Indexes (sin cambios)
 

@@ -6,6 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModeAnimation } from "react-theme-switch-animation";
 import {
@@ -16,6 +17,8 @@ import {
   ChevronDown,
   Menu,
   X,
+  Volume2,
+  VolumeX,
   CheckSquare,
   FileText,
   FolderKanban,
@@ -59,17 +62,24 @@ import {
   BookOpen,
   Gamepad2,
   Loader2,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 import { useTheme } from "../../shared/theme/useTheme";
 import { useDeleteCalendar } from "../../lib/hooks/useCalendars";
+import { useNotifications } from "../../lib/hooks/useNotifications";
+import { useUserInvitations } from "../../lib/hooks/useInvitations";
 import { getAvatarUrl } from "../../lib/services/profileService";
 import { getGroupLogoUrl } from "../../lib/hooks/useGroups";
+import { notificationService } from "../../lib/services/notificationService";
 import { CreateCalendarModal } from "../calendar/CreateCalendarModal";
 import { GroupModal } from "../groups/GroupModal";
+import { NotificationDetailsModal } from "../notifications/NotificationDetailsModal";
 import { ImageViewerModal } from "../../shared/ui/ImageViewerModal";
 import { env } from "../../shared/appwrite/env";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 // Módulos de navegación principal
 const MODULES = [
@@ -257,6 +267,55 @@ export function AppShell() {
   const deleteCalendar = useDeleteCalendar();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Notificaciones con Realtime
+  const {
+    data: notifications = [],
+    unreadCount: serverUnreadCount,
+    isLoading: notificationsLoading,
+    soundEnabled,
+    toggleSound,
+  } = useNotifications(null, profile?.$id);
+
+  // Invitaciones pendientes
+  const { data: invitations } = useUserInvitations(profile?.email);
+
+  // Combinar notificaciones e invitaciones (evitando duplicados)
+  const { recentNotifications, unreadCount } = useMemo(() => {
+    // IDs de invitaciones que ya tienen una notificación real
+    const notifiedInvitationIds = new Set(
+      notifications
+        .filter((n) => n.entityType === "group_invitations")
+        .map((n) => n.entityId)
+    );
+
+    const inviteNotifs = (invitations || [])
+      .filter(
+        (inv) => inv.status === "PENDING" && !notifiedInvitationIds.has(inv.$id)
+      )
+      .map((inv) => ({
+        $id: `inv-${inv.$id}`, // ID único para evitar colisiones
+        kind: "INVITE",
+        title: "Invitación a espacio",
+        body: `Te han invitado a unirte a ${inv.group?.name}`,
+        createdAt: inv.$createdAt,
+        readAt: null,
+        isInvitation: true,
+        // Datos necesarios para la navegación
+        entityType: "group_invitations",
+        entityId: inv.$id,
+      }));
+
+    const combined = [...notifications, ...inviteNotifs].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    return {
+      recentNotifications: combined.slice(0, 5),
+      unreadCount: (serverUnreadCount || 0) + inviteNotifs.length,
+    };
+  }, [notifications, invitations, serverUnreadCount]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -270,6 +329,7 @@ export function AppShell() {
   const [showCreateCalendar, setShowCreateCalendar] = useState(false);
   const [calendarToEdit, setCalendarToEdit] = useState(null);
   const [showAvatarViewer, setShowAvatarViewer] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -611,7 +671,7 @@ export function AppShell() {
                         setShowGroupMenu(false);
                         navigate("/groups");
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                     >
                       <Settings className="w-4 h-4" />
                       <span>Gestionar espacios</span>
@@ -726,7 +786,9 @@ export function AppShell() {
               >
                 <Bell className="w-5 h-5" />
                 {/* Badge para notificaciones no leídas */}
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[rgb(var(--error))] rounded-full border-2 border-[rgb(var(--bg-surface))]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[rgb(var(--error))] rounded-full border-2 border-[rgb(var(--bg-surface))]" />
+                )}
               </button>
 
               {/* Notifications Dropdown */}
@@ -743,60 +805,72 @@ export function AppShell() {
                       <h3 className="font-semibold text-[rgb(var(--text-primary))]">
                         Notificaciones
                       </h3>
-                      <button className="text-xs text-[rgb(var(--brand-primary))] hover:underline">
-                        Marcar todas como leídas
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSound();
+                          }}
+                          className="p-1 rounded-md text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                          title={
+                            soundEnabled
+                              ? "Silenciar notificaciones"
+                              : "Activar sonido"
+                          }
+                        >
+                          {soundEnabled ? (
+                            <Volume2 className="w-4 h-4" />
+                          ) : (
+                            <VolumeX className="w-4 h-4" />
+                          )}
+                        </button>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAllAsRead(
+                                activeGroup?.$id,
+                                profile?.$id
+                              );
+                            }}
+                            className="text-xs text-[rgb(var(--brand-primary))] hover:underline"
+                          >
+                            Marcar leídas
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-72 overflow-y-auto">
-                      {/* Ejemplo de notificaciones - después se conectará a datos reales */}
                       <div className="p-2 space-y-1">
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer">
-                          <div className="w-9 h-9 rounded-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
-                            <CalendarCheck className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
+                        {notificationsLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-[rgb(var(--text-muted))]" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-primary))]">
-                              Nuevo evento:{" "}
-                              <span className="font-medium">
-                                Reunión de equipo
-                              </span>
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Hace 5 minutos
+                        ) : recentNotifications.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Bell className="w-8 h-8 mx-auto text-[rgb(var(--text-muted))] mb-2 opacity-50" />
+                            <p className="text-sm text-[rgb(var(--text-muted))]">
+                              No hay notificaciones
                             </p>
                           </div>
-                          <div className="w-2 h-2 rounded-full bg-[rgb(var(--brand-primary))] mt-2 shrink-0" />
-                        </div>
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer">
-                          <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                            <UserPlus className="w-4 h-4 text-green-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-primary))]">
-                              <span className="font-medium">Juan Pérez</span>{" "}
-                              aceptó tu invitación
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Hace 1 hora
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer opacity-60">
-                          <div className="w-9 h-9 rounded-full bg-[rgb(var(--bg-muted))] flex items-center justify-center shrink-0">
-                            <Clock className="w-4 h-4 text-[rgb(var(--text-muted))]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-secondary))]">
-                              Recordatorio:{" "}
-                              <span className="font-medium">
-                                Cita con el dentista
-                              </span>
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Ayer
-                            </p>
-                          </div>
-                        </div>
+                        ) : (
+                          recentNotifications.map((notification) => (
+                            <NotificationItem
+                              key={notification.$id}
+                              notification={notification}
+                              onClick={() => {
+                                handleNotificationClick(
+                                  notification,
+                                  navigate,
+                                  setSelectedNotification,
+                                  queryClient,
+                                  profile?.$id
+                                );
+                                setShowNotifications(false);
+                              }}
+                            />
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="px-4 py-3 border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-muted))]">
@@ -917,7 +991,9 @@ export function AppShell() {
                 className="p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] text-[rgb(var(--text-muted))] relative"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[rgb(var(--error))] rounded-full border-2 border-[rgb(var(--bg-surface))]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[rgb(var(--error))] rounded-full border-2 border-[rgb(var(--bg-surface))]" />
+                )}
               </button>
 
               {/* Notifications Dropdown - Desktop */}
@@ -934,59 +1010,67 @@ export function AppShell() {
                       <h3 className="font-semibold text-[rgb(var(--text-primary))]">
                         Notificaciones
                       </h3>
-                      <button className="text-xs text-[rgb(var(--brand-primary))] hover:underline">
-                        Marcar todas como leídas
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSound();
+                          }}
+                          className="p-1 rounded-md text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                          title={
+                            soundEnabled
+                              ? "Silenciar notificaciones"
+                              : "Activar sonido"
+                          }
+                        >
+                          {soundEnabled ? (
+                            <Volume2 className="w-4 h-4" />
+                          ) : (
+                            <VolumeX className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleMarkAllAsRead(activeGroup?.$id, profile?.$id)
+                          }
+                          disabled={unreadCount === 0}
+                          className="text-xs text-[rgb(var(--brand-primary))] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Marcar leídas
+                        </button>
+                      </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       <div className="p-2 space-y-1">
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer">
-                          <div className="w-10 h-10 rounded-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
-                            <CalendarCheck className="w-5 h-5 text-[rgb(var(--brand-primary))]" />
+                        {notificationsLoading ? (
+                          <div className="flex items-center justify-center py-12">
+                            <Loader2 className="w-6 h-6 animate-spin text-[rgb(var(--text-muted))]" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-primary))]">
-                              Nuevo evento:{" "}
-                              <span className="font-medium">
-                                Reunión de equipo
-                              </span>
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Hace 5 minutos
+                        ) : recentNotifications.length === 0 ? (
+                          <div className="text-center py-12">
+                            <Bell className="w-10 h-10 mx-auto text-[rgb(var(--text-muted))] mb-2 opacity-50" />
+                            <p className="text-sm text-[rgb(var(--text-muted))]">
+                              No hay notificaciones
                             </p>
                           </div>
-                          <div className="w-2 h-2 rounded-full bg-[rgb(var(--brand-primary))] mt-2 shrink-0" />
-                        </div>
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer">
-                          <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                            <UserPlus className="w-5 h-5 text-green-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-primary))]">
-                              <span className="font-medium">Juan Pérez</span>{" "}
-                              aceptó tu invitación
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Hace 1 hora
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer opacity-60">
-                          <div className="w-10 h-10 rounded-full bg-[rgb(var(--bg-muted))] flex items-center justify-center shrink-0">
-                            <Clock className="w-5 h-5 text-[rgb(var(--text-muted))]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-[rgb(var(--text-secondary))]">
-                              Recordatorio:{" "}
-                              <span className="font-medium">
-                                Cita con el dentista
-                              </span>
-                            </p>
-                            <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
-                              Ayer
-                            </p>
-                          </div>
-                        </div>
+                        ) : (
+                          recentNotifications.map((notification) => (
+                            <NotificationItem
+                              key={notification.$id}
+                              notification={notification}
+                              onClick={() => {
+                                handleNotificationClick(
+                                  notification,
+                                  navigate,
+                                  setSelectedNotification,
+                                  queryClient,
+                                  profile?.$id
+                                );
+                                setShowNotifications(false);
+                              }}
+                            />
+                          ))
+                        )}
                       </div>
                     </div>
                     <div className="px-4 py-3 border-t border-[rgb(var(--border-base))] bg-[rgb(var(--bg-muted))]">
@@ -1089,7 +1173,7 @@ export function AppShell() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white text-xs font-semibold">
+                    <div className="w-full h-full bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white text-xs font-semibold">
                       {initials}
                     </div>
                   )}
@@ -1134,7 +1218,7 @@ export function AppShell() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white font-semibold">
+                            <div className="w-full h-full bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white font-semibold">
                               {initials}
                             </div>
                           )}
@@ -1165,7 +1249,7 @@ export function AppShell() {
                           navigate("/groups");
                           setShowProfileMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                       >
                         <Building2 className="w-4 h-4" />
                         <span>Mis espacios</span>
@@ -1175,7 +1259,7 @@ export function AppShell() {
                           navigate("/settings");
                           setShowProfileMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                       >
                         <Settings className="w-4 h-4" />
                         <span>Configuración</span>
@@ -1185,12 +1269,28 @@ export function AppShell() {
                           navigate("/notifications");
                           setShowProfileMenu(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                       >
                         <Bell className="w-4 h-4" />
                         <span>Centro de notificaciones</span>
                       </button>
                     </div>
+
+                    {/* Admin - solo para platform admins */}
+                    {(profile?.isPlatformAdmin || profile?.adminplatform) && (
+                      <div className="border-t border-[rgb(var(--border-base))] p-1">
+                        <button
+                          onClick={() => {
+                            navigate("/admin");
+                            setShowProfileMenu(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                        >
+                          <Shield className="w-4 h-4" />
+                          <span>Panel de administración</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Logout */}
                     <div className="border-t border-[rgb(var(--border-base))] p-1">
@@ -1261,7 +1361,7 @@ export function AppShell() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white text-[8px] font-semibold">
+                  <div className="w-full h-full bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white text-[8px] font-semibold">
                     {initials}
                   </div>
                 )}
@@ -1327,7 +1427,7 @@ export function AppShell() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white font-semibold text-sm">
+                          <div className="w-full h-full bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/70 flex items-center justify-center text-white font-semibold text-sm">
                             {initials}
                           </div>
                         )}
@@ -1358,7 +1458,7 @@ export function AppShell() {
                         setShowMobileProfileMenu(false);
                         navigate("/groups");
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                     >
                       <Building2 className="w-4 h-4" />
                       <span>Mis espacios</span>
@@ -1370,7 +1470,7 @@ export function AppShell() {
                         setShowMobileProfileMenu(false);
                         navigate("/settings");
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                     >
                       <Settings className="w-4 h-4" />
                       <span>Configuración</span>
@@ -1382,12 +1482,28 @@ export function AppShell() {
                         setShowMobileProfileMenu(false);
                         navigate("/notifications");
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                     >
                       <Bell className="w-4 h-4" />
                       <span>Centro de notificaciones</span>
                     </button>
                   </div>
+
+                  {/* Admin - solo para platform admins */}
+                  {(profile?.isPlatformAdmin || profile?.adminplatform) && (
+                    <div className="border-t border-[rgb(var(--border-base))] p-1">
+                      <button
+                        onClick={() => {
+                          setShowMobileProfileMenu(false);
+                          navigate("/admin");
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Panel de administración</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Logout */}
                   <div className="border-t border-[rgb(var(--border-base))] p-1">
@@ -1521,7 +1637,7 @@ export function AppShell() {
                                     : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
                                 }`}
                               >
-                                <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0">
+                                <div className="w-5 h-5 rounded overflow-hidden shrink-0">
                                   {logoUrl ? (
                                     <img
                                       src={logoUrl}
@@ -1563,7 +1679,7 @@ export function AppShell() {
                             setMobileMenuOpen(false);
                             navigate("/groups");
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                         >
                           <Settings className="w-4 h-4" />
                           <span>Gestionar espacios</span>
@@ -1711,7 +1827,7 @@ export function AppShell() {
                                         setCalendarToEdit(calendar);
                                         setShowCreateCalendar(true);
                                       }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                                     >
                                       <Pencil className="w-3.5 h-3.5" />
                                       <span>Editar</span>
@@ -1721,7 +1837,7 @@ export function AppShell() {
                                         setMobileCalendarMenuId(null);
                                         setSharingCalendar(calendar);
                                       }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
                                     >
                                       <Share2 className="w-3.5 h-3.5" />
                                       <span>Compartir</span>
@@ -1851,6 +1967,13 @@ export function AppShell() {
         />
       )}
 
+      {/* Notification Details */}
+      <NotificationDetailsModal
+        isOpen={!!selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        notification={selectedNotification}
+      />
+
       {/* Delete Calendar Confirmation */}
       <AnimatePresence>
         {deletingCalendar && (
@@ -1930,6 +2053,169 @@ export function AppShell() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ============================================================================
+// Helper Functions para Notificaciones
+// ============================================================================
+
+/**
+ * Manejar click en notificación
+ */
+async function handleNotificationClick(
+  notification,
+  navigate,
+  onOpenDetails = null,
+  queryClient = null,
+  profileId = null
+) {
+  // Las notificaciones virtuales de invitación no necesitan marcarse como leídas
+  // porque no existen en la base de datos. Solo navegamos.
+  if (notification.isInvitation) {
+    navigate("/groups");
+    return;
+  }
+
+  // Marcar como leída PRIMERO y esperar a que se complete
+  // antes de navegar (para que se actualice el contador)
+  if (!notification.readAt) {
+    try {
+      await notificationService.markAsRead(notification.$id);
+
+      // Invalidar cache manualmente para actualización inmediata
+      if (queryClient && profileId) {
+        queryClient.invalidateQueries(["notifications", null, profileId]);
+        queryClient.invalidateQueries([
+          "notifications",
+          notification.groupId,
+          profileId,
+        ]);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  }
+
+  // Si es una notificación de sistema (ej: invitación rechazada/aceptada), mostrar modal
+  if (notification.kind === "SYSTEM" && onOpenDetails) {
+    onOpenDetails(notification);
+    return;
+  }
+
+  // Navegar a la entidad si existe
+  if (notification.entityType && notification.entityId) {
+    // Si es una invitación, extraer el token del metadata y navegar directamente
+    if (
+      notification.entityType === "group_invitations" &&
+      notification.metadata
+    ) {
+      try {
+        const metadata =
+          typeof notification.metadata === "string"
+            ? JSON.parse(notification.metadata)
+            : notification.metadata;
+
+        if (metadata.token) {
+          navigate(`/invite/${metadata.token}`);
+          return;
+        }
+      } catch (err) {
+        console.error("Error parsing notification metadata:", err);
+      }
+    }
+
+    const entityTypeToPath = {
+      events: "/calendar",
+      group_invitations: "/groups",
+      calendars: "/calendar",
+      groups: "/groups",
+    };
+
+    const path = entityTypeToPath[notification.entityType];
+    if (path) {
+      navigate(path);
+      return;
+    }
+  }
+
+  // Si no hay acción específica, abrir detalles
+  if (onOpenDetails) {
+    onOpenDetails(notification);
+  }
+}
+
+/**
+ * Marcar todas las notificaciones como leídas
+ */
+async function handleMarkAllAsRead(groupId, profileId) {
+  try {
+    await notificationService.markAllAsRead(groupId, profileId);
+  } catch (error) {
+    console.error("Error marking all as read:", error);
+  }
+}
+
+// ============================================================================
+// Componente NotificationItem
+// ============================================================================
+
+function NotificationItem({ notification, onClick }) {
+  const isUnread = !notification.readAt;
+
+  // Mapeo de iconos por kind
+  const iconMap = {
+    EVENT_REMINDER: CalendarCheck,
+    INVITE: UserPlus,
+    SYSTEM: Bell,
+  };
+
+  const Icon = iconMap[notification.kind] || Bell;
+
+  // Colores por tipo
+  const colorMap = {
+    EVENT_REMINDER: "rgb(var(--brand-primary))",
+    INVITE: "rgb(34, 197, 94)", // green-500
+    SYSTEM: "rgb(var(--text-muted))",
+  };
+
+  const color = colorMap[notification.kind] || "rgb(var(--text-muted))";
+
+  return (
+    <div
+      onClick={onClick}
+      className={`
+        flex gap-3 p-3 rounded-lg hover:bg-[rgb(var(--bg-hover))] cursor-pointer
+        transition-all duration-200
+        ${isUnread ? "bg-[rgb(var(--brand-primary))]/5" : "opacity-75"}
+      `}
+    >
+      <div
+        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+        style={{ backgroundColor: `${color}15` }}
+      >
+        <Icon className="w-4 h-4" style={{ color }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-[rgb(var(--text-primary))] line-clamp-1">
+          {notification.title}
+        </p>
+        {notification.body && (
+          <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5 line-clamp-1">
+            {notification.body}
+          </p>
+        )}
+        <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
+          {formatDistanceToNow(new Date(notification.createdAt), {
+            addSuffix: true,
+            locale: es,
+          })}
+        </p>
+      </div>
+      {isUnread && (
+        <div className="w-2 h-2 rounded-full bg-[rgb(var(--brand-primary))] mt-2 shrink-0" />
+      )}
     </div>
   );
 }

@@ -204,7 +204,7 @@ export function GroupSection() {
               className={clsx(
                 "w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden",
                 "border-2 border-[rgb(var(--border-base))]",
-                "bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]"
+                "bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-dark))]"
               )}
             >
               {logoUrl ? (
@@ -361,18 +361,15 @@ export function GroupSection() {
                 <Button
                   onClick={handleSave}
                   disabled={isLoading || !form.name.trim()}
+                  leftIcon={
+                    updateGroup.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )
+                  }
                 >
-                  {updateGroup.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Guardando...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4 mr-2" />
-                      Guardar
-                    </>
-                  )}
+                  {updateGroup.isPending ? "Guardando..." : "Guardar"}
                 </Button>
               </div>
             </motion.div>

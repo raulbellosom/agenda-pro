@@ -298,6 +298,9 @@ export default async ({ req, res, log, error }) => {
     if (inviteeExists) {
       // User exists - create in-app notification
       try {
+        // Obtener el accountId del usuario invitado
+        const invitedUserProfile = profileByEmail.documents[0];
+
         await databases.createDocument(
           databaseId,
           notificationsCollectionId,
@@ -305,6 +308,7 @@ export default async ({ req, res, log, error }) => {
           {
             groupId,
             profileId: invitedProfileId,
+            accountId: invitedUserProfile.accountId, // Agregar accountId para permisos
             kind: "INVITE",
             title: `Invitación a ${group.name}`,
             body:

@@ -4,7 +4,7 @@ import { X, AlertCircle, CheckCircle, Info } from "lucide-react";
 
 export function ToastViewport({ toasts, onDismiss }) {
   return (
-    <div className="fixed top-4 left-0 right-0 z-9999 flex items-start justify-center px-4 pointer-events-none">
+    <div className="fixed top-4 left-0 right-0 z-[9999] flex items-start justify-center px-4 pointer-events-none">
       <div className="w-full max-w-md space-y-3">
         <AnimatePresence>
           {toasts.map((t) => (

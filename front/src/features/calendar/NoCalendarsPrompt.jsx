@@ -58,7 +58,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
             />
 
             {/* Inner container */}
-            <div className="absolute inset-3 sm:inset-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 shadow-xl shadow-[rgb(var(--brand-primary))]/20 flex items-center justify-center">
+            <div className="absolute inset-3 sm:inset-4 rounded-xl sm:rounded-2xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 shadow-xl shadow-[rgb(var(--brand-primary))]/20 flex items-center justify-center">
               <CalendarPlus className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </div>
 
@@ -137,7 +137,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={onCreateCalendar}
-            className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
+            className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Crear mi primer calendario
@@ -154,7 +154,7 @@ export function NoCalendarsPrompt({ onCreateCalendar }) {
               animate={{ x: "200%" }}
               transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
             >
-              <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
+              <div className="w-1/3 h-full bg-linear-to-r from-transparent via-white/20 to-transparent skew-x-12" />
             </motion.div>
           </motion.button>
         </motion.div>

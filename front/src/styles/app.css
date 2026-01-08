@@ -26,6 +26,7 @@
 
   /* Borders */
   --border-base: 229 231 235;
+  --border-subtle: 229 231 235;
   --border-muted: 243 244 246;
   --border-strong: 209 213 219;
   --border-hover: 209 213 219;
@@ -75,6 +76,7 @@
 
   /* Borders */
   --border-base: 39 39 42;
+  --border-subtle: 39 39 42;
   --border-muted: 24 24 27;
   --border-strong: 63 63 70;
   --border-hover: 63 63 70;
