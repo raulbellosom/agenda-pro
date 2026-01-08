@@ -78,6 +78,7 @@ import { GroupModal } from "../groups/GroupModal";
 import { NotificationDetailsModal } from "../notifications/NotificationDetailsModal";
 import { ImageViewerModal } from "../../shared/ui/ImageViewerModal";
 import { env } from "../../shared/appwrite/env";
+import { ENUMS } from "../../lib/constants";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -440,6 +441,31 @@ export function AppShell() {
     }),
     [visibleCalendars, setVisibleCalendars, toggleCalendarVisibility]
   );
+
+  // Agrupar calendarios por tipo (Personal, Grupo propios, Compartidos)
+  const groupedCalendars = useMemo(() => {
+    if (!calendars || !profile?.$id) {
+      return { personal: [], ownGroup: [], shared: [] };
+    }
+
+    return {
+      personal: calendars.filter(
+        (cal) =>
+          cal.scope === ENUMS.CALENDAR_SCOPE.PERSONAL &&
+          cal.ownerProfileId === profile.$id
+      ),
+      ownGroup: calendars.filter(
+        (cal) =>
+          cal.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
+          cal.ownerProfileId === profile.$id
+      ),
+      shared: calendars.filter(
+        (cal) =>
+          cal.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
+          cal.ownerProfileId !== profile.$id
+      ),
+    };
+  }, [calendars, profile?.$id]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1737,133 +1763,262 @@ export function AppShell() {
                   </div>
                 ) : (
                   <div className="space-y-0.5">
-                    {calendars
-                      .filter((cal) => cal.ownerProfileId === profile?.$id)
-                      .map((calendar) => {
-                        const colorStyle = getCalendarColor(calendar.color);
-                        const CalendarItemIcon = getCalendarIcon(calendar.icon);
-                        const isVisible = visibleCalendars.includes(
-                          calendar.$id
-                        );
+                    {/* Calendarios PERSONALES */}
+                    {groupedCalendars.personal.length > 0 && (
+                      <>
+                        <div className="pt-2 pb-2">
+                          <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
+                            <Heart className="w-3 h-3" />
+                            Personal
+                          </span>
+                        </div>
+                        {groupedCalendars.personal.map((calendar) => {
+                          const colorStyle = getCalendarColor(calendar.color);
+                          const CalendarItemIcon = getCalendarIcon(
+                            calendar.icon
+                          );
+                          const isVisible = visibleCalendars.includes(
+                            calendar.$id
+                          );
 
-                        return (
-                          <div
-                            key={calendar.$id}
-                            className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
-                              isVisible ? "" : "opacity-60"
-                            }`}
-                          >
-                            <button
-                              onClick={() =>
-                                toggleCalendarVisibility(calendar.$id)
-                              }
-                              className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
-                              aria-label={
-                                isVisible
-                                  ? `Ocultar ${calendar.name}`
-                                  : `Mostrar ${calendar.name}`
-                              }
-                            >
-                              {isVisible ? (
-                                <div
-                                  className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
-                                >
-                                  <Check
-                                    className="w-3.5 h-3.5 text-white"
-                                    strokeWidth={3}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
-                              )}
-                            </button>
-
-                            {/* Icono del calendario */}
+                          return (
                             <div
-                              className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center shrink-0`}
-                            >
-                              <CalendarItemIcon
-                                className={`w-3 h-3 ${colorStyle.text}`}
-                              />
-                            </div>
-
-                            <span
-                              className={`flex-1 text-sm truncate ${
-                                isVisible
-                                  ? "text-[rgb(var(--text-primary))]"
-                                  : "text-[rgb(var(--text-muted))]"
+                              key={calendar.$id}
+                              className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                                isVisible ? "" : "opacity-60"
                               }`}
                             >
-                              {calendar.name}
-                            </span>
-                            <div className="relative">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setMobileCalendarMenuId(
-                                    mobileCalendarMenuId === calendar.$id
-                                      ? null
-                                      : calendar.$id
-                                  );
-                                }}
-                                className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))] active:bg-[rgb(var(--bg-active))]"
+                                onClick={() =>
+                                  toggleCalendarVisibility(calendar.$id)
+                                }
+                                className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                                aria-label={
+                                  isVisible
+                                    ? `Ocultar ${calendar.name}`
+                                    : `Mostrar ${calendar.name}`
+                                }
                               >
-                                <MoreHorizontal className="w-4 h-4" />
+                                {isVisible ? (
+                                  <div
+                                    className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                  >
+                                    <Check
+                                      className="w-3.5 h-3.5 text-white"
+                                      strokeWidth={3}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                )}
                               </button>
 
-                              {/* Calendar options menu */}
-                              <AnimatePresence>
-                                {mobileCalendarMenuId === calendar.$id && (
-                                  <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-1 w-36 bg-[rgb(var(--bg-elevated))] rounded-lg border border-[rgb(var(--border-base))] shadow-lg overflow-hidden z-10"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      onClick={() => {
-                                        setMobileCalendarMenuId(null);
-                                        setCalendarToEdit(calendar);
-                                        setShowCreateCalendar(true);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                              <div
+                                className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center shrink-0`}
+                              >
+                                <CalendarItemIcon
+                                  className={`w-3 h-3 ${colorStyle.text}`}
+                                />
+                              </div>
+
+                              <span
+                                className={`flex-1 text-sm truncate ${
+                                  isVisible
+                                    ? "text-[rgb(var(--text-primary))]"
+                                    : "text-[rgb(var(--text-muted))]"
+                                }`}
+                              >
+                                {calendar.name}
+                              </span>
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMobileCalendarMenuId(
+                                      mobileCalendarMenuId === calendar.$id
+                                        ? null
+                                        : calendar.$id
+                                    );
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))] active:bg-[rgb(var(--bg-active))]"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+
+                                <AnimatePresence>
+                                  {mobileCalendarMenuId === calendar.$id && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
+                                      className="absolute right-0 top-full mt-1 w-36 bg-[rgb(var(--bg-elevated))] rounded-lg border border-[rgb(var(--border-base))] shadow-lg overflow-hidden z-10"
+                                      onClick={(e) => e.stopPropagation()}
                                     >
-                                      <Pencil className="w-3.5 h-3.5" />
-                                      <span>Editar</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setMobileCalendarMenuId(null);
-                                        setSharingCalendar(calendar);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
-                                    >
-                                      <Share2 className="w-3.5 h-3.5" />
-                                      <span>Compartir</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setMobileCalendarMenuId(null);
-                                        setDeletingCalendar(calendar);
-                                      }}
-                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      <span>Eliminar</span>
-                                    </button>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setCalendarToEdit(calendar);
+                                          setShowCreateCalendar(true);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>Editar</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setDeletingCalendar(calendar);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Eliminar</span>
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* Calendarios de GRUPO propios */}
+                    {groupedCalendars.ownGroup.length > 0 && (
+                      <>
+                        <div className="pt-4 pb-2">
+                          <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
+                            <Users className="w-3 h-3" />
+                            {activeGroup?.name || "Grupo"}
+                          </span>
+                        </div>
+                        {groupedCalendars.ownGroup.map((calendar) => {
+                          const colorStyle = getCalendarColor(calendar.color);
+                          const CalendarItemIcon = getCalendarIcon(
+                            calendar.icon
+                          );
+                          const isVisible = visibleCalendars.includes(
+                            calendar.$id
+                          );
+
+                          return (
+                            <div
+                              key={calendar.$id}
+                              className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                                isVisible ? "" : "opacity-60"
+                              }`}
+                            >
+                              <button
+                                onClick={() =>
+                                  toggleCalendarVisibility(calendar.$id)
+                                }
+                                className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                                aria-label={
+                                  isVisible
+                                    ? `Ocultar ${calendar.name}`
+                                    : `Mostrar ${calendar.name}`
+                                }
+                              >
+                                {isVisible ? (
+                                  <div
+                                    className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                  >
+                                    <Check
+                                      className="w-3.5 h-3.5 text-white"
+                                      strokeWidth={3}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                )}
+                              </button>
+
+                              <div
+                                className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center shrink-0`}
+                              >
+                                <CalendarItemIcon
+                                  className={`w-3 h-3 ${colorStyle.text}`}
+                                />
+                              </div>
+
+                              <span
+                                className={`flex-1 text-sm truncate ${
+                                  isVisible
+                                    ? "text-[rgb(var(--text-primary))]"
+                                    : "text-[rgb(var(--text-muted))]"
+                                }`}
+                              >
+                                {calendar.name}
+                              </span>
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMobileCalendarMenuId(
+                                      mobileCalendarMenuId === calendar.$id
+                                        ? null
+                                        : calendar.$id
+                                    );
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))] active:bg-[rgb(var(--bg-active))]"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+
+                                <AnimatePresence>
+                                  {mobileCalendarMenuId === calendar.$id && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
+                                      className="absolute right-0 top-full mt-1 w-36 bg-[rgb(var(--bg-elevated))] rounded-lg border border-[rgb(var(--border-base))] shadow-lg overflow-hidden z-10"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setCalendarToEdit(calendar);
+                                          setShowCreateCalendar(true);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>Editar</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setSharingCalendar(calendar);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                                      >
+                                        <Share2 className="w-3.5 h-3.5" />
+                                        <span>Compartir</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setDeletingCalendar(calendar);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Eliminar</span>
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
 
                     {/* Calendarios compartidos */}
-                    {calendars.filter(
-                      (cal) => cal.ownerProfileId !== profile?.$id
-                    ).length > 0 && (
+                    {groupedCalendars.shared.length > 0 && (
                       <>
                         <div className="pt-4 pb-2">
                           <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider">

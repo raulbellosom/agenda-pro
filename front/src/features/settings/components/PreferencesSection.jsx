@@ -28,11 +28,8 @@ import { SettingsAlert, SettingsSkeleton } from "./SettingsWidgets";
 import { useIsPWA, usePWAInstall } from "../../../components/PWAInstallPrompt";
 
 export function PreferencesSection() {
-  const { activeGroup, profile } = useWorkspace();
-  const { data: settings, isLoading } = useUserSettings(
-    activeGroup?.$id,
-    profile?.$id
-  );
+  const { profile } = useWorkspace();
+  const { data: settings, isLoading } = useUserSettings(profile?.$id);
   const updateSettings = useUpdateUserSettings();
   const isPWA = useIsPWA();
   const { isInstallable, install } = usePWAInstall();
@@ -83,11 +80,10 @@ export function PreferencesSection() {
   };
 
   const handleSave = async () => {
-    if (!activeGroup || !profile) return;
+    if (!profile) return;
 
     try {
       await updateSettings.mutateAsync({
-        groupId: activeGroup.$id,
         profileId: profile.$id,
         data: localSettings,
       });

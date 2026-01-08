@@ -956,11 +956,8 @@ export function EventModal({
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
 
-  // Obtener la zona horaria del usuario desde sus configuraciones
-  const { data: userSettings } = useUserSettings(
-    activeGroup?.$id,
-    profile?.$id
-  );
+  // Obtener la zona horaria del usuario desde sus configuraciones (ahora globales)
+  const { data: userSettings } = useUserSettings(profile?.$id);
   const userTimezone = userSettings?.timezone || DEFAULTS.TIMEZONE;
 
   const [step, setStep] = useState(1);
@@ -1168,7 +1165,6 @@ export function EventModal({
       }
 
       const eventData = {
-        groupId: activeGroup.$id,
         calendarId: formData.calendarId,
         ownerProfileId: profile.$id,
         title: formData.title.trim(),
@@ -1180,6 +1176,17 @@ export function EventModal({
         status: ENUMS.EVENT_STATUS.CONFIRMED,
         // visibility: ENUMS.EVENT_VISIBILITY.INHERIT, // TODO: habilitar cuando exista en Appwrite
       };
+
+      // Solo agregar groupId si el calendario es de tipo GROUP
+      const selectedCalendar = calendars.find(
+        (cal) => cal.$id === formData.calendarId
+      );
+      if (
+        selectedCalendar?.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
+        activeGroup?.$id
+      ) {
+        eventData.groupId = activeGroup.$id;
+      }
 
       if (isEditing && event) {
         await updateEvent.mutateAsync({

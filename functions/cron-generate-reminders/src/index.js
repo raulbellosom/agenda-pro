@@ -232,7 +232,8 @@ export default async ({ req, res, log, error }) => {
                   notificationsCollectionId,
                   ID.unique(),
                   {
-                    groupId: event.groupId,
+                    // groupId is optional - only set if event has groupId
+                    ...(event.groupId && { groupId: event.groupId }),
                     profileId,
                     accountId, // Agregar accountId para permisos
                     kind: "EVENT_REMINDER",

@@ -12,6 +12,8 @@ import {
   Globe,
   Lock,
   Loader2,
+  User,
+  Users,
   // Icons for calendar selection
   CalendarDays,
   CalendarCheck,
@@ -100,6 +102,21 @@ const ICONS_CONFIG = [
   { id: "gamepad-2", icon: Gamepad2, label: "Juegos" },
 ];
 
+const SCOPE_OPTIONS = [
+  {
+    id: ENUMS.CALENDAR_SCOPE.PERSONAL,
+    label: "Personal",
+    description: "Solo tú puedes ver este calendario, sin importar el grupo",
+    icon: User,
+  },
+  {
+    id: ENUMS.CALENDAR_SCOPE.GROUP,
+    label: "Grupo",
+    description: "Calendario compartido con tu grupo actual",
+    icon: Users,
+  },
+];
+
 const VISIBILITY_OPTIONS = [
   {
     id: ENUMS.CALENDAR_VISIBILITY.GROUP,
@@ -119,7 +136,8 @@ const VISIBILITY_OPTIONS = [
 const STEPS = [
   { id: 1, title: "Nombre", icon: Calendar },
   { id: 2, title: "Estilo", icon: Palette },
-  { id: 3, title: "Visibilidad", icon: Eye },
+  { id: 3, title: "Tipo", icon: Users },
+  { id: 4, title: "Visibilidad", icon: Eye },
 ];
 
 // Progress indicator component
@@ -357,8 +375,141 @@ function StepColorAndIcon({ color, icon, onColorChange, onIconChange }) {
   );
 }
 
-// Step 3: Visibility
-function StepVisibility({ value, onChange }) {
+// Step 3: Scope
+function StepScope({ value, onChange }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
+      <div className="text-center space-y-2">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.1 }}
+          className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20"
+        >
+          <Users className="w-8 h-8 text-white" />
+        </motion.div>
+        <h3 className="text-xl font-semibold text-[rgb(var(--text-primary))]">
+          ¿Qué tipo de calendario es?
+        </h3>
+        <p className="text-sm text-[rgb(var(--text-muted))]">
+          Elige si es personal o compartido con tu grupo
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {SCOPE_OPTIONS.map((option) => {
+          const Icon = option.icon;
+          const isSelected = value === option.id;
+
+          return (
+            <motion.button
+              key={option.id}
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onChange(option.id)}
+              className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left flex items-start gap-4 ${
+                isSelected
+                  ? "border-[rgb(var(--brand-primary))] bg-[rgb(var(--brand-primary))]/5"
+                  : "border-[rgb(var(--border-base))] hover:border-[rgb(var(--border-hover))] bg-[rgb(var(--bg-surface))]"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                  isSelected
+                    ? "bg-[rgb(var(--brand-primary))] text-white"
+                    : "bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))]"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`font-medium ${
+                      isSelected
+                        ? "text-[rgb(var(--brand-primary))]"
+                        : "text-[rgb(var(--text-primary))]"
+                    }`}
+                  >
+                    {option.label}
+                  </span>
+                  {isSelected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-5 h-5 rounded-full bg-[rgb(var(--brand-primary))] flex items-center justify-center"
+                    >
+                      <Check className="w-3 h-3 text-white" />
+                    </motion.div>
+                  )}
+                </div>
+                <p className="text-sm text-[rgb(var(--text-muted))] mt-0.5">
+                  {option.description}
+                </p>
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+// Step 4: Visibility
+function StepVisibility({ value, onChange, scope }) {
+  // Si es calendario PERSONAL, siempre es PRIVATE
+  if (scope === ENUMS.CALENDAR_SCOPE.PERSONAL) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+      >
+        <div className="text-center space-y-2">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.1 }}
+            className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20"
+          >
+            <Lock className="w-8 h-8 text-white" />
+          </motion.div>
+          <h3 className="text-xl font-semibold text-[rgb(var(--text-primary))]">
+            Calendario privado
+          </h3>
+          <p className="text-sm text-[rgb(var(--text-muted))]">
+            Los calendarios personales son siempre privados
+          </p>
+        </div>
+        <div className="p-4 rounded-xl bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[rgb(var(--brand-primary))] text-white flex items-center justify-center">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-[rgb(var(--text-primary))]">
+                Privado
+              </p>
+              <p className="text-sm text-[rgb(var(--text-muted))]">
+                Solo tú tienes acceso
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Para calendarios GROUP, mostrar opciones
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -465,7 +616,8 @@ export function CreateCalendarModal({
     name: "",
     color: "cyan",
     icon: "calendar",
-    visibility: ENUMS.CALENDAR_VISIBILITY.GROUP,
+    scope: ENUMS.CALENDAR_SCOPE.PERSONAL,
+    visibility: ENUMS.CALENDAR_VISIBILITY.PRIVATE,
   });
 
   // Initialize form with calendar data when editing
@@ -475,6 +627,7 @@ export function CreateCalendarModal({
         name: calendar.name || "",
         color: calendar.color || "cyan",
         icon: calendar.icon || "calendar",
+        scope: calendar.scope || ENUMS.CALENDAR_SCOPE.GROUP,
         visibility: calendar.visibility || ENUMS.CALENDAR_VISIBILITY.GROUP,
       });
     }
@@ -485,7 +638,7 @@ export function CreateCalendarModal({
   }, []);
 
   const handleNext = useCallback(() => {
-    if (step < 3) {
+    if (step < 4) {
       setStep((s) => s + 1);
     }
   }, [step]);
@@ -497,7 +650,7 @@ export function CreateCalendarModal({
   }, [step]);
 
   const handleSubmit = async () => {
-    if (!activeGroup?.$id || !profile?.$id) return;
+    if (!profile?.$id) return;
 
     try {
       if (isEditing && calendar) {
@@ -508,21 +661,29 @@ export function CreateCalendarModal({
             name: formData.name.trim(),
             color: formData.color,
             icon: formData.icon,
+            scope: formData.scope,
             visibility: formData.visibility,
           },
         });
         onSuccess?.(result);
       } else {
         // Create new calendar
-        const result = await createCalendar.mutateAsync({
-          groupId: activeGroup.$id,
+        const payload = {
           ownerProfileId: profile.$id,
           name: formData.name.trim(),
           color: formData.color,
           icon: formData.icon,
+          scope: formData.scope,
           visibility: formData.visibility,
           isDefault: isFirstCalendar,
-        });
+        };
+
+        // Solo agregar groupId si es scope GROUP
+        if (formData.scope === ENUMS.CALENDAR_SCOPE.GROUP && activeGroup?.$id) {
+          payload.groupId = activeGroup.$id;
+        }
+
+        const result = await createCalendar.mutateAsync(payload);
         onSuccess?.(result);
       }
       handleClose();
@@ -543,7 +704,8 @@ export function CreateCalendarModal({
           name: "",
           color: "cyan",
           icon: "calendar",
-          visibility: ENUMS.CALENDAR_VISIBILITY.GROUP,
+          scope: ENUMS.CALENDAR_SCOPE.PERSONAL,
+          visibility: ENUMS.CALENDAR_VISIBILITY.PRIVATE,
         });
       }, 300);
     }
@@ -554,8 +716,10 @@ export function CreateCalendarModal({
       case 1:
         return formData.name.trim().length >= 2;
       case 2:
-        return !!formData.color;
+        return !!formData.color && !!formData.icon;
       case 3:
+        return !!formData.scope;
+      case 4:
         return !!formData.visibility;
       default:
         return false;
@@ -674,9 +838,26 @@ export function CreateCalendarModal({
                       />
                     )}
                     {step === 3 && (
-                      <StepVisibility
+                      <StepScope
                         key="step3"
+                        value={formData.scope}
+                        onChange={(v) => {
+                          updateField("scope", v);
+                          // Si cambia a PERSONAL, forzar visibility a PRIVATE
+                          if (v === ENUMS.CALENDAR_SCOPE.PERSONAL) {
+                            updateField(
+                              "visibility",
+                              ENUMS.CALENDAR_VISIBILITY.PRIVATE
+                            );
+                          }
+                        }}
+                      />
+                    )}
+                    {step === 4 && (
+                      <StepVisibility
+                        key="step4"
                         value={formData.visibility}
+                        scope={formData.scope}
                         onChange={(v) => updateField("visibility", v)}
                       />
                     )}
@@ -698,7 +879,7 @@ export function CreateCalendarModal({
                     Atrás
                   </motion.button>
 
-                  {step < 3 ? (
+                  {step < 4 ? (
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}

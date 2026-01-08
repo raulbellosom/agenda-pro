@@ -6,28 +6,29 @@ import { QUERY_KEYS } from "../constants";
 import * as calendarService from "../services/calendarService";
 
 /**
- * Hook para obtener los calendarios de un grupo
- * Solo devuelve calendarios visibles para el usuario actual:
- * - GROUP: visibles para todos
- * - PRIVATE: solo para el dueño
+ * Hook para obtener los calendarios visibles para el usuario
+ * Incluye:
+ * - Calendarios PERSONALES del usuario (scope=PERSONAL)
+ * - Calendarios GROUP del grupo actual (scope=GROUP, según visibility)
  */
 export function useCalendars(groupId, currentProfileId = null) {
   return useQuery({
     queryKey: [QUERY_KEYS.CALENDARS, groupId, currentProfileId],
     queryFn: () => calendarService.getCalendars(groupId, currentProfileId),
-    enabled: !!groupId,
+    enabled: !!currentProfileId, // Solo requiere profileId (groupId puede ser null)
     staleTime: 2 * 60 * 1000,
   });
 }
 
 /**
  * Hook para obtener el calendario por defecto
+ * Prioriza calendario personal sobre calendario de grupo
  */
 export function useDefaultCalendar(groupId, ownerProfileId) {
   return useQuery({
     queryKey: [QUERY_KEYS.CALENDARS, "default", groupId, ownerProfileId],
     queryFn: () => calendarService.getDefaultCalendar(groupId, ownerProfileId),
-    enabled: !!groupId && !!ownerProfileId,
+    enabled: !!ownerProfileId, // Solo requiere ownerProfileId (groupId puede ser null)
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -51,9 +52,10 @@ export function useCreateCalendar() {
 
   return useMutation({
     mutationFn: (data) => calendarService.createCalendar(data),
-    onSuccess: (_, variables) => {
+    onSuccess: (newCalendar, variables) => {
+      // Invalidar tanto calendarios de grupo como personales
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.CALENDARS, variables.groupId],
+        queryKey: [QUERY_KEYS.CALENDARS],
       });
     },
   });
@@ -73,8 +75,9 @@ export function useUpdateCalendar() {
         [QUERY_KEYS.CALENDARS, "detail", updatedCalendar.$id],
         updatedCalendar
       );
+      // Invalidar todas las queries de calendarios (personales y de grupo)
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.CALENDARS, updatedCalendar.groupId],
+        queryKey: [QUERY_KEYS.CALENDARS],
       });
     },
   });

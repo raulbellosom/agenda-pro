@@ -335,8 +335,9 @@
 
 | Field          | Type        | Required | Default  | Notes                                  |
 | -------------- | ----------- | -------: | -------- | -------------------------------------- |
-| groupId        | String(64)  |       ✅ |          | tenant                                 |
+| groupId        | String(64)  |       ❌ |          | tenant                                 |
 | ownerProfileId | String(64)  |       ✅ |          | creador                                |
+| scope          | Enum        |       ❌ | GROUP    | PERSONAL/GROUP                         |
 | name           | String(120) |       ✅ |          |                                        |
 | color          | String(20)  |       ❌ | violet   | token de color (violet/blue/green/etc) |
 | icon           | String(96)  |       ❌ | calendar | nombre del icono (lucide icon name)    |
@@ -347,9 +348,11 @@
 ## I.2 Indexes
 
 - `idx_calendars_groupId` → `groupId`
+- `idx_calendars_owner_scope` → (`ownerProfileId`, `scope`) **NUEVO**
 - `idx_calendars_group_owner` → (`groupId`, `ownerProfileId`)
 - `idx_calendars_group_visibility` → (`groupId`, `visibility`)
 - `idx_calendars_enabled` → `enabled`
+- `idx_calendars_scope` → `scope` **NUEVO**
 
 ## I.3 Relationships
 
@@ -359,33 +362,35 @@
 
 # J) events
 
-## J.1 Attributes (sin cambios)
+## J.1 Attributes
 
-| Field           | Type         | Required | Default   | Notes                     |
-| --------------- | ------------ | -------: | --------- | ------------------------- |
-| groupId         | String(64)   |       ✅ |           |                           |
-| calendarId      | String(64)   |       ✅ |           | `calendars.$id`           |
-| ownerProfileId  | String(64)   |       ✅ |           |                           |
-| title           | String(200)  |       ✅ |           |                           |
-| description     | String(3000) |       ❌ |           |                           |
-| locationText    | String(300)  |       ❌ |           |                           |
-| startAt         | Datetime     |       ✅ |           |                           |
-| endAt           | Datetime     |       ✅ |           |                           |
-| allDay          | Boolean      |       ❌ | false     |                           |
-| timezone        | String(64)   |       ❌ |           | IANA                      |
-| status          | Enum         |       ❌ | CONFIRMED | DRAFT/CONFIRMED/CANCELLED |
-| visibility      | Enum         |       ❌ | INHERIT   | INHERIT/PRIVATE/GROUP     |
-| recurrenceRule  | String(500)  |       ❌ |           | RRULE (iCal)              |
-| recurrenceUntil | Datetime     |       ❌ |           |                           |
-| enabled         | Boolean      |       ❌ | true      |                           |
-| createdAt       | Datetime     |       ❌ |           | set API/Function          |
-| updatedAt       | Datetime     |       ❌ |           | set API/Function          |
+| Field           | Type         | Required | Default   | Notes                                                |
+| --------------- | ------------ | -------: | --------- | ---------------------------------------------------- |
+| groupId         | String(64)   |       ❌ |           | tenant (NULL para eventos en calendarios personales) |
+| calendarId      | String(64)   |       ✅ |           | `calendars.$id`                                      |
+| ownerProfileId  | String(64)   |       ✅ |           |                                                      |
+| title           | String(200)  |       ✅ |           |                                                      |
+| description     | String(3000) |       ❌ |           |                                                      |
+| locationText    | String(300)  |       ❌ |           |                                                      |
+| startAt         | Datetime     |       ✅ |           |                                                      |
+| endAt           | Datetime     |       ✅ |           |                                                      |
+| allDay          | Boolean      |       ❌ | false     |                                                      |
+| timezone        | String(64)   |       ❌ |           | IANA                                                 |
+| status          | Enum         |       ❌ | CONFIRMED | DRAFT/CONFIRMED/CANCELLED                            |
+| visibility      | Enum         |       ❌ | INHERIT   | INHERIT/PRIVATE/GROUP                                |
+| recurrenceRule  | String(500)  |       ❌ |           | RRULE (iCal)                                         |
+| recurrenceUntil | Datetime     |       ❌ |           |                                                      |
+| enabled         | Boolean      |       ❌ | true      |                                                      |
+| createdAt       | Datetime     |       ❌ |           | set API/Function                                     |
+| updatedAt       | Datetime     |       ❌ |           | set API/Function                                     |
 
-## J.2 Indexes (sin cambios)
+## J.2 Indexes
 
-- `idx_events_group_calendar_start` → (`groupId`, `calendarId`, `startAt`)
-- `idx_events_group_owner_start` → (`groupId`, `ownerProfileId`, `startAt`)
-- `idx_events_group_status` → (`groupId`, `status`)
+- `idx_events_groupId` → `groupId` **MODIFICADO**
+- `idx_events_calendarId` → `calendarId` **NUEVO**
+- `idx_events_calendar_start` → (`calendarId`, `startAt`) **NUEVO**
+- `idx_events_owner_start` → (`ownerProfileId`, `startAt`) **NUEVO**
+- `idx_events_group_calendar_start` → (`groupId`, `calendarId`, `startAt`) (mantener para eventos de grupo)
 - `idx_events_enabled` → `enabled`
 
 ## J.3 Relationships
@@ -396,24 +401,25 @@
 
 # K) event_attendees
 
-## K.1 Attributes (sin cambios)
+## K.1 Attributes
 
-| Field          | Type        | Required | Default      | Notes                                    |
-| -------------- | ----------- | -------: | ------------ | ---------------------------------------- |
-| groupId        | String(64)  |       ✅ |              |                                          |
-| eventId        | String(64)  |       ✅ |              |                                          |
-| profileId      | String(64)  |       ❌ |              | invitado interno                         |
-| email          | Email       |       ❌ |              | invitado externo                         |
-| displayName    | String(120) |       ❌ |              |                                          |
-| role           | Enum        |       ❌ | REQUIRED     | REQUIRED/OPTIONAL                        |
-| responseStatus | Enum        |       ❌ | NEEDS_ACTION | NEEDS_ACTION/ACCEPTED/DECLINED/TENTATIVE |
-| enabled        | Boolean     |       ❌ | true         |                                          |
+| Field          | Type        | Required | Default      | Notes                                               |
+| -------------- | ----------- | -------: | ------------ | --------------------------------------------------- |
+| groupId        | String(64)  |       ❌ |              | tenant (NULL para asistentes de eventos personales) |
+| eventId        | String(64)  |       ✅ |              |                                                     |
+| profileId      | String(64)  |       ❌ |              | invitado interno                                    |
+| email          | Email       |       ❌ |              | invitado externo                                    |
+| displayName    | String(120) |       ❌ |              |                                                     |
+| role           | Enum        |       ❌ | REQUIRED     | REQUIRED/OPTIONAL                                   |
+| responseStatus | Enum        |       ❌ | NEEDS_ACTION | NEEDS_ACTION/ACCEPTED/DECLINED/TENTATIVE            |
+| enabled        | Boolean     |       ❌ | true         |                                                     |
 
-## K.2 Indexes (sin cambios)
+## K.2 Indexes
 
-- `idx_event_attendees_group_event` → (`groupId`, `eventId`)
-- `idx_event_attendees_group_profile` → (`groupId`, `profileId`)
-- `idx_event_attendees_group_email` → (`groupId`, `email`)
+- `idx_event_attendees_groupId` → `groupId` **MODIFICADO**
+- `idx_event_attendees_eventId` → `eventId` **NUEVO**
+- `idx_event_attendees_profileId` → `profileId` **NUEVO**
+- `idx_event_attendees_group_event` → (`groupId`, `eventId`) (mantener para eventos de grupo)
 - `idx_event_attendees_enabled` → `enabled`
 
 ## K.3 Relationships
@@ -424,21 +430,23 @@
 
 # L) event_reminders
 
-## L.1 Attributes (sin cambios)
+## L.1 Attributes
 
-| Field         | Type       | Required | Default | Notes                                       |
-| ------------- | ---------- | -------: | ------- | ------------------------------------------- |
-| groupId       | String(64) |       ✅ |         |                                             |
-| eventId       | String(64) |       ✅ |         |                                             |
-| type          | Enum       |       ✅ |         | MINUTES_BEFORE / AT_TIME                    |
-| minutesBefore | Integer    |       ❌ |         | si aplica                                   |
-| atTime        | Datetime   |       ❌ |         | si aplica                                   |
-| channel       | Enum Array |       ❌ | IN_APP  | IN_APP / PUSH / EMAIL - (multiple opciones) |
-| enabled       | Boolean    |       ❌ | true    |                                             |
+| Field         | Type       | Required | Default | Notes                                                  |
+| ------------- | ---------- | -------: | ------- | ------------------------------------------------------ |
+| groupId       | String(64) |       ❌ |         | tenant (NULL para recordatorios de eventos personales) |
+| eventId       | String(64) |       ✅ |         |                                                        |
+| type          | Enum       |       ✅ |         | MINUTES_BEFORE / AT_TIME                               |
+| minutesBefore | Integer    |       ❌ |         | si aplica                                              |
+| atTime        | Datetime   |       ❌ |         | si aplica                                              |
+| channel       | Enum Array |       ❌ | IN_APP  | IN_APP / PUSH / EMAIL - (multiple opciones)            |
+| enabled       | Boolean    |       ❌ | true    |                                                        |
 
-## L.2 Indexes (sin cambios)
+## L.2 Indexes
 
-- `idx_event_reminders_group_event` → (`groupId`, `eventId`)
+- `idx_event_reminders_groupId` → `groupId` **MODIFICADO**
+- `idx_event_reminders_eventId` → `eventId` **NUEVO**
+- `idx_event_reminders_group_event` → (`groupId`, `eventId`) (mantener para eventos de grupo)
 - `idx_event_reminders_enabled` → `enabled`
 
 ## L.3 Relationships
@@ -449,27 +457,30 @@
 
 # M) notifications
 
-## M.1 Attributes (sin cambios)
+## M.1 Attributes
 
-| Field      | Type          | Required | Default | Notes                            |
-| ---------- | ------------- | -------: | ------- | -------------------------------- |
-| groupId    | String(64)    |       ✅ |         |                                  |
-| profileId  | String(64)    |       ✅ |         | destinatario                     |
-| kind       | Enum          |       ✅ |         | EVENT_REMINDER / INVITE / SYSTEM |
-| title      | String(140)   |       ✅ |         |                                  |
-| body       | String(1000)  |       ❌ |         |                                  |
-| entityType | String(80)    |       ❌ |         | events, groups, etc              |
-| entityId   | String(64)    |       ❌ |         |                                  |
-| readAt     | Datetime      |       ❌ |         |                                  |
-| createdAt  | Datetime      |       ✅ |         | set API/Function                 |
-| enabled    | Boolean       |       ❌ | true    |                                  |
-| accountId  | String(36)    |       ✅ |         | account del destinatario         |
-| metadata   | String(16384) |       ❌ |         | JSON string con datos extra      |
+| Field      | Type          | Required | Default | Notes                                                   |
+| ---------- | ------------- | -------: | ------- | ------------------------------------------------------- |
+| groupId    | String(64)    |       ❌ |         | tenant (NULL para notificaciones de eventos personales) |
+| profileId  | String(64)    |       ✅ |         | destinatario                                            |
+| kind       | Enum          |       ✅ |         | EVENT_REMINDER / INVITE / SYSTEM                        |
+| title      | String(140)   |       ✅ |         |                                                         |
+| body       | String(1000)  |       ❌ |         |                                                         |
+| entityType | String(80)    |       ❌ |         | events, groups, etc                                     |
+| entityId   | String(64)    |       ❌ |         |                                                         |
+| readAt     | Datetime      |       ❌ |         |                                                         |
+| createdAt  | Datetime      |       ✅ |         | set API/Function                                        |
+| enabled    | Boolean       |       ❌ | true    |                                                         |
+| accountId  | String(36)    |       ✅ |         | account del destinatario                                |
+| metadata   | String(16384) |       ❌ |         | JSON string con datos extra                             |
 
-## M.2 Indexes (sin cambios)
+## M.2 Indexes
 
-- `idx_notifi_group_profile_created` → (`groupId`, `profileId`, `createdAt`)
-- `idx_notifi_group_profile_unread` → (`groupId`, `profileId`, `readAt`)
+- `idx_notifi_groupId` → `groupId` **MODIFICADO**
+- `idx_notifi_profileId` → `profileId` **NUEVO**
+- `idx_notifi_profile_created` → (`profileId`, `createdAt`) **NUEVO**
+- `idx_notifi_group_profile_created` → (`groupId`, `profileId`, `createdAt`) (mantener para notificaciones de grupo)
+- `idx_notifi_profile_unread` → (`profileId`, `readAt`) **NUEVO**
 - `idx_notifications_enabled` → `enabled`
 
 ## M.3 Relationships
@@ -482,28 +493,28 @@
 
 ## N.1 Attributes
 
-| Field                     | Type       | Required | Default             | Notes                                     |
-| ------------------------- | ---------- | -------: | ------------------- | ----------------------------------------- |
-| groupId                   | String(64) |       ✅ |                     | tenant                                    |
-| profileId                 | String(64) |       ✅ |                     | usuario                                   |
-| timezone                  | String(64) |       ❌ | America/Mexico_City | IANA tz - preferencia usuario             |
-| dateFormat                | String(30) |       ❌ | DD/MM/YYYY          | preferencia formato fecha                 |
-| timeFormat                | String(30) |       ❌ | 24h                 | 12h / 24h                                 |
-| weekStartsOn              | Integer    |       ❌ | 0                   | 0=Sunday, 1=Monday, etc                   |
-| defaultCalendarId         | String(64) |       ❌ |                     | calendario por defecto para crear eventos |
-| notificationsEnabled      | Boolean    |       ❌ | true                | habilitar notificaciones in-app           |
-| emailNotificationsEnabled | Boolean    |       ❌ | true                | habilitar notificaciones email            |
-| pushNotificationsEnabled  | Boolean    |       ❌ | false               | habilitar notificaciones push             |
-| defaultReminderMinutes    | Integer    |       ❌ | 15                  | recordatorio por defecto (minutos antes)  |
-| soundEnabled              | Boolean    |       ❌ | true                | sonido para notificaciones                |
-| language                  | String(10) |       ❌ | es                  | código idioma (es, en, etc)               |
-| theme                     | Enum       |       ❌ | SYSTEM              | LIGHT / DARK / SYSTEM                     |
-| enabled                   | Boolean    |       ❌ | true                |                                           |
+| Field                     | Type       | Required | Default             | Notes                                            |
+| ------------------------- | ---------- | -------: | ------------------- | ------------------------------------------------ |
+| groupId                   | String(64) |       ❌ |                     | opcional - puede ser NULL para settings globales |
+| profileId                 | String(64) |       ✅ |                     | usuario                                          |
+| timezone                  | String(64) |       ❌ | America/Mexico_City | IANA tz - preferencia usuario                    |
+| dateFormat                | String(30) |       ❌ | DD/MM/YYYY          | preferencia formato fecha                        |
+| timeFormat                | String(30) |       ❌ | 24h                 | 12h / 24h                                        |
+| weekStartsOn              | Integer    |       ❌ | 0                   | 0=Sunday, 1=Monday, etc                          |
+| defaultCalendarId         | String(64) |       ❌ |                     | calendario por defecto para crear eventos        |
+| notificationsEnabled      | Boolean    |       ❌ | true                | habilitar notificaciones in-app                  |
+| emailNotificationsEnabled | Boolean    |       ❌ | true                | habilitar notificaciones email                   |
+| pushNotificationsEnabled  | Boolean    |       ❌ | false               | habilitar notificaciones push                    |
+| defaultReminderMinutes    | Integer    |       ❌ | 15                  | recordatorio por defecto (minutos antes)         |
+| soundEnabled              | Boolean    |       ❌ | true                | sonido para notificaciones                       |
+| language                  | String(10) |       ❌ | es                  | código idioma (es, en, etc)                      |
+| theme                     | Enum       |       ❌ | SYSTEM              | LIGHT / DARK / SYSTEM                            |
+| enabled                   | Boolean    |       ❌ | true                |                                                  |
 
 ## N.2 Indexes
 
-- `uq_user_settings_group_profile` (unique) → (`groupId`, `profileId`)
-- `idx_user_settings_groupId` → `groupId`
+- `uq_user_settings_profile` (unique) → `profileId` **MODIFICADO** (para settings globales)
+- `idx_user_settings_groupId` → `groupId` (opcional, para settings por grupo si se necesita)
 - `idx_user_settings_profileId` → `profileId`
 - `idx_user_settings_enabled` → `enabled`
 
@@ -517,25 +528,26 @@
 
 ## O.1 Attributes
 
-| Field      | Type        | Required | Default | Notes                      |
-| ---------- | ----------- | -------: | ------- | -------------------------- |
-| groupId    | String(64)  |       ✅ |         | tenant                     |
-| profileId  | String(64)  |       ✅ |         | usuario                    |
-| endpoint   | String(512) |       ✅ |         | Push API endpoint          |
-| p256dh     | String(128) |       ✅ |         | clave pública p256dh       |
-| auth       | String(64)  |       ✅ |         | clave auth                 |
-| userAgent  | String(500) |       ❌ |         | navegador/dispositivo      |
-| ipAddress  | IP          |       ❌ |         | IP de registro             |
-| isActive   | Boolean     |       ❌ | true    | si suscripción está activa |
-| lastUsedAt | Datetime    |       ❌ |         | última vez que se usó      |
-| createdAt  | Datetime    |       ✅ |         | set API/Function           |
-| enabled    | Boolean     |       ❌ | true    |                            |
+| Field      | Type        | Required | Default | Notes                                       |
+| ---------- | ----------- | -------: | ------- | ------------------------------------------- |
+| groupId    | String(64)  |       ❌ |         | opcional - NULL para suscripciones globales |
+| profileId  | String(64)  |       ✅ |         | usuario                                     |
+| endpoint   | String(512) |       ✅ |         | Push API endpoint                           |
+| p256dh     | String(128) |       ✅ |         | clave pública p256dh                        |
+| auth       | String(64)  |       ✅ |         | clave auth                                  |
+| userAgent  | String(500) |       ❌ |         | navegador/dispositivo                       |
+| ipAddress  | IP          |       ❌ |         | IP de registro                              |
+| isActive   | Boolean     |       ❌ | true    | si suscripción está activa                  |
+| lastUsedAt | Datetime    |       ❌ |         | última vez que se usó                       |
+| createdAt  | Datetime    |       ✅ |         | set API/Function                            |
+| enabled    | Boolean     |       ❌ | true    |                                             |
 
 ## O.2 Indexes
 
 - `uq_push_subscriptions_endpoint` (unique) → `endpoint`
-- `idx_push_subscriptions_group_profile` → (`groupId`, `profileId`)
-- `idx_push_subscriptions_group_active` → (`groupId`, `isActive`)
+- `idx_push_subscriptions_profileId` → `profileId` **NUEVO** (para suscripciones globales)
+- `idx_push_subs_profile_active` → (`profileId`, `isActive`) **NUEVO**
+- `idx_push_subscriptions_group_profile` → (`groupId`, `profileId`) (opcional, para filtrar por grupo)
 - `idx_push_subscriptions_enabled` → `enabled`
 
 ## O.3 Relationships
@@ -546,29 +558,31 @@
 
 # P) audit_logs
 
-## P.1 Attributes (sin cambios)
+## P.1 Attributes
 
-| Field      | Type         | Required | Default | Notes                                        |
-| ---------- | ------------ | -------: | ------- | -------------------------------------------- |
-| groupId    | String(64)   |       ✅ |         | puede ser null si es global                  |
-| profileId  | String(64)   |       ✅ |         | actor                                        |
-| action     | Enum         |       ✅ |         | CREATE/UPDATE/DELETE/LOGIN/LOGOUT/VIEW/OTHER |
-| entityType | String(80)   |       ✅ |         | events/calendars/roles/...                   |
-| entityId   | String(64)   |       ❌ |         |                                              |
-| entityName | String(200)  |       ❌ |         |                                              |
-| details    | String(2000) |       ❌ |         | JSON string                                  |
-| ipAddress  | IP           |       ❌ |         |                                              |
-| userAgent  | String(500)  |       ❌ |         |                                              |
-| createdAt  | Datetime     |       ✅ |         | set API/Function                             |
-| enabled    | Boolean      |       ❌ | true    |                                              |
+| Field      | Type         | Required | Default | Notes                                              |
+| ---------- | ------------ | -------: | ------- | -------------------------------------------------- |
+| groupId    | String(64)   |       ❌ |         | NULL para acciones globales/personales del usuario |
+| profileId  | String(64)   |       ✅ |         | actor                                              |
+| action     | Enum         |       ✅ |         | CREATE/UPDATE/DELETE/LOGIN/LOGOUT/VIEW/OTHER       |
+| entityType | String(80)   |       ✅ |         | events/calendars/roles/user_settings/profile/...   |
+| entityId   | String(64)   |       ❌ |         |                                                    |
+| entityName | String(200)  |       ❌ |         |                                                    |
+| details    | String(2000) |       ❌ |         | JSON string                                        |
+| ipAddress  | IP           |       ❌ |         |                                                    |
+| userAgent  | String(500)  |       ❌ |         |                                                    |
+| createdAt  | Datetime     |       ✅ |         | set API/Function                                   |
+| enabled    | Boolean      |       ❌ | true    |                                                    |
 
-## P.2 Indexes (sin cambios)
+## P.2 Indexes
 
-- `idx_audit_logs_groupId` → `groupId`
+- `idx_audit_logs_groupId` → `groupId` **MODIFICADO** (ahora opcional)
 - `idx_audit_logs_profileId` → `profileId`
-- `idx_audit_logs_group_action` → (`groupId`, `action`)
-- `idx_audit_logs_group_entityType` → (`groupId`, `entityType`)
-- `idx_audit_logs_group_createdAt` → (`groupId`, `createdAt`)
+- `idx_audit_logs_profile_created` → (`profileId`, `createdAt`) **NUEVO** (para auditoría completa del usuario)
+- `idx_audit_logs_profile_action` → (`profileId`, `action`) **NUEVO** (filtrar acciones del usuario)
+- `idx_audit_logs_group_action` → (`groupId`, `action`) (mantener para acciones de grupo)
+- `idx_audit_logs_group_entityType` → (`groupId`, `entityType`) (mantener para acciones de grupo)
+- `idx_audit_logs_group_createdAt` → (`groupId`, `createdAt`) (mantener para acciones de grupo)
 - `idx_audit_logs_enabled` → `enabled`
 
 ## P.3 Relationships
@@ -623,11 +637,17 @@
 
 ## 4) Consecuencia práctica (joins sin relaciones)
 
-- “Eventos del calendario X” → query `events` con `groupId` + `calendarId`.
-- “Calendarios del usuario” → `calendars` con `groupId` + `ownerProfileId`.
-- “Miembros del grupo” → `group_members` con `groupId`.
-- “Roles del usuario” → `user_roles` con `groupId` + `profileId`, luego cargar `roles` por `roleId`.
-- “Permisos efectivos” → `role_permissions` por `groupId` + `roleId`, luego cargar `permissions` por ids.
+- "Eventos del calendario X" → query `events` con `calendarId` + `startAt` (sin groupId requerido).
+- "Eventos de un calendario personal" → query `events` con `calendarId` donde calendar.scope = PERSONAL.
+- "Eventos de un calendario de grupo" → query `events` con `groupId` + `calendarId`.
+- "Calendarios del usuario" → `calendars` con `ownerProfileId` (personales) o `groupId` + `ownerProfileId` (grupo).
+- "Calendarios personales" → `calendars` con `ownerProfileId` + `scope=PERSONAL`.
+- "Calendarios de grupo" → `calendars` con `groupId` + `scope=GROUP`.
+- "Miembros del grupo" → `group_members` con `groupId`.
+- "Roles del usuario" → `user_roles` con `groupId` + `profileId`, luego cargar `roles` por `roleId`.
+- "Permisos efectivos" → `role_permissions` por `groupId` + `roleId`, luego cargar `permissions` por ids.
+- "Notificaciones de eventos personales" → `notifications` con `profileId` + `groupId=NULL`.
+- "Notificaciones de eventos de grupo" → `notifications` con `groupId` + `profileId`.
 
 ---
 

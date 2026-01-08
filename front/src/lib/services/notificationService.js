@@ -108,13 +108,12 @@ export const notificationService = {
   },
 
   /**
-   * Guardar token FCM
+   * Guardar token FCM (suscripciones push son globales del usuario, no por grupo)
    */
-  async savePushToken(groupId, profileId, token, deviceInfo = {}) {
+  async savePushToken(profileId, token, deviceInfo = {}) {
     try {
       // Para FCM, usamos el campo 'endpoint' para almacenar el token
       // y dejamos p256dh y auth vacíos (son para Web Push nativo)
-      const tenantGroupId = groupId || "default";
 
       // Check if token already exists using endpoint field
       const existing = await databases.listDocuments(
@@ -139,13 +138,12 @@ export const notificationService = {
         );
       }
 
-      // Create new subscription
+      // Create new subscription (sin groupId, las suscripciones son globales)
       const response = await databases.createDocument(
         databaseId,
         pushSubscriptionsCollectionId,
         ID.unique(),
         {
-          groupId: tenantGroupId,
           profileId,
           endpoint: token, // FCM token stored as endpoint
           p256dh: "fcm", // Marker to indicate this is FCM, not Web Push

@@ -135,9 +135,8 @@ export function useNotifications(groupId, profileId, options = {}) {
               isIOSPWA: isIOSStandalone(),
             };
 
-            // Use the local notificationService
+            // Save push subscription (global, not group-specific)
             await notificationService.savePushToken(
-              groupId,
               profileId,
               token,
               deviceInfo

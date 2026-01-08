@@ -180,18 +180,19 @@ export default async ({ req, res, log, error }) => {
       }
     }
 
-    // 5) Optional: create user_settings with defaults (if groupId provided)
-    // user_settings is per-group, so we only create it when user joins a group
-    if (payload.groupId && userSettingsCollectionId) {
+    // 5) Create user_settings with defaults (GLOBAL settings, not group-specific)
+    // User settings are now global per user, not per group
+    const userSettingsCollectionId =
+      process.env.COLLECTION_USER_SETTINGS_ID || "";
+    if (userSettingsCollectionId) {
       try {
-        log?.("Creating user settings with defaults...");
+        log?.("Creating global user settings with defaults...");
         userSettingsDoc = await databases.createDocument(
           databaseId,
           userSettingsCollectionId,
           ID.unique(),
           {
             // Required fields
-            groupId: String(payload.groupId),
             profileId: createdProfile.$id,
             // Optional with defaults (from schema)
             timezone: String(payload.timezone || "America/Mexico_City"),
@@ -209,6 +210,7 @@ export default async ({ req, res, log, error }) => {
             language: String(payload.language || "es"),
             theme: String(payload.theme || "SYSTEM"),
             enabled: true,
+            // groupId is NULL (not included) - settings are global
           }
         );
         log?.(`User settings created: ${userSettingsDoc.$id}`);
@@ -217,6 +219,36 @@ export default async ({ req, res, log, error }) => {
           `Warning: Failed to create user settings: ${settingsError.message}`
         );
         // No fallar todo el proceso - settings pueden crearse después
+      }
+    }
+
+    // 6) Create personal default calendar (always, regardless of group)
+    const calendarsCollectionId = process.env.COLLECTION_CALENDARS_ID || "";
+    if (calendarsCollectionId) {
+      try {
+        log?.("Creating personal default calendar...");
+        const personalCalendar = await databases.createDocument(
+          databaseId,
+          calendarsCollectionId,
+          ID.unique(),
+          {
+            ownerProfileId: createdProfile.$id,
+            scope: "PERSONAL", // PERSONAL calendar
+            name: "Mi Calendario",
+            color: "violet",
+            icon: "calendar",
+            visibility: "PRIVATE", // Personal calendars are always private
+            isDefault: true,
+            enabled: true,
+            // groupId is NULL (not included)
+          }
+        );
+        log?.(`Personal calendar created: ${personalCalendar.$id}`);
+      } catch (calendarError) {
+        log?.(
+          `Warning: Failed to create personal calendar: ${calendarError.message}`
+        );
+        // No fallar todo el proceso
       }
     }
 

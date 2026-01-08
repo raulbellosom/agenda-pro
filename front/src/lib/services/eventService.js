@@ -18,18 +18,23 @@ const { databaseId } = APPWRITE;
 const collectionId = COLLECTIONS.EVENTS;
 
 /**
- * Obtiene eventos de un grupo en un rango de fechas
+ * Obtiene eventos por calendarios en un rango de fechas
+ * Soporta calendarios personales (sin groupId) y de grupo
  */
 export async function getEvents(
   groupId,
   { startDate, endDate, calendarIds } = {}
 ) {
   const queries = [
-    Query.equal("groupId", groupId),
     Query.equal("enabled", true),
     Query.orderAsc("startAt"),
     Query.limit(500),
   ];
+
+  // Si hay groupId, filtrar por grupo
+  if (groupId) {
+    queries.push(Query.equal("groupId", groupId));
+  }
 
   if (startDate) {
     queries.push(Query.greaterThanEqual("startAt", startDate.toISOString()));
@@ -39,6 +44,8 @@ export async function getEvents(
     queries.push(Query.lessThanEqual("startAt", endDate.toISOString()));
   }
 
+  // Si hay calendarIds, filtrar por calendarios específicos
+  // Esto es importante para obtener eventos de calendarios personales
   if (calendarIds && calendarIds.length > 0) {
     queries.push(Query.equal("calendarId", calendarIds));
   }
@@ -108,7 +115,6 @@ export async function createEvent(data) {
 
   // Construir payload solo con campos que existen en la colección
   const payload = {
-    groupId: data.groupId,
     calendarId: data.calendarId,
     ownerProfileId: data.ownerProfileId,
     title: data.title,
@@ -122,6 +128,12 @@ export async function createEvent(data) {
     createdAt: now,
     updatedAt: now,
   };
+
+  // Solo agregar groupId si existe (eventos de grupo)
+  // Eventos en calendarios personales no tendrán groupId
+  if (data.groupId) {
+    payload.groupId = data.groupId;
+  }
 
   // Campos opcionales - solo agregar si tienen valor
   // Nota: visibility, timezone, recurrenceRule, recurrenceUntil
@@ -162,29 +174,66 @@ export async function deleteEvent(eventId) {
 
 /**
  * Busca eventos por título
+ * Si se proporciona groupId, busca en ese grupo; si no, busca por calendarIds
  */
-export async function searchEvents(groupId, searchTerm, limit = 20) {
-  const response = await databases.listDocuments(databaseId, collectionId, [
-    Query.equal("groupId", groupId),
+export async function searchEvents(
+  groupId,
+  searchTerm,
+  limit = 20,
+  calendarIds = null
+) {
+  const queries = [
     Query.equal("enabled", true),
     Query.search("title", searchTerm),
     Query.orderDesc("startAt"),
     Query.limit(limit),
-  ]);
+  ];
+
+  if (groupId) {
+    queries.push(Query.equal("groupId", groupId));
+  }
+
+  if (calendarIds && calendarIds.length > 0) {
+    queries.push(Query.equal("calendarId", calendarIds));
+  }
+
+  const response = await databases.listDocuments(
+    databaseId,
+    collectionId,
+    queries
+  );
   return response.documents;
 }
 
 /**
  * Obtiene próximos eventos
+ * Soporta filtrar por groupId o calendarIds
  */
-export async function getUpcomingEvents(groupId, limit = 10) {
+export async function getUpcomingEvents(
+  groupId,
+  limit = 10,
+  calendarIds = null
+) {
   const now = new Date().toISOString();
-  const response = await databases.listDocuments(databaseId, collectionId, [
-    Query.equal("groupId", groupId),
+  const queries = [
     Query.equal("enabled", true),
     Query.greaterThanEqual("startAt", now),
     Query.orderAsc("startAt"),
     Query.limit(limit),
-  ]);
+  ];
+
+  if (groupId) {
+    queries.push(Query.equal("groupId", groupId));
+  }
+
+  if (calendarIds && calendarIds.length > 0) {
+    queries.push(Query.equal("calendarId", calendarIds));
+  }
+
+  const response = await databases.listDocuments(
+    databaseId,
+    collectionId,
+    queries
+  );
   return response.documents;
 }

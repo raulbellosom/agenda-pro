@@ -28,11 +28,8 @@ import { SettingsToggle } from "./SettingsControls";
 import { SettingsAlert, SettingsSkeleton } from "./SettingsWidgets";
 
 export function NotificationsSection() {
-  const { activeGroup, profile } = useWorkspace();
-  const { data: settings, isLoading } = useUserSettings(
-    activeGroup?.$id,
-    profile?.$id
-  );
+  const { profile } = useWorkspace();
+  const { data: settings, isLoading } = useUserSettings(profile?.$id);
   const updateSettings = useUpdateUserSettings();
   const {
     permission,
@@ -78,11 +75,10 @@ export function NotificationsSection() {
   };
 
   const handleSave = async () => {
-    if (!activeGroup || !profile) return;
+    if (!profile) return;
 
     try {
       await updateSettings.mutateAsync({
-        groupId: activeGroup.$id,
         profileId: profile.$id,
         data: localSettings,
       });

@@ -2272,11 +2272,8 @@ function SelectedDayPanel({
   onEventLongPress,
   onCreateEvent,
 }) {
-  const { activeGroup, profile } = useWorkspace();
-  const { data: userSettings } = useUserSettings(
-    activeGroup?.$id,
-    profile?.$id
-  );
+  const { profile } = useWorkspace();
+  const { data: userSettings } = useUserSettings(profile?.$id);
 
   // Estado para el reloj en tiempo real
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -2505,8 +2502,8 @@ export function CalendarPage() {
   const groupId = activeGroup?.$id;
   const profileId = profile?.$id;
 
-  // Cargar preferencias del usuario
-  const { data: userSettings } = useUserSettings(groupId, profileId);
+  // Cargar preferencias del usuario (ahora son globales, no por grupo)
+  const { data: userSettings } = useUserSettings(profileId);
 
   // Configuración con valores por defecto si no hay settings
   const weekStartsOn = userSettings?.weekStartsOn ?? 1; // Default: Lunes

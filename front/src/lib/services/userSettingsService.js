@@ -1,6 +1,6 @@
 /**
  * User Settings Service
- * Maneja las preferencias del usuario por grupo
+ * Maneja las preferencias globales del usuario
  */
 import { Query, ID } from "appwrite";
 import { databases } from "../../shared/appwrite/client";
@@ -10,16 +10,15 @@ const { databaseId } = APPWRITE;
 const collectionId = COLLECTIONS.USER_SETTINGS;
 
 /**
- * Obtiene las preferencias del usuario para un grupo
+ * Obtiene las preferencias globales del usuario
  */
-export async function getUserSettings(groupId, profileId) {
+export async function getUserSettings(profileId) {
   if (!collectionId) {
     console.warn("User settings collection not configured");
     return null;
   }
 
   const response = await databases.listDocuments(databaseId, collectionId, [
-    Query.equal("groupId", groupId),
     Query.equal("profileId", profileId),
     Query.equal("enabled", true),
     Query.limit(1),
@@ -31,13 +30,13 @@ export async function getUserSettings(groupId, profileId) {
 /**
  * Crea o actualiza las preferencias del usuario
  */
-export async function upsertUserSettings(groupId, profileId, data) {
+export async function upsertUserSettings(profileId, data) {
   if (!collectionId) {
     throw new Error("User settings collection not configured");
   }
 
   // Buscar settings existentes
-  const existing = await getUserSettings(groupId, profileId);
+  const existing = await getUserSettings(profileId);
 
   if (existing) {
     // Actualizar
@@ -49,9 +48,8 @@ export async function upsertUserSettings(groupId, profileId, data) {
     );
   }
 
-  // Crear nuevas con defaults
+  // Crear nuevas con defaults (sin groupId, settings son globales)
   return databases.createDocument(databaseId, collectionId, ID.unique(), {
-    groupId,
     profileId,
     timezone: DEFAULTS.TIMEZONE,
     dateFormat: DEFAULTS.DATE_FORMAT,
@@ -83,12 +81,12 @@ export async function updateUserSettings(settingsId, data) {
 /**
  * Obtiene o crea settings con valores por defecto
  */
-export async function getOrCreateUserSettings(groupId, profileId) {
-  const existing = await getUserSettings(groupId, profileId);
+export async function getOrCreateUserSettings(profileId) {
+  const existing = await getUserSettings(profileId);
 
   if (existing) return existing;
 
-  return upsertUserSettings(groupId, profileId, {});
+  return upsertUserSettings(profileId, {});
 }
 
 // Opciones disponibles para settings

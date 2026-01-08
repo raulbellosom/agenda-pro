@@ -6,14 +6,13 @@ import { QUERY_KEYS } from "../constants";
 import * as userSettingsService from "../services/userSettingsService";
 
 /**
- * Hook para obtener las preferencias del usuario
+ * Hook para obtener las preferencias globales del usuario
  */
-export function useUserSettings(groupId, profileId) {
+export function useUserSettings(profileId) {
   return useQuery({
-    queryKey: [QUERY_KEYS.USER_SETTINGS, groupId, profileId],
-    queryFn: () =>
-      userSettingsService.getOrCreateUserSettings(groupId, profileId),
-    enabled: !!groupId && !!profileId,
+    queryKey: [QUERY_KEYS.USER_SETTINGS, profileId],
+    queryFn: () => userSettingsService.getOrCreateUserSettings(profileId),
+    enabled: !!profileId,
     staleTime: 10 * 60 * 1000, // 10 minutos
   });
 }
@@ -25,11 +24,11 @@ export function useUpdateUserSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ groupId, profileId, data }) =>
-      userSettingsService.upsertUserSettings(groupId, profileId, data),
+    mutationFn: ({ profileId, data }) =>
+      userSettingsService.upsertUserSettings(profileId, data),
     onSuccess: (updatedSettings, variables) => {
       queryClient.setQueryData(
-        [QUERY_KEYS.USER_SETTINGS, variables.groupId, variables.profileId],
+        [QUERY_KEYS.USER_SETTINGS, variables.profileId],
         updatedSettings
       );
     },
