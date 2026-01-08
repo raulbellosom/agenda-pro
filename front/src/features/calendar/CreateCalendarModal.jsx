@@ -55,6 +55,7 @@ const COLORS_CONFIG = [
     ring: "ring-violet-500",
   },
   { id: "pink", label: "Rosa", class: "bg-pink-500", ring: "ring-pink-500" },
+  { id: "rose", label: "Rose", class: "bg-rose-500", ring: "ring-rose-500" },
   { id: "red", label: "Rojo", class: "bg-red-500", ring: "ring-red-500" },
   {
     id: "orange",
@@ -69,10 +70,22 @@ const COLORS_CONFIG = [
     ring: "ring-amber-500",
   },
   {
+    id: "yellow",
+    label: "Amarillo",
+    class: "bg-yellow-500",
+    ring: "ring-yellow-500",
+  },
+  {
     id: "emerald",
     label: "Esmeralda",
     class: "bg-emerald-500",
     ring: "ring-emerald-500",
+  },
+  {
+    id: "green",
+    label: "Verde",
+    class: "bg-green-500",
+    ring: "ring-green-500",
   },
   { id: "teal", label: "Teal", class: "bg-teal-500", ring: "ring-teal-500" },
   { id: "slate", label: "Gris", class: "bg-slate-500", ring: "ring-slate-500" },

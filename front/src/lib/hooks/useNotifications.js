@@ -88,12 +88,7 @@ export function useNotifications(groupId, profileId, options = {}) {
                   updateViaCache: "none", // Important for iOS
                 }
               );
-              console.log("FCM Service Worker registered:", registration);
             } else {
-              console.log(
-                "FCM Service Worker already registered:",
-                registration
-              );
             }
 
             // Wait for the service worker to be active
@@ -141,15 +136,11 @@ export function useNotifications(groupId, profileId, options = {}) {
               token,
               deviceInfo
             );
-
-            console.log("FCM token saved successfully");
           }
         }
 
         // Listen to foreground messages
         unsubscribeForeground = listenToForegroundMessages((payload) => {
-          console.log("FCM Foreground message received:", payload);
-
           // Show toast with FCM message
           addToast({
             title:

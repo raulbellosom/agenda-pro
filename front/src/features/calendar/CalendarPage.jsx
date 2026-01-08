@@ -50,10 +50,12 @@ import {
   Trash2,
   Loader2,
   Globe,
+  Lock,
+  User,
 } from "lucide-react";
 import { NoCalendarsPrompt, EmptyCalendarsList } from "./NoCalendarsPrompt";
 import { CreateCalendarModal } from "./CreateCalendarModal";
-import { NoGroupsPrompt } from "../groups/NoGroupsPrompt";
+import { NoGroupsBanner } from "../groups/NoGroupsBanner";
 import { GroupModal } from "../groups/GroupModal";
 import { EventModal } from "./EventModal";
 import { EventDetailsModal } from "./EventDetailsModal";
@@ -99,6 +101,7 @@ import {
   formatTimeRange,
   getWeekDayNames,
 } from "../../lib/utils/dateTimeFormat";
+import { ENUMS } from "../../lib/constants";
 
 // ================================================
 // CONSTANTS & UTILITIES
@@ -666,7 +669,54 @@ function CalendarItem({
   const colors = getCalendarColor(calendar.color);
   const CalendarItemIcon = getCalendarIcon(calendar.icon);
   const [showMenu, setShowMenu] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
   const menuRef = useRef(null);
+
+  // Determinar el tipo de visibilidad
+  const isPersonal = calendar.scope === ENUMS.CALENDAR_SCOPE.PERSONAL;
+  const isPrivate = calendar.visibility === ENUMS.CALENDAR_VISIBILITY.PRIVATE;
+  const isPublic = calendar.visibility === ENUMS.CALENDAR_VISIBILITY.GROUP;
+
+  // Texto del tooltip
+  const getVisibilityTooltip = () => {
+    if (isPersonal) return "Calendario personal (solo tú)";
+    if (isPrivate) return "Calendario privado del grupo";
+    if (isPublic) return "Calendario público del grupo";
+    return "";
+  };
+
+  // Determinar el icono de visibilidad
+  const renderVisibilityIcon = () => {
+    if (isPersonal) return null;
+
+    return (
+      <div
+        className="relative"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        {isPrivate ? (
+          <Lock className="w-3.5 h-3.5 text-[rgb(var(--text-muted))]" />
+        ) : isPublic ? (
+          <Globe className="w-3.5 h-3.5 text-[rgb(var(--text-muted))]" />
+        ) : null}
+
+        <AnimatePresence>
+          {showTooltip && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="absolute bottom-full right-0 mb-1 px-2 py-1 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-base))] rounded-lg shadow-lg whitespace-nowrap text-xs text-[rgb(var(--text-secondary))] z-50 pointer-events-none"
+            >
+              {getVisibilityTooltip()}
+              <div className="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[rgb(var(--border-base))]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   // Close menu when clicking outside
   React.useEffect(() => {
@@ -709,6 +759,9 @@ function CalendarItem({
         <span className="flex-1 text-sm text-[rgb(var(--text-secondary))] text-left truncate">
           {calendar.name}
         </span>
+
+        {/* Icono de visibilidad con tooltip */}
+        {renderVisibilityIcon()}
 
         {/* Menú de opciones - visible siempre en móvil, en hover en desktop */}
         <div ref={menuRef} className="relative">
@@ -792,20 +845,21 @@ function CalendarsList({
   onShareCalendar,
   onDeleteCalendar,
   currentProfileId,
-  needsFirstGroup = false,
 }) {
   if (!calendars || calendars.length === 0) {
-    return (
-      <EmptyCalendarsList
-        onCreateCalendar={onCreateCalendar}
-        needsFirstGroup={needsFirstGroup}
-      />
-    );
+    return <EmptyCalendarsList onCreateCalendar={onCreateCalendar} />;
   }
 
-  // Separar calendarios propios y compartidos
-  const myCalendars = calendars.filter(
-    (cal) => cal.ownerProfileId === currentProfileId
+  // Separar calendarios por scope y ownership
+  const personalCalendars = calendars.filter(
+    (cal) =>
+      cal.scope === ENUMS.CALENDAR_SCOPE.PERSONAL &&
+      cal.ownerProfileId === currentProfileId
+  );
+  const myGroupCalendars = calendars.filter(
+    (cal) =>
+      cal.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
+      cal.ownerProfileId === currentProfileId
   );
   const sharedCalendars = calendars.filter(
     (cal) => cal.ownerProfileId !== currentProfileId
@@ -813,16 +867,43 @@ function CalendarsList({
 
   return (
     <div className="space-y-4">
-      {/* Mis Calendarios */}
-      {myCalendars.length > 0 && (
+      {/* Calendarios Personales */}
+      {personalCalendars.length > 0 && (
         <div>
-          <div className="px-2 mb-1">
+          <div className="px-2 mb-1 flex items-center gap-1.5">
+            <User className="w-3 h-3 text-[rgb(var(--text-muted))]" />
             <span className="text-xs font-medium text-[rgb(var(--text-muted))] uppercase tracking-wider">
-              Mis calendarios
+              Personales
             </span>
           </div>
           <div className="space-y-0.5">
-            {myCalendars.map((cal) => (
+            {personalCalendars.map((cal) => (
+              <CalendarItem
+                key={cal.$id}
+                calendar={cal}
+                isVisible={visibleCalendars.includes(cal.$id)}
+                onToggle={() => onToggleVisibility(cal.$id)}
+                onEdit={onEditCalendar}
+                onShare={onShareCalendar}
+                onDelete={onDeleteCalendar}
+                isOwner={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Calendarios de Grupo (Propios) */}
+      {myGroupCalendars.length > 0 && (
+        <div>
+          <div className="px-2 mb-1 flex items-center gap-1.5">
+            <Users className="w-3 h-3 text-[rgb(var(--text-muted))]" />
+            <span className="text-xs font-medium text-[rgb(var(--text-muted))] uppercase tracking-wider">
+              De Grupo
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {myGroupCalendars.map((cal) => (
               <CalendarItem
                 key={cal.$id}
                 calendar={cal}
@@ -865,19 +946,21 @@ function CalendarsList({
       )}
 
       {/* Mensaje si no hay calendarios propios */}
-      {myCalendars.length === 0 && sharedCalendars.length > 0 && (
-        <div className="px-2 py-3 text-center">
-          <p className="text-xs text-[rgb(var(--text-muted))]">
-            No tienes calendarios propios
-          </p>
-          <button
-            onClick={onCreateCalendar}
-            className="mt-2 text-xs text-[rgb(var(--brand-primary))] hover:underline"
-          >
-            Crear mi primer calendario
-          </button>
-        </div>
-      )}
+      {personalCalendars.length === 0 &&
+        myGroupCalendars.length === 0 &&
+        sharedCalendars.length > 0 && (
+          <div className="px-2 py-3 text-center">
+            <p className="text-xs text-[rgb(var(--text-muted))]">
+              No tienes calendarios propios
+            </p>
+            <button
+              onClick={onCreateCalendar}
+              className="mt-2 text-xs text-[rgb(var(--brand-primary))] hover:underline"
+            >
+              Crear mi primer calendario
+            </button>
+          </div>
+        )}
     </div>
   );
 }
@@ -2438,7 +2521,15 @@ export function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState(VIEW_MODES.MONTH);
-  const [localVisibleCalendars, setLocalVisibleCalendars] = useState([]);
+  const [localVisibleCalendars, setLocalVisibleCalendars] = useState(() => {
+    // Cargar calendarios visibles desde localStorage
+    try {
+      const saved = localStorage.getItem("agenda_pro_visible_calendars");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [miniCalendarCollapsed, setMiniCalendarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
@@ -2484,12 +2575,7 @@ export function CalendarPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const {
-    activeGroup,
-    calendars = [],
-    profile,
-    needsFirstGroup,
-  } = useWorkspace();
+  const { activeGroup, calendars = [], profile, groups = [] } = useWorkspace();
   const outletContext = useOutletContext();
   const calendarVisibility = outletContext?.calendarVisibility;
   const visibleCalendars =
@@ -2561,14 +2647,38 @@ export function CalendarPage() {
     }));
   }, [rawEvents, calendars]);
 
-  // Initialize visible calendars - solo inicializar una vez cuando se cargan los calendarios
-  const hasInitializedCalendars = React.useRef(false);
+  // Initialize visible calendars - reinicializar cuando cambian los calendarios disponibles
+  const prevCalendarIdsRef = React.useRef([]);
   React.useEffect(() => {
-    if (calendars.length > 0 && !hasInitializedCalendars.current) {
-      if (!visibleCalendars || visibleCalendars.length === 0) {
-        setVisibleCalendars(calendars.map((c) => c.$id));
+    if (calendars.length > 0) {
+      const currentCalendarIds = calendars
+        .map((c) => c.$id)
+        .sort()
+        .join(",");
+      const prevCalendarIds = prevCalendarIdsRef.current.join(",");
+
+      // Si los calendarios cambiaron (nuevo grupo o calendarios añadidos/eliminados)
+      if (currentCalendarIds !== prevCalendarIds) {
+        // Obtener los nuevos calendarios que no estaban antes
+        const newCalendarIds = calendars
+          .map((c) => c.$id)
+          .filter((id) => !prevCalendarIdsRef.current.includes(id));
+
+        if (newCalendarIds.length > 0) {
+          // Agregar los nuevos calendarios a los visibles
+          const updatedVisible = [
+            ...new Set([...visibleCalendars, ...newCalendarIds]),
+          ];
+          setVisibleCalendars(updatedVisible);
+        }
+
+        // Si no hay calendarios visibles, mostrar todos
+        if (!visibleCalendars || visibleCalendars.length === 0) {
+          setVisibleCalendars(calendars.map((c) => c.$id));
+        }
+
+        prevCalendarIdsRef.current = calendars.map((c) => c.$id);
       }
-      hasInitializedCalendars.current = true;
     }
   }, [calendars, setVisibleCalendars, visibleCalendars]);
 
@@ -2727,9 +2837,7 @@ export function CalendarPage() {
   // Hook de swipe para navegación táctil en móviles
   // Solo activo cuando no estamos en scroll infinito del mes móvil
   const shouldEnableSwipe =
-    !needsFirstGroup &&
-    hasCalendars &&
-    !(isMobile && viewMode === VIEW_MODES.MONTH);
+    hasCalendars && !(isMobile && viewMode === VIEW_MODES.MONTH);
   const {
     bind: swipeBindings,
     style: swipeStyle,
@@ -3007,25 +3115,17 @@ export function CalendarPage() {
           {/* New Event/Calendar Button */}
           <button
             onClick={() => {
-              if (needsFirstGroup) {
-                return; // No hacer nada si no hay grupo
-              }
               if (!hasCalendars) {
                 setShowCreateCalendarModal(true);
               } else {
                 handleCreateEvent();
               }
             }}
-            disabled={needsFirstGroup}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[rgb(var(--brand-primary))] text-white text-sm font-medium hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">
-              {needsFirstGroup
-                ? "Crear Grupo"
-                : hasCalendars
-                ? "Nuevo"
-                : "Crear Calendario"}
+              {hasCalendars ? "Nuevo" : "Crear Calendario"}
             </span>
           </button>
         </div>
@@ -3142,14 +3242,12 @@ export function CalendarPage() {
                     <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
                       Calendarios
                     </span>
-                    {!needsFirstGroup && (
-                      <button
-                        onClick={() => setShowCreateCalendarModal(true)}
-                        className="text-xs text-[rgb(var(--brand-primary))] hover:underline"
-                      >
-                        + Nuevo
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setShowCreateCalendarModal(true)}
+                      className="text-xs text-[rgb(var(--brand-primary))] hover:underline"
+                    >
+                      + Nuevo
+                    </button>
                   </div>
                   <div className="px-2 pb-4">
                     <CalendarsList
@@ -3161,7 +3259,6 @@ export function CalendarPage() {
                       onShareCalendar={(cal) => setSharingCalendar(cal)}
                       onDeleteCalendar={(cal) => setDeletingCalendar(cal)}
                       currentProfileId={profile?.$id}
-                      needsFirstGroup={needsFirstGroup}
                     />
                   </div>
                 </div>
@@ -3172,14 +3269,17 @@ export function CalendarPage() {
 
         {/* Main Calendar Area */}
         <div className="flex-1 flex flex-col min-w-0 bg-[rgb(var(--bg-base))] overflow-hidden">
-          {needsFirstGroup ? (
-            <NoGroupsPrompt
-              onCreateGroup={() => setShowCreateGroupModal(true)}
-            />
-          ) : !hasCalendars ? (
-            <NoCalendarsPrompt
-              onCreateCalendar={() => setShowCreateCalendarModal(true)}
-            />
+          {!hasCalendars ? (
+            <>
+              {groups.length === 0 && (
+                <NoGroupsBanner
+                  onCreateGroup={() => setShowCreateGroupModal(true)}
+                />
+              )}
+              <NoCalendarsPrompt
+                onCreateCalendar={() => setShowCreateCalendarModal(true)}
+              />
+            </>
           ) : viewMode === VIEW_MODES.MONTH ? (
             // Vista de mes con scroll vertical infinito (móvil y desktop)
             <VerticalMonthScroller

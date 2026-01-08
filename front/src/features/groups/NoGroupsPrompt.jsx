@@ -20,7 +20,7 @@ export function NoGroupsPrompt({ onCreateGroup }) {
       animate={{ opacity: 1 }}
       className="min-h-full flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
     >
-      <div className="max-w-md w-full text-center py-8">
+      <div className="max-w-md lg:max-w-lg w-full text-center py-8">
         {/* Animated illustration */}
         <div className="relative mb-6 sm:mb-8">
           {/* Background glow */}
@@ -46,10 +46,10 @@ export function NoGroupsPrompt({ onCreateGroup }) {
               damping: 15,
               delay: 0.2,
             }}
-            className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-2xl sm:rounded-3xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-2xl shadow-[rgb(var(--brand-primary))]/30"
+            className="relative w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 mx-auto rounded-2xl sm:rounded-3xl bg-linear-to-br from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/60 flex items-center justify-center shadow-2xl shadow-[rgb(var(--brand-primary))]/30"
           >
             <Users
-              className="w-12 h-12 sm:w-16 sm:h-16 text-white"
+              className="w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 text-white"
               strokeWidth={1.5}
             />
 
@@ -64,10 +64,10 @@ export function NoGroupsPrompt({ onCreateGroup }) {
                 repeat: Infinity,
                 delay: 0.5,
               }}
-              className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-linear-to-br from-[rgb(var(--brand-secondary))] to-[rgb(var(--brand-secondary))]/60 flex items-center justify-center shadow-xl"
+              className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-linear-to-br from-[rgb(var(--brand-secondary))] to-[rgb(var(--brand-secondary))]/60 flex items-center justify-center shadow-xl"
             >
               <Calendar
-                className="w-5 h-5 sm:w-6 sm:h-6 text-white"
+                className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white"
                 strokeWidth={2}
               />
             </motion.div>
@@ -82,10 +82,10 @@ export function NoGroupsPrompt({ onCreateGroup }) {
                 repeat: Infinity,
                 delay: 1,
               }}
-              className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-linear-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl"
+              className="absolute -bottom-1 -left-1 sm:-bottom-2 sm:-left-2 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-linear-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl"
             >
               <Sparkles
-                className="w-4 h-4 sm:w-5 sm:h-5 text-white"
+                className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white"
                 strokeWidth={2}
               />
             </motion.div>
@@ -99,10 +99,10 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           transition={{ delay: 0.4 }}
           className="space-y-3 sm:space-y-4 px-2"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-[rgb(var(--text-primary))]">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[rgb(var(--text-primary))]">
             ¡Bienvenido a Agenda Pro!
           </h2>
-          <p className="text-sm sm:text-base text-[rgb(var(--text-secondary))] max-w-sm mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-[rgb(var(--text-secondary))] max-w-sm lg:max-w-md mx-auto leading-relaxed">
             Para comenzar, necesitas crear tu primer{" "}
             <span className="font-semibold text-[rgb(var(--brand-primary))]">
               espacio de trabajo
@@ -139,10 +139,10 @@ export function NoGroupsPrompt({ onCreateGroup }) {
               transition={{ delay: 0.7 + index * 0.1 }}
               className="flex items-center gap-2 sm:gap-3 text-left bg-[rgb(var(--bg-surface))] rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-[rgb(var(--border-base))]"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
-                <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[rgb(var(--brand-primary))]" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg sm:rounded-xl bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center shrink-0">
+                <feature.icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-[rgb(var(--brand-primary))]" />
               </div>
-              <span className="text-xs sm:text-sm text-[rgb(var(--text-secondary))] font-medium">
+              <span className="text-xs sm:text-sm lg:text-base text-[rgb(var(--text-secondary))] font-medium">
                 {feature.text}
               </span>
             </motion.div>
@@ -160,7 +160,7 @@ export function NoGroupsPrompt({ onCreateGroup }) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCreateGroup}
-            className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
+            className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-linear-to-r from-[rgb(var(--brand-primary))] to-[rgb(var(--brand-primary))]/80 text-white text-sm sm:text-base lg:text-lg font-semibold shadow-xl shadow-[rgb(var(--brand-primary))]/25 hover:shadow-2xl hover:shadow-[rgb(var(--brand-primary))]/30 transition-all duration-300 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Crear mi primer espacio
@@ -170,15 +170,18 @@ export function NoGroupsPrompt({ onCreateGroup }) {
             >
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.div>
-            {/* Shine effect */}
+            {/* Efecto de pulso sutil en el fondo - NO causa overflow */}
             <motion.div
-              className="absolute inset-0 rounded-2xl overflow-hidden"
-              initial={{ x: "-100%" }}
-              animate={{ x: "200%" }}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-            >
-              <div className="w-1/3 h-full bg-linear-to-r from-transparent via-white/20 to-transparent skew-x-12" />
-            </motion.div>
+              className="absolute inset-0 rounded-xl sm:rounded-2xl bg-white/10"
+              animate={{
+                opacity: [0, 0.3, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                repeatDelay: 1,
+              }}
+            />
           </motion.button>
         </motion.div>
 
@@ -187,7 +190,7 @@ export function NoGroupsPrompt({ onCreateGroup }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.1 }}
-          className="mt-4 sm:mt-6 text-xs text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5 px-2"
+          className="mt-4 sm:mt-6 text-xs sm:text-sm text-[rgb(var(--text-muted))] flex items-center justify-center gap-1.5 px-2"
         >
           <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
           Se creará automáticamente un calendario personal

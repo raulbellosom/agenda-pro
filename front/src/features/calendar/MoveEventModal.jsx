@@ -1,34 +1,121 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, ChevronRight, AlertCircle } from "lucide-react";
+import {
+  X,
+  Calendar,
+  ChevronRight,
+  AlertCircle,
+  Calendar as CalendarIcon,
+  CalendarDays,
+  CalendarCheck,
+  CalendarClock,
+  CalendarHeart,
+  CalendarRange,
+  Star,
+  Briefcase,
+  GraduationCap,
+  Heart,
+  Home,
+  Plane,
+  Trophy,
+  Music,
+  Dumbbell,
+  Coffee,
+  Utensils,
+  Car,
+  BookOpen,
+  Gamepad2,
+} from "lucide-react";
 import { useMoveEvent } from "../../lib/hooks/useEvents";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
 
+// Mapeo de iconos de calendarios (igual que en CalendarPage)
 const CALENDAR_ICONS = {
-  work: "💼",
-  personal: "👤",
-  family: "👨‍👩‍👧‍👦",
-  health: "❤️",
-  education: "🎓",
-  social: "🎉",
-  finance: "💰",
-  travel: "✈️",
-  projects: "📋",
-  other: "📅",
+  calendar: CalendarIcon,
+  "calendar-days": CalendarDays,
+  "calendar-check": CalendarCheck,
+  "calendar-clock": CalendarClock,
+  "calendar-heart": CalendarHeart,
+  "calendar-range": CalendarRange,
+  star: Star,
+  briefcase: Briefcase,
+  "graduation-cap": GraduationCap,
+  heart: Heart,
+  home: Home,
+  plane: Plane,
+  trophy: Trophy,
+  music: Music,
+  dumbbell: Dumbbell,
+  coffee: Coffee,
+  utensils: Utensils,
+  car: Car,
+  "book-open": BookOpen,
+  "gamepad-2": Gamepad2,
 };
 
+// Mapeo de colores de calendarios (igual que en EventModal)
 const CALENDAR_COLORS = {
-  blue: "rgb(59, 130, 246)",
-  purple: "rgb(168, 85, 247)",
-  pink: "rgb(236, 72, 153)",
-  red: "rgb(239, 68, 68)",
-  orange: "rgb(249, 115, 22)",
-  yellow: "rgb(234, 179, 8)",
-  green: "rgb(34, 197, 94)",
-  teal: "rgb(20, 184, 166)",
-  cyan: "rgb(6, 182, 212)",
-  indigo: "rgb(99, 102, 241)",
+  violet: {
+    bg: "bg-violet-500",
+    light: "bg-violet-500/10",
+    dot: "bg-violet-500",
+  },
+  blue: {
+    bg: "bg-blue-500",
+    light: "bg-blue-500/10",
+    dot: "bg-blue-500",
+  },
+  cyan: {
+    bg: "bg-cyan-500",
+    light: "bg-cyan-500/10",
+    dot: "bg-cyan-500",
+  },
+  emerald: {
+    bg: "bg-emerald-500",
+    light: "bg-emerald-500/10",
+    dot: "bg-emerald-500",
+  },
+  amber: {
+    bg: "bg-amber-500",
+    light: "bg-amber-500/10",
+    dot: "bg-amber-500",
+  },
+  orange: {
+    bg: "bg-orange-500",
+    light: "bg-orange-500/10",
+    dot: "bg-orange-500",
+  },
+  rose: {
+    bg: "bg-rose-500",
+    light: "bg-rose-500/10",
+    dot: "bg-rose-500",
+  },
+  pink: {
+    bg: "bg-pink-500",
+    light: "bg-pink-500/10",
+    dot: "bg-pink-500",
+  },
+  red: {
+    bg: "bg-red-500",
+    light: "bg-red-500/10",
+    dot: "bg-red-500",
+  },
+  teal: {
+    bg: "bg-teal-500",
+    light: "bg-teal-500/10",
+    dot: "bg-teal-500",
+  },
+  slate: {
+    bg: "bg-slate-500",
+    light: "bg-slate-500/10",
+    dot: "bg-slate-500",
+  },
 };
+
+const getCalendarIcon = (iconId) => CALENDAR_ICONS[iconId] || CalendarIcon;
+
+const getCalendarColor = (color) =>
+  CALENDAR_COLORS[color] || CALENDAR_COLORS.violet;
 
 export function MoveEventModal({
   isOpen,
@@ -62,11 +149,17 @@ export function MoveEventModal({
       return;
     }
 
+    // Encontrar el calendario seleccionado para pasar su groupId
+    const selectedCalendar = availableCalendars.find(
+      (cal) => cal.$id === selectedCalendarId
+    );
+
     try {
       setError(null);
       await moveEvent.mutateAsync({
         eventId: event.$id,
         newCalendarId: selectedCalendarId,
+        newCalendar: selectedCalendar, // Pasar el calendario completo para obtener su groupId
       });
       onSuccess?.();
       onClose();
@@ -129,21 +222,30 @@ export function MoveEventModal({
                 Calendario actual
               </label>
               <div className="flex items-center gap-3 p-3 rounded-xl bg-[rgb(var(--bg-muted))] border border-[rgb(var(--border-base))]">
-                <span className="text-2xl">
-                  {CALENDAR_ICONS[currentCalendar?.icon] || "📅"}
-                </span>
+                {(() => {
+                  const IconComponent = getCalendarIcon(currentCalendar?.icon);
+                  const colors = getCalendarColor(currentCalendar?.color);
+                  return (
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${colors.bg}`}
+                    >
+                      <IconComponent className="w-4 h-4" />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1">
                   <div className="font-medium text-[rgb(var(--text-primary))]">
                     {currentCalendar?.name}
                   </div>
                 </div>
-                <div
-                  className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                  style={{
-                    backgroundColor:
-                      CALENDAR_COLORS[currentCalendar?.color] || "#6366f1",
-                  }}
-                />
+                {(() => {
+                  const colors = getCalendarColor(currentCalendar?.color);
+                  return (
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 border-white shadow-sm ${colors.dot}`}
+                    />
+                  );
+                })()}
               </div>
             </div>
 
@@ -167,6 +269,8 @@ export function MoveEventModal({
                   {availableCalendars.map((calendar) => {
                     const isSelected = selectedCalendarId === calendar.$id;
                     const isOwner = calendar.ownerProfileId === profile?.$id;
+                    const IconComponent = getCalendarIcon(calendar.icon);
+                    const colors = getCalendarColor(calendar.color);
 
                     return (
                       <button
@@ -181,9 +285,11 @@ export function MoveEventModal({
                           }
                         `}
                       >
-                        <span className="text-2xl">
-                          {CALENDAR_ICONS[calendar.icon] || "📅"}
-                        </span>
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${colors.bg}`}
+                        >
+                          <IconComponent className="w-4 h-4" />
+                        </div>
                         <div className="flex-1 text-left">
                           <div className="font-medium text-[rgb(var(--text-primary))]">
                             {calendar.name}
@@ -194,11 +300,7 @@ export function MoveEventModal({
                         </div>
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                            style={{
-                              backgroundColor:
-                                CALENDAR_COLORS[calendar.color] || "#6366f1",
-                            }}
+                            className={`w-4 h-4 rounded-full border-2 border-white shadow-sm ${colors.dot}`}
                           />
                           {isSelected && (
                             <ChevronRight className="w-5 h-5 text-[rgb(var(--brand-primary))]" />

@@ -28,7 +28,8 @@ export function WorkspaceProvider({ children }) {
   // Estado del grupo activo
   const [activeGroupId, setActiveGroupId] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem(ACTIVE_GROUP_KEY) || null;
+      const saved = localStorage.getItem(ACTIVE_GROUP_KEY);
+      return saved || null;
     }
     return null;
   });
@@ -59,26 +60,51 @@ export function WorkspaceProvider({ children }) {
   // Grupo activo actual
   const activeGroup = useMemo(() => {
     if (!groups || groups.length === 0) return null;
+    // Permitir explícitamente null para "sin grupo" (solo calendarios personales)
+    if (activeGroupId === null || activeGroupId === "null") {
+      return null;
+    }
     if (activeGroupId) {
       const found = groups.find((g) => g.$id === activeGroupId);
       if (found) return found;
+      // Si el grupo guardado no existe, NO seleccionar automáticamente otro
+      // Mantener null para que el usuario elija
+      return null;
     }
-    // Si no hay grupo seleccionado o no se encontró, usar el primero
-    return groups[0];
+    return null;
   }, [groups, activeGroupId]);
 
-  // Actualizar el grupo activo cuando cambie
+  // Limpiar activeGroupId si el grupo guardado ya no existe
   useEffect(() => {
-    if (activeGroup && activeGroup.$id !== activeGroupId) {
-      setActiveGroupId(activeGroup.$id);
-      localStorage.setItem(ACTIVE_GROUP_KEY, activeGroup.$id);
+    // Solo actuar cuando los grupos hayan terminado de cargar Y tengamos datos
+    if (groupsLoading || groups === undefined) {
+      return;
     }
-  }, [activeGroup, activeGroupId]);
+
+    // Si ya cargó y no hay grupos, limpiar el activeGroupId
+    if (groups.length === 0) {
+      if (activeGroupId !== null) {
+        setActiveGroupId(null);
+        localStorage.removeItem(ACTIVE_GROUP_KEY);
+      }
+    } else if (activeGroupId && activeGroupId !== "null") {
+      // Verificar si el grupo guardado todavía existe
+      const found = groups.find((g) => g.$id === activeGroupId);
+      if (!found) {
+        setActiveGroupId(null);
+        localStorage.removeItem(ACTIVE_GROUP_KEY);
+      }
+    }
+  }, [activeGroupId, groups, groupsLoading]);
 
   // Función para cambiar el grupo activo
   const switchGroup = useCallback((groupId) => {
     setActiveGroupId(groupId);
-    localStorage.setItem(ACTIVE_GROUP_KEY, groupId);
+    if (groupId === null) {
+      localStorage.removeItem(ACTIVE_GROUP_KEY);
+    } else {
+      localStorage.setItem(ACTIVE_GROUP_KEY, groupId);
+    }
   }, []);
 
   // Función para crear el primer grupo si no existe
@@ -128,7 +154,7 @@ export function WorkspaceProvider({ children }) {
       refetchGroups,
       isCreatingGroup: createGroupMutation.isPending,
 
-      // Calendarios del grupo activo
+      // Calendarios (personales + del grupo activo si hay)
       calendars: calendars || [],
       calendarsLoading,
       refetchCalendars,

@@ -63,6 +63,9 @@ import {
   Gamepad2,
   Loader2,
   Shield,
+  User,
+  Lock,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "../../app/providers/AuthProvider";
 import { useWorkspace } from "../../app/providers/WorkspaceProvider";
@@ -138,12 +141,33 @@ const CALENDAR_COLORS = {
     dot: "bg-emerald-500",
     light: "bg-emerald-500/10",
   },
+  teal: {
+    bg: "bg-teal-500/20",
+    border: "border-teal-500",
+    text: "text-teal-500 dark:text-teal-400",
+    dot: "bg-teal-500",
+    light: "bg-teal-500/10",
+  },
   amber: {
     bg: "bg-amber-500/20",
     border: "border-amber-500",
     text: "text-amber-500 dark:text-amber-400",
     dot: "bg-amber-500",
     light: "bg-amber-500/10",
+  },
+  orange: {
+    bg: "bg-orange-500/20",
+    border: "border-orange-500",
+    text: "text-orange-500 dark:text-orange-400",
+    dot: "bg-orange-500",
+    light: "bg-orange-500/10",
+  },
+  pink: {
+    bg: "bg-pink-500/20",
+    border: "border-pink-500",
+    text: "text-pink-500 dark:text-pink-400",
+    dot: "bg-pink-500",
+    light: "bg-pink-500/10",
   },
   rose: {
     bg: "bg-rose-500/20",
@@ -152,12 +176,12 @@ const CALENDAR_COLORS = {
     dot: "bg-rose-500",
     light: "bg-rose-500/10",
   },
-  pink: {
-    bg: "bg-pink-500/20",
-    border: "border-pink-500",
-    text: "text-pink-500 dark:text-pink-400",
-    dot: "bg-pink-500",
-    light: "bg-pink-500/10",
+  red: {
+    bg: "bg-red-500/20",
+    border: "border-red-500",
+    text: "text-red-500 dark:text-red-400",
+    dot: "bg-red-500",
+    light: "bg-red-500/10",
   },
   green: {
     bg: "bg-green-500/20",
@@ -173,19 +197,12 @@ const CALENDAR_COLORS = {
     dot: "bg-yellow-500",
     light: "bg-yellow-500/10",
   },
-  orange: {
-    bg: "bg-orange-500/20",
-    border: "border-orange-500",
-    text: "text-orange-500 dark:text-orange-400",
-    dot: "bg-orange-500",
-    light: "bg-orange-500/10",
-  },
-  red: {
-    bg: "bg-red-500/20",
-    border: "border-red-500",
-    text: "text-red-500 dark:text-red-400",
-    dot: "bg-red-500",
-    light: "bg-red-500/10",
+  slate: {
+    bg: "bg-slate-500/20",
+    border: "border-slate-500",
+    text: "text-slate-500 dark:text-slate-400",
+    dot: "bg-slate-500",
+    light: "bg-slate-500/10",
   },
 };
 
@@ -334,8 +351,16 @@ export function AppShell() {
   const [newGroupName, setNewGroupName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Estados para calendarios en móvil
-  const [visibleCalendars, setVisibleCalendars] = useState([]);
+  // Estados para calendarios en móvil con persistencia
+  const [visibleCalendars, setVisibleCalendars] = useState(() => {
+    // Cargar calendarios visibles desde localStorage
+    try {
+      const saved = localStorage.getItem('agenda_pro_visible_calendars');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [mobileCalendarMenuId, setMobileCalendarMenuId] = useState(null);
   const [sharingCalendar, setSharingCalendar] = useState(null);
   const [deletingCalendar, setDeletingCalendar] = useState(null);
@@ -419,10 +444,31 @@ export function AppShell() {
   const hasInitializedMobileCalendars = useRef(false);
   useEffect(() => {
     if (calendars.length > 0 && !hasInitializedMobileCalendars.current) {
-      setVisibleCalendars(calendars.map((c) => c.$id));
+      // Solo inicializar si no hay calendarios guardados
+      setVisibleCalendars((prev) => {
+        if (prev.length === 0) {
+          const allIds = calendars.map((c) => c.$id);
+          localStorage.setItem('agenda_pro_visible_calendars', JSON.stringify(allIds));
+          return allIds;
+        }
+        // Filtrar calendarios que ya no existen
+        const validIds = prev.filter(id => calendars.some(c => c.$id === id));
+        if (validIds.length !== prev.length) {
+          localStorage.setItem('agenda_pro_visible_calendars', JSON.stringify(validIds));
+          return validIds;
+        }
+        return prev;
+      });
       hasInitializedMobileCalendars.current = true;
     }
   }, [calendars]);
+
+  // Guardar calendarios visibles en localStorage cuando cambien
+  useEffect(() => {
+    if (visibleCalendars.length > 0) {
+      localStorage.setItem('agenda_pro_visible_calendars', JSON.stringify(visibleCalendars));
+    }
+  }, [visibleCalendars]);
 
   // Toggle visibilidad de calendario en móvil
   const toggleCalendarVisibility = useCallback((calendarId) => {
@@ -442,11 +488,22 @@ export function AppShell() {
     [visibleCalendars, setVisibleCalendars, toggleCalendarVisibility]
   );
 
-  // Agrupar calendarios por tipo (Personal, Grupo propios, Compartidos)
+  // Agrupar calendarios por tipo (Personal, Grupo propios por visibilidad, Compartidos)
   const groupedCalendars = useMemo(() => {
     if (!calendars || !profile?.$id) {
-      return { personal: [], ownGroup: [], shared: [] };
+      return {
+        personal: [],
+        ownGroupPrivate: [],
+        ownGroupGroup: [],
+        shared: [],
+      };
     }
+
+    const ownGroupCalendars = calendars.filter(
+      (cal) =>
+        cal.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
+        cal.ownerProfileId === profile.$id
+    );
 
     return {
       personal: calendars.filter(
@@ -454,10 +511,11 @@ export function AppShell() {
           cal.scope === ENUMS.CALENDAR_SCOPE.PERSONAL &&
           cal.ownerProfileId === profile.$id
       ),
-      ownGroup: calendars.filter(
-        (cal) =>
-          cal.scope === ENUMS.CALENDAR_SCOPE.GROUP &&
-          cal.ownerProfileId === profile.$id
+      ownGroupPrivate: ownGroupCalendars.filter(
+        (cal) => cal.visibility === ENUMS.CALENDAR_VISIBILITY.PRIVATE
+      ),
+      ownGroupGroup: ownGroupCalendars.filter(
+        (cal) => cal.visibility === ENUMS.CALENDAR_VISIBILITY.GROUP
       ),
       shared: calendars.filter(
         (cal) =>
@@ -594,7 +652,11 @@ export function AppShell() {
                   />
                 ) : (
                   <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
-                    <Building2 className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
+                    {activeGroup ? (
+                      <Building2 className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
+                    ) : (
+                      <Calendar className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
+                    )}
                   </div>
                 )}
               </div>
@@ -604,13 +666,15 @@ export function AppShell() {
                 }`}
               >
                 <p className="text-xs font-medium text-[rgb(var(--text-primary))] truncate">
-                  {activeGroup?.name || "Sin grupo"}
+                  {activeGroup?.name || "Calendarios Personales"}
                 </p>
                 <p className="text-[10px] text-[rgb(var(--text-muted))]">
-                  {activeGroup?.membershipRole === "OWNER" ||
-                  activeGroup?.ownerProfileId === profile?.$id
-                    ? "Propietario"
-                    : "Miembro"}
+                  {activeGroup
+                    ? activeGroup?.membershipRole === "OWNER" ||
+                      activeGroup?.ownerProfileId === profile?.$id
+                      ? "Propietario"
+                      : "Miembro"
+                    : "Solo personales"}
                 </p>
               </div>
               <ChevronDown
@@ -635,6 +699,37 @@ export function AppShell() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="p-1 max-h-60 overflow-auto">
+                    {/* Opción: Calendarios Personales (sin grupo) */}
+                    <button
+                      onClick={() => {
+                        switchGroup(null);
+                        setShowGroupMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        activeGroup === null
+                          ? "bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))]"
+                          : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                      }`}
+                    >
+                      <div className="w-6 h-6 rounded-md overflow-hidden flex items-center justify-center shrink-0">
+                        <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                          <Calendar className="w-3 h-3 text-[rgb(var(--brand-primary))]" />
+                        </div>
+                      </div>
+                      <span className="flex-1 text-left truncate">
+                        Calendarios Personales
+                      </span>
+                      {activeGroup === null && (
+                        <Check className="w-4 h-4 shrink-0" />
+                      )}
+                    </button>
+
+                    {/* Separador si hay grupos */}
+                    {groups.length > 0 && (
+                      <div className="my-1 border-t border-[rgb(var(--border-base))]" />
+                    )}
+
+                    {/* Lista de grupos existentes */}
                     {groups.map((group) => {
                       const isOwner =
                         group.ownerProfileId === profile?.$id ||
@@ -1595,126 +1690,162 @@ export function AppShell() {
               </div>
 
               {/* Grupo activo - compacto con opción de cambiar */}
-              {activeGroup && (
-                <div className="px-4 py-3 border-b border-[rgb(var(--border-base))]">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowGroupMenu((prev) => !prev);
-                    }}
-                    className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
-                      {activeGroup?.logoFileId ? (
-                        <img
-                          src={getGroupLogoUrl(activeGroup.logoFileId, 64, 64)}
-                          alt={activeGroup.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+              <div className="px-4 py-3 border-b border-[rgb(var(--border-base))]">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowGroupMenu((prev) => !prev);
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-[rgb(var(--bg-hover))] transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                    {activeGroup?.logoFileId ? (
+                      <img
+                        src={getGroupLogoUrl(activeGroup.logoFileId, 64, 64)}
+                        alt={activeGroup.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                        {activeGroup ? (
                           <Building2 className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-medium text-[rgb(var(--text-primary))] truncate">
-                        {activeGroup.name}
-                      </p>
-                      <p className="text-xs text-[rgb(var(--text-muted))]">
-                        {groups.length}{" "}
-                        {groups.length === 1 ? "espacio" : "espacios"}
-                      </p>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[rgb(var(--text-muted))] transition-transform ${
-                        showGroupMenu ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {/* Group switcher dropdown */}
-                  <AnimatePresence>
-                    {showGroupMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-2 overflow-hidden"
-                      >
-                        <div className="space-y-1 max-h-40 overflow-y-auto">
-                          {groups.map((group) => {
-                            const isOwner =
-                              group.ownerProfileId === profile?.$id ||
-                              group.membershipRole === "OWNER";
-                            const logoUrl = group.logoFileId
-                              ? getGroupLogoUrl(group.logoFileId, 32, 32)
-                              : null;
-                            return (
-                              <button
-                                key={group.$id}
-                                onClick={() => {
-                                  switchGroup(group.$id);
-                                  setShowGroupMenu(false);
-                                }}
-                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                  group.$id === activeGroup.$id
-                                    ? "bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))]"
-                                    : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
-                                }`}
-                              >
-                                <div className="w-5 h-5 rounded overflow-hidden shrink-0">
-                                  {logoUrl ? (
-                                    <img
-                                      src={logoUrl}
-                                      alt={group.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
-                                      <Building2 className="w-3 h-3 text-[rgb(var(--brand-primary))]" />
-                                    </div>
-                                  )}
-                                </div>
-                                <span className="truncate flex-1">
-                                  {group.name}
-                                </span>
-                                {isOwner && (
-                                  <Crown className="w-3 h-3 text-amber-500 shrink-0" />
-                                )}
-                                {group.$id === activeGroup.$id && (
-                                  <Check className="w-4 h-4 shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <button
-                          onClick={() => {
-                            setShowGroupMenu(false);
-                            setShowGroupModal(true);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-lg text-sm text-[rgb(var(--brand-primary))] hover:bg-[rgb(var(--brand-primary))]/10 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>Crear nuevo espacio</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowGroupMenu(false);
-                            setMobileMenuOpen(false);
-                            navigate("/groups");
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span>Gestionar espacios</span>
-                        </button>
-                      </motion.div>
+                        ) : (
+                          <Calendar className="w-4 h-4 text-[rgb(var(--brand-primary))]" />
+                        )}
+                      </div>
                     )}
-                  </AnimatePresence>
-                </div>
-              )}
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-[rgb(var(--text-primary))] truncate">
+                      {activeGroup?.name || "Calendarios Personales"}
+                    </p>
+                    <p className="text-xs text-[rgb(var(--text-muted))]">
+                      {activeGroup
+                        ? `${groups.length} ${
+                            groups.length === 1 ? "espacio" : "espacios"
+                          }`
+                        : "Solo personales"}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[rgb(var(--text-muted))] transition-transform ${
+                      showGroupMenu ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Group switcher dropdown */}
+                <AnimatePresence>
+                  {showGroupMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-2 overflow-hidden"
+                    >
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {/* Opción: Calendarios Personales (sin grupo) */}
+                        <button
+                          onClick={() => {
+                            switchGroup(null);
+                            setShowGroupMenu(false);
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                            activeGroup === null
+                              ? "bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))]"
+                              : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                          }`}
+                        >
+                          <div className="w-5 h-5 rounded overflow-hidden shrink-0">
+                            <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                              <Calendar className="w-3 h-3 text-[rgb(var(--brand-primary))]" />
+                            </div>
+                          </div>
+                          <span className="truncate flex-1">
+                            Calendarios Personales
+                          </span>
+                          {activeGroup === null && (
+                            <Check className="w-4 h-4 shrink-0" />
+                          )}
+                        </button>
+
+                        {/* Separador si hay grupos */}
+                        {groups.length > 0 && (
+                          <div className="my-1 border-t border-[rgb(var(--border-base))]" />
+                        )}
+
+                        {/* Lista de grupos existentes */}
+                        {groups.map((group) => {
+                          const isOwner =
+                            group.ownerProfileId === profile?.$id ||
+                            group.membershipRole === "OWNER";
+                          const logoUrl = group.logoFileId
+                            ? getGroupLogoUrl(group.logoFileId, 32, 32)
+                            : null;
+                          return (
+                            <button
+                              key={group.$id}
+                              onClick={() => {
+                                switchGroup(group.$id);
+                                setShowGroupMenu(false);
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                                group.$id === activeGroup?.$id
+                                  ? "bg-[rgb(var(--brand-primary))]/10 text-[rgb(var(--brand-primary))]"
+                                  : "text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))]"
+                              }`}
+                            >
+                              <div className="w-5 h-5 rounded overflow-hidden shrink-0">
+                                {logoUrl ? (
+                                  <img
+                                    src={logoUrl}
+                                    alt={group.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-[rgb(var(--brand-primary))]/10 flex items-center justify-center">
+                                    <Building2 className="w-3 h-3 text-[rgb(var(--brand-primary))]" />
+                                  </div>
+                                )}
+                              </div>
+                              <span className="truncate flex-1">
+                                {group.name}
+                              </span>
+                              {isOwner && (
+                                <Crown className="w-3 h-3 text-amber-500 shrink-0" />
+                              )}
+                              {group.$id === activeGroup?.$id && (
+                                <Check className="w-4 h-4 shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowGroupMenu(false);
+                          setShowGroupModal(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-lg text-sm text-[rgb(var(--brand-primary))] hover:bg-[rgb(var(--brand-primary))]/10 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Crear nuevo espacio</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowGroupMenu(false);
+                          setMobileMenuOpen(false);
+                          navigate("/groups");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Gestionar espacios</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Sección de Calendarios */}
               <div className="flex-1 overflow-y-auto p-3">
@@ -1768,7 +1899,7 @@ export function AppShell() {
                       <>
                         <div className="pt-2 pb-2">
                           <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
-                            <Heart className="w-3 h-3" />
+                            <User className="w-3 h-3" />
                             Personal
                           </span>
                         </div>
@@ -1809,7 +1940,9 @@ export function AppShell() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                  <div
+                                    className={`w-5 h-5 rounded border-2 ${colorStyle.border}`}
+                                  />
                                 )}
                               </button>
 
@@ -1830,6 +1963,10 @@ export function AppShell() {
                               >
                                 {calendar.name}
                               </span>
+                              <User
+                                className="w-3 h-3 text-[rgb(var(--text-muted))]"
+                                title="Personal"
+                              />
                               <div className="relative">
                                 <button
                                   onClick={(e) => {
@@ -1885,16 +2022,16 @@ export function AppShell() {
                       </>
                     )}
 
-                    {/* Calendarios de GRUPO propios */}
-                    {groupedCalendars.ownGroup.length > 0 && (
+                    {/* Calendarios de GRUPO propios - PRIVADOS */}
+                    {groupedCalendars.ownGroupPrivate.length > 0 && (
                       <>
                         <div className="pt-4 pb-2">
                           <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
-                            <Users className="w-3 h-3" />
-                            {activeGroup?.name || "Grupo"}
+                            <Lock className="w-3 h-3" />
+                            Privado ({activeGroup?.name || "Grupo"})
                           </span>
                         </div>
-                        {groupedCalendars.ownGroup.map((calendar) => {
+                        {groupedCalendars.ownGroupPrivate.map((calendar) => {
                           const colorStyle = getCalendarColor(calendar.color);
                           const CalendarItemIcon = getCalendarIcon(
                             calendar.icon
@@ -1902,6 +2039,15 @@ export function AppShell() {
                           const isVisible = visibleCalendars.includes(
                             calendar.$id
                           );
+                          // Icono de visibilidad
+                          const VisibilityIcon =
+                            calendar.visibility ===
+                            ENUMS.CALENDAR_VISIBILITY.PRIVATE
+                              ? Lock
+                              : calendar.visibility ===
+                                ENUMS.CALENDAR_VISIBILITY.PUBLIC
+                              ? Globe
+                              : Users;
 
                           return (
                             <div
@@ -1931,7 +2077,9 @@ export function AppShell() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                  <div
+                                    className={`w-5 h-5 rounded border-2 ${colorStyle.border}`}
+                                  />
                                 )}
                               </button>
 
@@ -1952,6 +2100,173 @@ export function AppShell() {
                               >
                                 {calendar.name}
                               </span>
+                              <VisibilityIcon
+                                className="w-3 h-3 text-[rgb(var(--text-muted))]"
+                                title={
+                                  calendar.visibility ===
+                                  ENUMS.CALENDAR_VISIBILITY.PRIVATE
+                                    ? "Privado"
+                                    : calendar.visibility ===
+                                      ENUMS.CALENDAR_VISIBILITY.PUBLIC
+                                    ? "Público"
+                                    : "Grupo"
+                                }
+                              />
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMobileCalendarMenuId(
+                                      mobileCalendarMenuId === calendar.$id
+                                        ? null
+                                        : calendar.$id
+                                    );
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-[rgb(var(--bg-muted))] text-[rgb(var(--text-muted))] active:bg-[rgb(var(--bg-active))]"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+
+                                <AnimatePresence>
+                                  {mobileCalendarMenuId === calendar.$id && (
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0.95 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.95 }}
+                                      className="absolute right-0 top-full mt-1 w-36 bg-[rgb(var(--bg-elevated))] rounded-lg border border-[rgb(var(--border-base))] shadow-lg overflow-hidden z-10"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setCalendarToEdit(calendar);
+                                          setShowCreateCalendar(true);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>Editar</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setSharingCalendar(calendar);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-hover))] hover:text-[rgb(var(--text-primary))] transition-colors"
+                                      >
+                                        <Share2 className="w-3.5 h-3.5" />
+                                        <span>Compartir</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setMobileCalendarMenuId(null);
+                                          setDeletingCalendar(calendar);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Eliminar</span>
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* Calendarios de GRUPO propios - DE GRUPO */}
+                    {groupedCalendars.ownGroupGroup.length > 0 && (
+                      <>
+                        <div className="pt-4 pb-2">
+                          <span className="text-xs font-semibold text-[rgb(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
+                            <Users className="w-3 h-3" />
+                            Grupo ({activeGroup?.name || "Grupo"})
+                          </span>
+                        </div>
+                        {groupedCalendars.ownGroupGroup.map((calendar) => {
+                          const colorStyle = getCalendarColor(calendar.color);
+                          const CalendarItemIcon = getCalendarIcon(
+                            calendar.icon
+                          );
+                          const isVisible = visibleCalendars.includes(
+                            calendar.$id
+                          );
+                          // Icono de visibilidad
+                          const VisibilityIcon =
+                            calendar.visibility ===
+                            ENUMS.CALENDAR_VISIBILITY.PRIVATE
+                              ? Lock
+                              : calendar.visibility ===
+                                ENUMS.CALENDAR_VISIBILITY.PUBLIC
+                              ? Globe
+                              : Users;
+
+                          return (
+                            <div
+                              key={calendar.$id}
+                              className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                                isVisible ? "" : "opacity-60"
+                              }`}
+                            >
+                              <button
+                                onClick={() =>
+                                  toggleCalendarVisibility(calendar.$id)
+                                }
+                                className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                                aria-label={
+                                  isVisible
+                                    ? `Ocultar ${calendar.name}`
+                                    : `Mostrar ${calendar.name}`
+                                }
+                              >
+                                {isVisible ? (
+                                  <div
+                                    className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                  >
+                                    <Check
+                                      className="w-3.5 h-3.5 text-white"
+                                      strokeWidth={3}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={`w-5 h-5 rounded border-2 ${colorStyle.border}`}
+                                  />
+                                )}
+                              </button>
+
+                              <div
+                                className={`w-5 h-5 rounded ${colorStyle.light} flex items-center justify-center shrink-0`}
+                              >
+                                <CalendarItemIcon
+                                  className={`w-3 h-3 ${colorStyle.text}`}
+                                />
+                              </div>
+
+                              <span
+                                className={`flex-1 text-sm truncate ${
+                                  isVisible
+                                    ? "text-[rgb(var(--text-primary))]"
+                                    : "text-[rgb(var(--text-muted))]"
+                                }`}
+                              >
+                                {calendar.name}
+                              </span>
+                              <VisibilityIcon
+                                className="w-3 h-3 text-[rgb(var(--text-muted))]"
+                                title={
+                                  calendar.visibility ===
+                                  ENUMS.CALENDAR_VISIBILITY.PRIVATE
+                                    ? "Privado"
+                                    : calendar.visibility ===
+                                      ENUMS.CALENDAR_VISIBILITY.PUBLIC
+                                    ? "Público"
+                                    : "Grupo"
+                                }
+                              />
                               <div className="relative">
                                 <button
                                   onClick={(e) => {
@@ -2025,58 +2340,56 @@ export function AppShell() {
                             Compartidos conmigo
                           </span>
                         </div>
-                        {calendars
-                          .filter((cal) => cal.ownerProfileId !== profile?.$id)
-                          .map((calendar) => {
-                            const colorStyle = getCalendarColor(calendar.color);
-                            const isVisible = visibleCalendars.includes(
-                              calendar.$id
-                            );
+                        {groupedCalendars.shared.map((calendar) => {
+                          const colorStyle = getCalendarColor(calendar.color);
+                          const isVisible = visibleCalendars.includes(
+                            calendar.$id
+                          );
 
-                            return (
-                              <div
-                                key={calendar.$id}
-                                className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
-                                  isVisible ? "" : "opacity-60"
+                          return (
+                            <div
+                              key={calendar.$id}
+                              className={`flex items-center gap-2 px-2 py-2.5 rounded-lg active:bg-[rgb(var(--bg-hover))] transition-colors ${
+                                isVisible ? "" : "opacity-60"
+                              }`}
+                            >
+                              <button
+                                onClick={() =>
+                                  toggleCalendarVisibility(calendar.$id)
+                                }
+                                className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
+                                aria-label={
+                                  isVisible
+                                    ? `Ocultar ${calendar.name}`
+                                    : `Mostrar ${calendar.name}`
+                                }
+                              >
+                                {isVisible ? (
+                                  <div
+                                    className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
+                                  >
+                                    <Check
+                                      className="w-3.5 h-3.5 text-white"
+                                      strokeWidth={3}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
+                                )}
+                              </button>
+                              <span
+                                className={`flex-1 text-sm truncate ${
+                                  isVisible
+                                    ? "text-[rgb(var(--text-primary))]"
+                                    : "text-[rgb(var(--text-muted))]"
                                 }`}
                               >
-                                <button
-                                  onClick={() =>
-                                    toggleCalendarVisibility(calendar.$id)
-                                  }
-                                  className="shrink-0 p-1.5 -m-1.5 touch-manipulation"
-                                  aria-label={
-                                    isVisible
-                                      ? `Ocultar ${calendar.name}`
-                                      : `Mostrar ${calendar.name}`
-                                  }
-                                >
-                                  {isVisible ? (
-                                    <div
-                                      className={`w-5 h-5 rounded ${colorStyle.dot} flex items-center justify-center`}
-                                    >
-                                      <Check
-                                        className="w-3.5 h-3.5 text-white"
-                                        strokeWidth={3}
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="w-5 h-5 rounded border-2 border-[rgb(var(--border-muted))]" />
-                                  )}
-                                </button>
-                                <span
-                                  className={`flex-1 text-sm truncate ${
-                                    isVisible
-                                      ? "text-[rgb(var(--text-primary))]"
-                                      : "text-[rgb(var(--text-muted))]"
-                                  }`}
-                                >
-                                  {calendar.name}
-                                </span>
-                                <Users className="w-3.5 h-3.5 text-[rgb(var(--text-muted))]" />
-                              </div>
-                            );
-                          })}
+                                {calendar.name}
+                              </span>
+                              <Users className="w-3.5 h-3.5 text-[rgb(var(--text-muted))]" />
+                            </div>
+                          );
+                        })}
                       </>
                     )}
                   </div>

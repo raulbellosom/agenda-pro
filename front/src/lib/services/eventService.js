@@ -31,8 +31,13 @@ export async function getEvents(
     Query.limit(500),
   ];
 
-  // Si hay groupId, filtrar por grupo
-  if (groupId) {
+  // Si hay calendarIds, filtrar por calendarios específicos
+  // IMPORTANTE: Los calendarIds tienen prioridad porque pueden incluir
+  // calendarios personales Y de grupo al mismo tiempo
+  if (calendarIds && calendarIds.length > 0) {
+    queries.push(Query.equal("calendarId", calendarIds));
+  } else if (groupId) {
+    // Solo filtrar por groupId si NO hay calendarIds específicos
     queries.push(Query.equal("groupId", groupId));
   }
 
@@ -42,12 +47,6 @@ export async function getEvents(
 
   if (endDate) {
     queries.push(Query.lessThanEqual("startAt", endDate.toISOString()));
-  }
-
-  // Si hay calendarIds, filtrar por calendarios específicos
-  // Esto es importante para obtener eventos de calendarios personales
-  if (calendarIds && calendarIds.length > 0) {
-    queries.push(Query.equal("calendarId", calendarIds));
   }
 
   const response = await databases.listDocuments(
@@ -155,11 +154,32 @@ export async function createEvent(data) {
 /**
  * Actualiza un evento
  */
+/**
+ * Actualiza un evento
+ * Nota: Para establecer groupId como null (mover a calendario personal),
+ * Appwrite requiere que NO se envíe el campo en lugar de enviarlo con null
+ */
 export async function updateEvent(eventId, data) {
-  return databases.updateDocument(databaseId, collectionId, eventId, {
+  const updatePayload = {
     ...data,
     updatedAt: new Date().toISOString(),
-  });
+  };
+
+  // Si groupId es explícitamente null, necesitamos manejarlo especialmente
+  // ya que Appwrite no permite establecer valores como null directamente.
+  // En este caso, el campo groupId ya es opcional en el schema,
+  // así que simplemente NO lo incluimos en el payload si es null
+  if (data.hasOwnProperty("groupId") && data.groupId === null) {
+    // NO incluir groupId en el payload - esto preservará null en la DB
+    delete updatePayload.groupId;
+  }
+
+  return databases.updateDocument(
+    databaseId,
+    collectionId,
+    eventId,
+    updatePayload
+  );
 }
 
 /**

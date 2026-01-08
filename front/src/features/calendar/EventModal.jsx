@@ -1123,7 +1123,8 @@ export function EventModal({
       return;
     }
 
-    if (!activeGroup?.$id || !profile?.$id) return;
+    // Solo requerimos profile, no activeGroup (puede ser calendario personal)
+    if (!profile?.$id) return;
 
     try {
       // Construir fechas usando la zona horaria del usuario

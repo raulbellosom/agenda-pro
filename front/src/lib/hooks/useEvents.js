@@ -7,6 +7,7 @@ import * as eventService from "../services/eventService";
 
 /**
  * Hook para obtener eventos de un mes
+ * Ahora soporta calendarios personales (groupId puede ser null/undefined)
  */
 export function useMonthEvents(groupId, date, calendarIds) {
   const month = date?.toISOString().slice(0, 7); // YYYY-MM format for cache key
@@ -14,13 +15,14 @@ export function useMonthEvents(groupId, date, calendarIds) {
   return useQuery({
     queryKey: [QUERY_KEYS.EVENTS, groupId, "month", month, calendarIds],
     queryFn: () => eventService.getEventsForMonth(groupId, date, calendarIds),
-    enabled: !!groupId && !!date,
+    enabled: !!date, // Solo requiere fecha, no groupId (puede ser null para calendarios personales)
     staleTime: 1 * 60 * 1000, // 1 minuto
   });
 }
 
 /**
  * Hook para obtener eventos de un día
+ * Ahora soporta calendarios personales (groupId puede ser null/undefined)
  */
 export function useDayEvents(groupId, date, calendarIds) {
   const day = date?.toISOString().slice(0, 10); // YYYY-MM-DD format
@@ -28,13 +30,14 @@ export function useDayEvents(groupId, date, calendarIds) {
   return useQuery({
     queryKey: [QUERY_KEYS.EVENTS, groupId, "day", day, calendarIds],
     queryFn: () => eventService.getEventsForDay(groupId, date, calendarIds),
-    enabled: !!groupId && !!date,
+    enabled: !!date, // Solo requiere fecha, no groupId
     staleTime: 1 * 60 * 1000,
   });
 }
 
 /**
  * Hook para obtener eventos de una semana
+ * Ahora soporta calendarios personales (groupId puede ser null/undefined)
  */
 export function useWeekEvents(groupId, date, calendarIds, weekStartsOn = 1) {
   const week = date?.toISOString().slice(0, 10);
@@ -43,7 +46,7 @@ export function useWeekEvents(groupId, date, calendarIds, weekStartsOn = 1) {
     queryKey: [QUERY_KEYS.EVENTS, groupId, "week", week, calendarIds],
     queryFn: () =>
       eventService.getEventsForWeek(groupId, date, calendarIds, weekStartsOn),
-    enabled: !!groupId && !!date,
+    enabled: !!date, // Solo requiere fecha, no groupId
     staleTime: 1 * 60 * 1000,
   });
 }
@@ -80,9 +83,10 @@ export function useCreateEvent() {
   return useMutation({
     mutationFn: (data) => eventService.createEvent(data),
     onSuccess: (_, variables) => {
-      // Invalidar todas las queries de eventos del grupo
+      // Invalidar todas las queries de eventos
+      // Esto incluye eventos personales (groupId=null) y de grupo
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.EVENTS, variables.groupId],
+        queryKey: [QUERY_KEYS.EVENTS],
       });
     },
   });
@@ -101,8 +105,9 @@ export function useUpdateEvent() {
         [QUERY_KEYS.EVENTS, "detail", updatedEvent.$id],
         updatedEvent
       );
+      // Invalidar todas las queries de eventos (personales y de grupo)
       queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.EVENTS, updatedEvent.groupId],
+        queryKey: [QUERY_KEYS.EVENTS],
       });
     },
   });
@@ -164,8 +169,20 @@ export function useMoveEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ eventId, newCalendarId }) => {
-      return eventService.updateEvent(eventId, { calendarId: newCalendarId });
+    mutationFn: async ({ eventId, newCalendarId, newCalendar }) => {
+      // Al mover un evento, actualizar tanto calendarId como groupId
+      // El groupId debe coincidir con el del calendario destino
+      const updateData = {
+        calendarId: newCalendarId,
+      };
+
+      // Si el calendario destino tiene un groupId, actualizar el evento con ese groupId
+      // Si es un calendario personal (sin groupId), establecer groupId como null
+      if (newCalendar) {
+        updateData.groupId = newCalendar.groupId || null;
+      }
+
+      return eventService.updateEvent(eventId, updateData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.EVENTS] });

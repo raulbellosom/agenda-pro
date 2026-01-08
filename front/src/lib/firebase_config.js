@@ -105,15 +105,12 @@ export async function requestNotificationPermission() {
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      console.log("Notification permission granted.");
-
       // Get registration token
       const currentToken = await getToken(messaging, {
         vapidKey: env.firebaseVapidKey,
       });
 
       if (currentToken) {
-        console.log("FCM Token:", currentToken);
         return currentToken;
       } else {
         console.log(
@@ -143,7 +140,6 @@ export function listenToForegroundMessages(callback) {
   }
 
   return onMessage(messaging, (payload) => {
-    console.log("Message received in foreground:", payload);
     callback(payload);
   });
 }

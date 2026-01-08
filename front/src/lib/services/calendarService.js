@@ -12,8 +12,10 @@ const collectionId = COLLECTIONS.CALENDARS;
 /**
  * Obtiene todos los calendarios visibles para el usuario
  * Incluye:
- * - Calendarios PERSONALES del usuario (scope=PERSONAL)
- * - Calendarios GROUP del grupo actual (scope=GROUP, según visibility)
+ * - Calendarios PERSONALES del usuario (scope=PERSONAL, sin groupId)
+ * - Calendarios GROUP del grupo actual (scope=GROUP, según visibility) - solo si hay groupId
+ *
+ * IMPORTANTE: Cuando groupId es null, SOLO retorna calendarios personales sin groupId
  */
 export async function getCalendars(groupId, currentProfileId = null) {
   if (!currentProfileId) {
@@ -22,7 +24,8 @@ export async function getCalendars(groupId, currentProfileId = null) {
 
   const allCalendars = [];
 
-  // 1. Obtener calendarios PERSONALES del usuario (siempre, sin importar groupId)
+  // 1. Obtener calendarios PERSONALES del usuario
+  // IMPORTANTE: Filtrar por scope=PERSONAL asegura que no tengan groupId
   const personalResponse = await databases.listDocuments(
     databaseId,
     collectionId,
@@ -34,7 +37,12 @@ export async function getCalendars(groupId, currentProfileId = null) {
       Query.limit(100),
     ]
   );
-  allCalendars.push(...personalResponse.documents);
+
+  // Filtro adicional: solo calendarios sin groupId (verdaderamente personales)
+  const personalCalendars = personalResponse.documents.filter(
+    (cal) => !cal.groupId
+  );
+  allCalendars.push(...personalCalendars);
 
   // 2. Si hay groupId, obtener calendarios del grupo
   if (groupId) {
@@ -251,10 +259,13 @@ export const CALENDAR_COLORS = [
   { id: "blue", value: "3b82f6", label: "Azul" },
   { id: "violet", value: "8b5cf6", label: "Violeta" },
   { id: "pink", value: "ec4899", label: "Rosa" },
+  { id: "rose", value: "f43f5e", label: "Rose" },
   { id: "red", value: "ef4444", label: "Rojo" },
   { id: "orange", value: "f97316", label: "Naranja" },
   { id: "amber", value: "f59e0b", label: "Ámbar" },
+  { id: "yellow", value: "eab308", label: "Amarillo" },
   { id: "emerald", value: "10b981", label: "Esmeralda" },
+  { id: "green", value: "22c55e", label: "Verde" },
   { id: "teal", value: "14b8a6", label: "Teal" },
   { id: "slate", value: "64748b", label: "Gris" },
 ];

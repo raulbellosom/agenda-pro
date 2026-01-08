@@ -182,8 +182,6 @@ export default async ({ req, res, log, error }) => {
 
     // 5) Create user_settings with defaults (GLOBAL settings, not group-specific)
     // User settings are now global per user, not per group
-    const userSettingsCollectionId =
-      process.env.COLLECTION_USER_SETTINGS_ID || "";
     if (userSettingsCollectionId) {
       try {
         log?.("Creating global user settings with defaults...");
