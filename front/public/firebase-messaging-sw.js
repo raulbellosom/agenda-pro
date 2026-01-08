@@ -33,6 +33,10 @@ messaging.onBackgroundMessage((payload) => {
   // Customize notification here
   const notificationTitle =
     payload.notification?.title || payload.data?.title || "Nueva notificación";
+
+  // Use notificationId as tag to prevent duplicate notifications
+  const notificationTag = payload.data?.notificationId || `notif-${Date.now()}`;
+
   const notificationOptions = {
     body:
       payload.notification?.body ||
@@ -40,7 +44,7 @@ messaging.onBackgroundMessage((payload) => {
       "Tienes una nueva notificación",
     icon: payload.notification?.icon || "/web/android-chrome-192x192.png",
     badge: "/web/android-chrome-96x96.png",
-    tag: payload.data?.notificationId || "notification",
+    tag: notificationTag, // Using notificationId ensures same notification doesn't show twice
     data: {
       url: payload.data?.url || "/notifications",
       notificationId: payload.data?.notificationId,
@@ -48,6 +52,7 @@ messaging.onBackgroundMessage((payload) => {
     },
     requireInteraction: false,
     silent: false,
+    renotify: false, // Don't vibrate/sound if notification with same tag already exists
   };
 
   return self.registration.showNotification(

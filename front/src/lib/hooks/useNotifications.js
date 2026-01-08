@@ -119,7 +119,15 @@ export function useNotifications(groupId, profileId, options = {}) {
     };
   }, [profileId, soundEnabled, queryClient, groupId, addToast]);
 
+  // ============================================================================
+  // REALTIME SUBSCRIPTION (SOLO para actualizar lista)
+  // ============================================================================
+  // Importante: NO duplicar la lógica de toasts/sonidos aquí
+  // Las notificaciones visuales y sonidos se manejan ÚNICAMENTE en FCM foreground
+  // Realtime solo sirve para mantener la lista actualizada en tiempo real
+  // ============================================================================
   // Suscripción Realtime a la colección de notificaciones
+  // SOLO para actualizar la lista, NO para mostrar toasts (eso lo hace FCM)
   useEffect(() => {
     if (!profileId) return;
 
@@ -140,37 +148,15 @@ export function useNotifications(groupId, profileId, options = {}) {
         return;
       }
 
-      // Nueva notificación creada
+      // Cualquier cambio en las notificaciones: solo refrescar la lista
+      // NO mostrar toasts ni sonidos aquí - eso lo maneja FCM
       if (
-        response.events.includes("databases.*.collections.*.documents.*.create")
-      ) {
-        // Invalidar query para recargar
-        queryClient.invalidateQueries(["notifications", groupId, profileId]);
-
-        // Mostrar notificación del navegador si tiene permisos
-        showBrowserNotification(notification);
-
-        // Mostrar Toast
-        addToast({
-          title: notification.title,
-          message: notification.body,
-          type: "info",
-        });
-
-        // Reproducir sonido si está habilitado
-        if (soundEnabled) {
-          const audio = new Audio("/sounds/notification.mp3");
-          audio.play().catch((e) => console.error("Error playing sound:", e));
-        }
-      }
-      // Notificación actualizada (ej: marcada como leída)
-      else if (
-        response.events.includes("databases.*.collections.*.documents.*.update")
-      ) {
-        queryClient.invalidateQueries(["notifications", groupId, profileId]);
-      }
-      // Notificación eliminada
-      else if (
+        response.events.includes(
+          "databases.*.collections.*.documents.*.create"
+        ) ||
+        response.events.includes(
+          "databases.*.collections.*.documents.*.update"
+        ) ||
         response.events.includes("databases.*.collections.*.documents.*.delete")
       ) {
         queryClient.invalidateQueries(["notifications", groupId, profileId]);
@@ -180,7 +166,7 @@ export function useNotifications(groupId, profileId, options = {}) {
     return () => {
       unsubscribe();
     };
-  }, [groupId, profileId, queryClient, addToast, soundEnabled]);
+  }, [groupId, profileId, queryClient]);
 
   // Calcular notificaciones no leídas
   useEffect(() => {
@@ -197,26 +183,6 @@ export function useNotifications(groupId, profileId, options = {}) {
     toggleSound,
     fcmToken,
   };
-}
-
-/**
- * Mostrar notificación del navegador usando Notification API
- */
-function showBrowserNotification(notification) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification(notification.title, {
-        body: notification.body || "",
-        icon: "/android/res/mipmap-xxxhdpi/ic_launcher.png",
-        badge: "/android/res/mipmap-xxxhdpi/ic_launcher.png",
-        tag: notification.$id,
-        requireInteraction: false,
-        silent: false,
-      });
-    } catch (error) {
-      console.error("Error showing notification:", error);
-    }
-  }
 }
 
 /**
