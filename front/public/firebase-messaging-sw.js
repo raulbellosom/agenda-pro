@@ -130,3 +130,11 @@ self.addEventListener("activate", (event) => {
   console.log("[Service Worker] Activating firebase-messaging-sw.js");
   event.waitUntil(self.clients.claim());
 });
+
+// Handle messages from the main thread
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    console.log("[Service Worker] Received SKIP_WAITING message");
+    self.skipWaiting();
+  }
+});

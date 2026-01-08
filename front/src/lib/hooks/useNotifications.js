@@ -6,6 +6,9 @@ import { useToast } from "../../app/providers/ToastProvider";
 import {
   requestNotificationPermission,
   listenToForegroundMessages,
+  isIOS,
+  isIOSStandalone,
+  isIOSNotificationSupported,
 } from "../firebase_config";
 
 const databaseId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -50,13 +53,73 @@ export function useNotifications(groupId, profileId, options = {}) {
 
     async function initializeFCM() {
       try {
+        // Check iOS compatibility
+        if (isIOS()) {
+          if (!isIOSNotificationSupported()) {
+            console.warn(
+              "iOS version does not support Web Push (requires 16.4+)"
+            );
+            return;
+          }
+          if (!isIOSStandalone()) {
+            console.warn(
+              "iOS requires app to be installed as PWA for notifications"
+            );
+            return;
+          }
+        }
+
         // Register service worker
         if ("serviceWorker" in navigator) {
-          const registration = await navigator.serviceWorker.register(
-            "/firebase-messaging-sw.js",
-            { scope: "/" }
-          );
-          console.log("FCM Service Worker registered:", registration);
+          // For iOS, ensure we wait for the service worker to be ready
+          let registration;
+
+          try {
+            // Check if already registered
+            registration = await navigator.serviceWorker.getRegistration(
+              "/firebase-messaging-sw.js"
+            );
+
+            if (!registration) {
+              registration = await navigator.serviceWorker.register(
+                "/firebase-messaging-sw.js",
+                {
+                  scope: "/",
+                  updateViaCache: "none", // Important for iOS
+                }
+              );
+              console.log("FCM Service Worker registered:", registration);
+            } else {
+              console.log(
+                "FCM Service Worker already registered:",
+                registration
+              );
+            }
+
+            // Wait for the service worker to be active
+            if (registration.installing) {
+              await new Promise((resolve) => {
+                registration.installing.addEventListener("statechange", (e) => {
+                  if (e.target.state === "activated") {
+                    resolve();
+                  }
+                });
+              });
+            } else if (registration.waiting) {
+              // If there's a waiting worker, activate it
+              registration.waiting.postMessage({ type: "SKIP_WAITING" });
+              await new Promise((resolve) => {
+                navigator.serviceWorker.addEventListener(
+                  "controllerchange",
+                  resolve,
+                  { once: true }
+                );
+              });
+            }
+          } catch (swError) {
+            console.error("Service Worker registration failed:", swError);
+            return;
+          }
 
           // Request permission and get token
           const token = await requestNotificationPermission();
@@ -68,6 +131,8 @@ export function useNotifications(groupId, profileId, options = {}) {
               userAgent: navigator.userAgent,
               platform: navigator.platform,
               language: navigator.language,
+              isIOS: isIOS(),
+              isIOSPWA: isIOSStandalone(),
             };
 
             // Use the local notificationService

@@ -94,6 +94,26 @@ export function useLeaveGroup() {
 }
 
 /**
+ * Hook para eliminar un miembro del grupo (owner/admin)
+ */
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ groupId, memberProfileId }) =>
+      groupService.removeMember(groupId, memberProfileId),
+    onSuccess: (_, variables) => {
+      // Invalidar miembros del grupo afectado
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.GROUP_MEMBERS, variables.groupId],
+      });
+      // Invalidar grupos (por si afecta conteo de miembros, etc)
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.GROUPS] });
+    },
+  });
+}
+
+/**
  * Hook para subir logo de grupo
  */
 export function useUploadGroupLogo() {

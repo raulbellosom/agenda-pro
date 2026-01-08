@@ -17,6 +17,11 @@ import {
 import { useWorkspace } from "../../../app/providers/WorkspaceProvider";
 import { useUserSettings, useUpdateUserSettings } from "../../../lib/hooks";
 import { useRequestNotificationPermission } from "../../../lib/hooks/useNotifications";
+import {
+  isIOS,
+  isIOSStandalone,
+  isIOSNotificationSupported,
+} from "../../../lib/firebase_config";
 import { Button } from "../../../components/ui/Button";
 import { SettingsCard, SettingsCardHeader } from "./SettingsCard";
 import { SettingsToggle } from "./SettingsControls";
@@ -47,6 +52,11 @@ export function NotificationsSection() {
 
   const [hasChanges, setHasChanges] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Detect iOS and its capabilities
+  const isIOSDevice = isIOS();
+  const isIOSPWA = isIOSStandalone();
+  const iosSupportsNotifications = isIOSNotificationSupported();
 
   // Sincronizar con settings
   useEffect(() => {
@@ -172,53 +182,83 @@ export function NotificationsSection() {
               exit={{ opacity: 0, height: 0 }}
               className="mt-3 pl-11"
             >
-              {hasPermission && fcmToken ? (
+              {/* iOS specific warnings */}
+              {isIOSDevice && !iosSupportsNotifications && (
                 <SettingsAlert
-                  type="success"
-                  icon={Check}
-                  title="Push habilitado"
-                  description="Tu navegador está configurado para recibir notificaciones."
-                />
-              ) : isDenied ? (
-                <SettingsAlert
-                  type="error"
+                  type="warning"
                   icon={AlertCircle}
-                  title="Permisos bloqueados"
-                  description="Para habilitar notificaciones push, debes cambiar la configuración en tu navegador. Haz clic en el ícono 🔒 en la barra de direcciones y permite las notificaciones."
+                  title="iOS 16.4+ requerido"
+                  description="Las notificaciones push en iOS requieren la versión 16.4 o superior. Por favor, actualiza tu dispositivo."
                 />
-              ) : (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                  <div className="flex items-start gap-3">
-                    <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                        Se requiere permiso del navegador
-                      </p>
-                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                        Para recibir notificaciones push, necesitas autorizar el
-                        acceso en tu navegador.
-                      </p>
-                      <Button
-                        onClick={requestPermission}
-                        disabled={isRequesting}
-                        size="sm"
-                        className="mt-2"
-                      >
-                        {isRequesting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Solicitando...
-                          </>
-                        ) : (
-                          <>
-                            <Bell className="w-4 h-4 mr-2" />
-                            Habilitar notificaciones
-                          </>
-                        )}
-                      </Button>
+              )}
+
+              {isIOSDevice && iosSupportsNotifications && !isIOSPWA && (
+                <SettingsAlert
+                  type="warning"
+                  icon={Info}
+                  title="Instalar como aplicación"
+                  description="En iOS, las notificaciones push solo funcionan cuando instalas la app en tu pantalla de inicio. Toca el botón de compartir y selecciona 'Agregar a pantalla de inicio'."
+                />
+              )}
+
+              {/* Standard notification states */}
+              {(!isIOSDevice ||
+                (isIOSDevice && iosSupportsNotifications && isIOSPWA)) && (
+                <>
+                  {hasPermission && fcmToken ? (
+                    <SettingsAlert
+                      type="success"
+                      icon={Check}
+                      title="Push habilitado"
+                      description="Tu navegador está configurado para recibir notificaciones."
+                    />
+                  ) : isDenied ? (
+                    <SettingsAlert
+                      type="error"
+                      icon={AlertCircle}
+                      title="Permisos bloqueados"
+                      description={
+                        isIOSDevice
+                          ? "Ve a Ajustes → Safari → Sitios web → Notificaciones y habilita las notificaciones para esta app."
+                          : "Para habilitar notificaciones push, debes cambiar la configuración en tu navegador. Haz clic en el ícono 🔒 en la barra de direcciones y permite las notificaciones."
+                      }
+                    />
+                  ) : (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                            Se requiere permiso del navegador
+                          </p>
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                            {isIOSDevice
+                              ? "Toca el botón para habilitar notificaciones. iOS te pedirá confirmación."
+                              : "Para recibir notificaciones push, necesitas autorizar el acceso en tu navegador."}
+                          </p>
+                          <Button
+                            onClick={requestPermission}
+                            disabled={isRequesting}
+                            size="sm"
+                            className="mt-2"
+                          >
+                            {isRequesting ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Solicitando...
+                              </>
+                            ) : (
+                              <>
+                                <Bell className="w-4 h-4 mr-2" />
+                                Habilitar notificaciones
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
             </motion.div>
           )}

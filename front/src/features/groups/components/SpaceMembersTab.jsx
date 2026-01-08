@@ -18,7 +18,7 @@ import {
   ChevronDown,
   Copy,
 } from "lucide-react";
-import { useGroupMembers } from "../../../lib/hooks/useGroups";
+import { useGroupMembers, useRemoveMember } from "../../../lib/hooks/useGroups";
 import { useGroupRoles, useUserPermissions } from "../../../lib/hooks/useRbac";
 import {
   useGroupInvitations,
@@ -357,6 +357,8 @@ function InviteModal({
 function MembersList({ groupId, members, roles, isOwner }) {
   const { data: permissions } = useUserPermissions(groupId, null);
   const [selectedAvatarId, setSelectedAvatarId] = useState(null);
+  const [confirmRemove, setConfirmRemove] = useState(null);
+  const removeMember = useRemoveMember();
   const canManageMembers =
     isOwner || permissions?.some((p) => p.key === "members.manage");
 
@@ -397,6 +399,17 @@ function MembersList({ groupId, members, roles, isOwner }) {
               {member.membershipRole === "OWNER" && (
                 <Crown className="w-4 h-4 text-amber-500" />
               )}
+              {/* Botón eliminar - solo si puedes gestionar y no es owner */}
+              {canManageMembers && member.membershipRole !== "OWNER" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmRemove(member)}
+                  title="Eliminar miembro"
+                  className="text-[rgb(var(--error))] hover:text-[rgb(var(--error))] hover:bg-[rgb(var(--error))]/10"
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -410,6 +423,100 @@ function MembersList({ groupId, members, roles, isOwner }) {
         images={selectedAvatarId ? [selectedAvatarId] : []}
         bucketId={BUCKETS.AVATARS}
       />
+
+      {/* Remove Member Confirmation Modal */}
+      <AnimatePresence>
+        {confirmRemove && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            onClick={() => setConfirmRemove(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[rgb(var(--bg-surface))] rounded-2xl border border-[rgb(var(--border-base))] shadow-xl overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[rgb(var(--error))]/10 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-6 h-6 text-[rgb(var(--error))]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-2">
+                      ¿Eliminar miembro?
+                    </h3>
+                    <p className="text-sm text-[rgb(var(--text-secondary))] mb-4">
+                      ¿Estás seguro de que quieres eliminar a{" "}
+                      <span className="font-medium text-[rgb(var(--text-primary))]">
+                        {confirmRemove.profile?.firstName}{" "}
+                        {confirmRemove.profile?.lastName}
+                      </span>{" "}
+                      del espacio? Esta acción no se puede deshacer.
+                    </p>
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-[rgb(var(--bg-muted))]/50 border border-[rgb(var(--border-base))]">
+                      <Avatar
+                        src={getAvatarUrl(
+                          confirmRemove.profile?.avatarFileId,
+                          32
+                        )}
+                        name={`${confirmRemove.profile?.firstName || ""} ${
+                          confirmRemove.profile?.lastName || ""
+                        }`}
+                        size={32}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[rgb(var(--text-primary))] truncate">
+                          {confirmRemove.profile?.firstName}{" "}
+                          {confirmRemove.profile?.lastName}
+                        </p>
+                        <p className="text-xs text-[rgb(var(--text-muted))] truncate">
+                          {confirmRemove.profile?.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setConfirmRemove(null)}
+                    disabled={removeMember.isPending}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={async () => {
+                      try {
+                        await removeMember.mutateAsync({
+                          groupId,
+                          memberProfileId: confirmRemove.profileId,
+                        });
+                        setConfirmRemove(null);
+                      } catch (error) {
+                        console.error("Error removing member:", error);
+                      }
+                    }}
+                    disabled={removeMember.isPending}
+                    loading={removeMember.isPending}
+                    leftIcon={
+                      !removeMember.isPending && <Trash2 className="w-4 h-4" />
+                    }
+                  >
+                    {removeMember.isPending ? "Eliminando..." : "Eliminar"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -16,9 +16,9 @@ export function SettingsToggle({
   className,
 }) {
   const sizes = {
-    sm: { track: "w-9 h-5", thumb: "w-4 h-4", translate: 16 },
-    md: { track: "w-11 h-6", thumb: "w-5 h-5", translate: 20 },
-    lg: { track: "w-14 h-7", thumb: "w-6 h-6", translate: 28 },
+    sm: { track: "w-9 h-5", thumb: "w-4 h-4", translate: 14 },
+    md: { track: "w-11 h-6", thumb: "w-5 h-5", translate: 18 },
+    lg: { track: "w-14 h-7", thumb: "w-6 h-6", translate: 26 },
   };
 
   const currentSize = sizes[size];
@@ -37,7 +37,7 @@ export function SettingsToggle({
       onClick={handleClick}
       disabled={disabled}
       className={clsx(
-        "relative rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--bg-surface))]",
+        "relative inline-flex rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--brand-primary))] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--bg-surface))] flex-shrink-0",
         currentSize.track,
         enabled
           ? "bg-[rgb(var(--brand-primary))]"
@@ -50,7 +50,7 @@ export function SettingsToggle({
         animate={{ x: enabled ? currentSize.translate : 2 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className={clsx(
-          "absolute top-1 rounded-full bg-white shadow-sm",
+          "inline-block top-0.5 rounded-full bg-white shadow-sm",
           currentSize.thumb
         )}
       />

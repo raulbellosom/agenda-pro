@@ -36,10 +36,67 @@ try {
 export { app, analytics, messaging };
 
 /**
+ * Detect if device is iOS
+ */
+export function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+/**
+ * Detect if running as PWA/standalone on iOS
+ */
+export function isIOSStandalone() {
+  return (
+    isIOS() &&
+    (window.navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches)
+  );
+}
+
+/**
+ * Check if iOS version supports notifications
+ * iOS 16.4+ supports Web Push for PWAs
+ */
+export function isIOSNotificationSupported() {
+  if (!isIOS()) return true;
+
+  // Check iOS version
+  const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+  if (!match) return false;
+
+  const majorVersion = parseInt(match[1], 10);
+  const minorVersion = parseInt(match[2], 10);
+
+  // iOS 16.4+ supports notifications for PWA
+  return majorVersion > 16 || (majorVersion === 16 && minorVersion >= 4);
+}
+
+/**
  * Request notification permission and get FCM token
  * @returns {Promise<string|null>} FCM token or null if permission denied
  */
 export async function requestNotificationPermission() {
+  // Check if Notification API is available
+  if (!("Notification" in window)) {
+    console.warn("Notifications not supported in this browser");
+    return null;
+  }
+
+  // iOS specific checks
+  if (isIOS()) {
+    // Check if iOS version supports notifications
+    if (!isIOSNotificationSupported()) {
+      console.warn("iOS version does not support Web Push. Requires iOS 16.4+");
+      return null;
+    }
+
+    // Check if running as PWA/standalone
+    if (!isIOSStandalone()) {
+      console.warn("iOS requires app to be installed as PWA for notifications");
+      return null;
+    }
+  }
+
   if (!messaging) {
     console.warn("Firebase Messaging not available");
     return null;

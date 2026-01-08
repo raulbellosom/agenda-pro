@@ -241,6 +241,108 @@ export async function isGroupOwner(groupId, profileId) {
 }
 
 /**
+ * Eliminar un miembro de un grupo (solo owner o admin)
+ */
+export async function removeMember(groupId, memberProfileId) {
+  // Buscar la membresía a eliminar
+  const membership = await databases.listDocuments(
+    databaseId,
+    COLLECTIONS.GROUP_MEMBERS,
+    [
+      Query.equal("groupId", groupId),
+      Query.equal("profileId", memberProfileId),
+      Query.equal("enabled", true),
+      Query.limit(1),
+    ]
+  );
+
+  if (membership.documents.length === 0) {
+    throw new Error("El usuario no es miembro de este grupo");
+  }
+
+  const memberDoc = membership.documents[0];
+
+  // No permitir eliminar al owner
+  if (memberDoc.membershipRole === ENUMS.GROUP_MEMBER_ROLE.OWNER) {
+    throw new Error("No se puede eliminar al propietario del grupo");
+  }
+
+  // Obtener información del grupo y del usuario eliminado
+  const [group, removedProfile] = await Promise.all([
+    databases.getDocument(databaseId, COLLECTIONS.GROUPS, groupId),
+    databases.getDocument(
+      databaseId,
+      COLLECTIONS.USERS_PROFILE,
+      memberProfileId
+    ),
+  ]);
+
+  // Soft delete de la membresía
+  const result = await databases.updateDocument(
+    databaseId,
+    COLLECTIONS.GROUP_MEMBERS,
+    memberDoc.$id,
+    { enabled: false }
+  );
+
+  // Desactivar calendarios personales del usuario en este grupo
+  try {
+    const userCalendars = await databases.listDocuments(
+      databaseId,
+      COLLECTIONS.CALENDARS,
+      [
+        Query.equal("groupId", groupId),
+        Query.equal("createdByProfileId", memberProfileId),
+        Query.equal("enabled", true),
+      ]
+    );
+
+    for (const calendar of userCalendars.documents) {
+      await databases.updateDocument(
+        databaseId,
+        COLLECTIONS.CALENDARS,
+        calendar.$id,
+        { enabled: false }
+      );
+    }
+  } catch (calendarError) {
+    console.error("Error disabling member calendars:", calendarError);
+  }
+
+  // Crear notificación para el usuario eliminado
+  const removedMemberName = `${removedProfile.firstName || ""} ${
+    removedProfile.lastName || ""
+  }`.trim();
+
+  try {
+    await databases.createDocument(
+      databaseId,
+      COLLECTIONS.NOTIFICATIONS,
+      ID.unique(),
+      {
+        groupId,
+        profileId: memberProfileId,
+        accountId: removedProfile.accountId,
+        kind: "SYSTEM",
+        title: `Fuiste removido de ${group.name}`,
+        body: `Has sido eliminado del espacio "${group.name}"`,
+        entityType: "groups",
+        entityId: groupId,
+        metadata: JSON.stringify({
+          action: "member_removed",
+          groupName: group.name,
+        }),
+        enabled: true,
+      }
+    );
+  } catch (notificationError) {
+    console.error("Error creating removal notification:", notificationError);
+  }
+
+  return result;
+}
+
+/**
  * Salir de un grupo (solo para miembros, no owners)
  */
 export async function leaveGroup(groupId, profileId) {
