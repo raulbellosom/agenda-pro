@@ -451,19 +451,20 @@
 
 ## M.1 Attributes (sin cambios)
 
-| Field      | Type         | Required | Default | Notes                            |
-| ---------- | ------------ | -------: | ------- | -------------------------------- |
-| groupId    | String(64)   |       ✅ |         |                                  |
-| profileId  | String(64)   |       ✅ |         | destinatario                     |
-| kind       | Enum         |       ✅ |         | EVENT_REMINDER / INVITE / SYSTEM |
-| title      | String(140)  |       ✅ |         |                                  |
-| body       | String(1000) |       ❌ |         |                                  |
-| entityType | String(80)   |       ❌ |         | events, groups, etc              |
-| entityId   | String(64)   |       ❌ |         |                                  |
-| readAt     | Datetime     |       ❌ |         |                                  |
-| createdAt  | Datetime     |       ✅ |         | set API/Function                 |
-| enabled    | Boolean      |       ❌ | true    |                                  |
-| accountId  | String(36)   |       ✅ |         | account del destinatario         |
+| Field      | Type          | Required | Default | Notes                            |
+| ---------- | ------------- | -------: | ------- | -------------------------------- |
+| groupId    | String(64)    |       ✅ |         |                                  |
+| profileId  | String(64)    |       ✅ |         | destinatario                     |
+| kind       | Enum          |       ✅ |         | EVENT_REMINDER / INVITE / SYSTEM |
+| title      | String(140)   |       ✅ |         |                                  |
+| body       | String(1000)  |       ❌ |         |                                  |
+| entityType | String(80)    |       ❌ |         | events, groups, etc              |
+| entityId   | String(64)    |       ❌ |         |                                  |
+| readAt     | Datetime      |       ❌ |         |                                  |
+| createdAt  | Datetime      |       ✅ |         | set API/Function                 |
+| enabled    | Boolean       |       ❌ | true    |                                  |
+| accountId  | String(36)    |       ✅ |         | account del destinatario         |
+| metadata   | String(16384) |       ❌ |         | JSON string con datos extra      |
 
 ## M.2 Indexes (sin cambios)
 

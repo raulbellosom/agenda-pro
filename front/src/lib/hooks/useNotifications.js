@@ -262,6 +262,7 @@ export function useRequestNotificationPermission() {
     permission,
     requestPermission,
     hasPermission: permission === "granted",
+    isDenied: permission === "denied",
     isRequesting,
     fcmToken,
   };

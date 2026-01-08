@@ -48,6 +48,7 @@ export default async ({ req, res, log, error }) => {
     const eventAttendeesCollectionId = must("COLLECTION_EVENT_ATTENDEES_ID");
     const calendarsCollectionId = must("COLLECTION_CALENDARS_ID");
     const notificationsCollectionId = must("COLLECTION_NOTIFICATIONS_ID");
+    const usersProfileCollectionId = must("COLLECTION_USERS_PROFILE_ID");
 
     // Optional config
     const batchSize = parseInt(process.env.BATCH_SIZE || "100", 10);
@@ -211,6 +212,21 @@ export default async ({ req, res, log, error }) => {
             try {
               // Create IN_APP notification
               if (channels.includes("IN_APP")) {
+                // Obtener el perfil para el accountId
+                let accountId;
+                try {
+                  const profile = await databases.getDocument(
+                    databaseId,
+                    usersProfileCollectionId,
+                    profileId
+                  );
+                  accountId = profile.accountId;
+                } catch (profileError) {
+                  log?.(
+                    `[CRON] Warning: Could not get accountId for ${profileId}: ${profileError.message}`
+                  );
+                }
+
                 await databases.createDocument(
                   databaseId,
                   notificationsCollectionId,
@@ -218,6 +234,7 @@ export default async ({ req, res, log, error }) => {
                   {
                     groupId: event.groupId,
                     profileId,
+                    accountId, // Agregar accountId para permisos
                     kind: "EVENT_REMINDER",
                     title: `Recordatorio: ${event.title}`,
                     body: `Tu evento "${event.title}" comienza ${timeText}`,

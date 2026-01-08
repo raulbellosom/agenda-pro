@@ -7,6 +7,7 @@ import {
   Query,
   initializeApp,
   cert,
+  getApps,
   getMessaging,
 } from "./_shared.js";
 
@@ -49,17 +50,27 @@ export default async ({ req, res, log, error }) => {
       "COLLECTION_PUSH_SUBSCRIPTIONS_ID"
     );
 
-    // Initialize Firebase Admin
+    // Initialize Firebase Admin (only if not already initialized)
     let firebaseApp;
     try {
-      firebaseApp = initializeApp({
-        credential: cert({
-          projectId: must("FIREBASE_PROJECT_ID"),
-          privateKey: must("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
-          clientEmail: must("FIREBASE_CLIENT_EMAIL"),
-        }),
-      });
-      log?.("Firebase Admin initialized");
+      // Check if Firebase app already exists
+      const existingApps = getApps();
+      
+      if (existingApps.length > 0) {
+        // Use existing app
+        firebaseApp = existingApps[0];
+        log?.("Using existing Firebase Admin app");
+      } else {
+        // Initialize new app
+        firebaseApp = initializeApp({
+          credential: cert({
+            projectId: must("FIREBASE_PROJECT_ID"),
+            privateKey: must("FIREBASE_PRIVATE_KEY").replace(/\\n/g, "\n"),
+            clientEmail: must("FIREBASE_CLIENT_EMAIL"),
+          }),
+        });
+        log?.("Firebase Admin initialized");
+      }
     } catch (firebaseError) {
       error?.(
         `Failed to initialize Firebase: ${firebaseError.message}`

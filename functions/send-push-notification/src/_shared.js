@@ -1,5 +1,5 @@
 export { Client, Databases, Query, ID } from "node-appwrite";
-export { initializeApp, cert } from "firebase-admin/app";
+export { initializeApp, cert, getApps } from "firebase-admin/app";
 export { getMessaging } from "firebase-admin/messaging";
 
 /**
